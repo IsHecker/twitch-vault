@@ -1,0 +1,23 @@
+{
+  "Paths": {
+    "Database": "Database.json",
+    "Streams": "Streams"
+  },
+  "Twitch": {
+    "ClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+    "Authorization": "OAuth 534yikldpe9nce90js4k5id373chs4"
+  },
+  "Vault": {
+    "MaxSegmentDurationInSec": 10,
+    "MaxConsecutiveEmptyPolls": 3,
+    "PlaylistFlushIntervalInSec": 2
+  },
+  "ChannelMonitor": {
+    "Enabled": true,
+    "RunIntervalInMinutes": 1
+  },
+  "StoppedStreamCheck": {
+    "Enabled": false,
+    "RunIntervalInMinutes": 0.1
+  }
+}

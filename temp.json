@@ -1,0 +1,153 @@
+{
+  "data": {
+    "user": {
+      "id": "22484632",
+      "stream": {
+        "id": "316794903397",
+        "previewImageURL": "https://static-cdn.jtvnw.net/previews-ttv/live_user_forsen-1280x720.jpg",
+        "restrictionType": null,
+        "__typename": "Stream"
+      },
+      "__typename": "User"
+    }
+  },
+  "extensions": {
+    "durationMilliseconds": 42,
+    "operationName": "VideoPreviewOverlay",
+    "requestID": "01KMZPCTWCWBX388SSWX9CDZ7J"
+  }
+}
+
+{
+  "data": {
+    "user": {
+      "id": "22484632",
+      "login": "forsen",
+      "stream": {
+        "id": "316794903397",
+        "createdAt": "2026-03-30T14:02:43Z",
+        "__typename": "Stream"
+      },
+      "__typename": "User"
+    }
+  },
+  "extensions": {
+    "durationMilliseconds": 42,
+    "operationName": "UseLive",
+    "requestID": "01KMZPCTWCWBX388SSWX9CDZ7J"
+  }
+}
+
+{
+  "data": {
+    "user": {
+      "id": "22484632",
+      "broadcastSettings": {
+        "id": "22484632",
+        "title": "Taking back the world record!",
+        "__typename": "BroadcastSettings"
+      },
+      "stream": {
+        "id": "316794903397",
+        "createdAt": "2026-03-30T14:02:43Z",
+        "game": {
+          "id": "27471",
+          "displayName": "Minecraft",
+          "__typename": "Game"
+        },
+        "__typename": "Stream"
+      },
+      "__typename": "User"
+    }
+  },
+  "extensions": {
+    "durationMilliseconds": 58,
+    "operationName": "NielsenContentMetadata",
+    "requestID": "01KMZPCTWCWBX388SSWX9CDZ7J"
+  }
+}
+
+{
+  "data": {
+    "user": {
+      "id": "22484632",
+      "stream": {
+        "id": "316794903397",
+        "game": {
+          "id": "27471",
+          "name": "Minecraft",
+          "__typename": "Game"
+        },
+        "__typename": "Stream"
+      },
+      "self": {
+        "banStatus": null,
+        "__typename": "UserSelfConnection"
+      },
+      "__typename": "User"
+    }
+  },
+  "extensions": {
+    "durationMilliseconds": 58,
+    "operationName": "ExtensionsOverlay",
+    "requestID": "01KMZPCTWCWBX388SSWX9CDZ7J"
+  }
+}
+
+
+
+[
+  {
+    "operationName": "UseLive",
+    "variables": {
+      "channelLogin": "forsen"
+    },
+    "extensions": {
+      "persistedQuery": {
+        "version": 1,
+        "sha256Hash": "639d5f11bfb8bf3053b424d9ef650d04c4ebb7d94711d644afb08fe9a0fad5d9"
+      }
+    }
+  },
+  {
+    "operationName": "VideoPreviewOverlay",
+    "variables": {
+      "login": "forsen"
+    },
+    "extensions": {
+      "persistedQuery": {
+        "version": 1,
+        "sha256Hash": "9515480dee68a77e667cb19de634739d33f243572b007e98e67184b1a5d8369f"
+      }
+    }
+  },
+  {
+    "operationName": "ExtensionsOverlay",
+    "variables": {
+      "channelLogin": "forsen"
+    },
+    "extensions": {
+      "persistedQuery": {
+        "version": 1,
+        "sha256Hash": "0ac7d363a6f57917933f99a1066075cc38fcdb87c10643fbb2aeacf21399f7b9"
+      }
+    }
+  },
+  {
+    "operationName": "NielsenContentMetadata",
+    "variables": {
+      "isCollectionContent": false,
+      "isLiveContent": true,
+      "isVODContent": false,
+      "collectionID": "",
+      "login": "forsen",
+      "vodID": ""
+    },
+    "extensions": {
+      "persistedQuery": {
+        "version": 1,
+        "sha256Hash": "2dbf505ee929438369e68e72319d1106bb3c142e295332fac157c90638968586"
+      }
+    }
+  }
+]

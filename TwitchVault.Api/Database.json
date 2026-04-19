@@ -1,0 +1,32 @@
+{
+  "Channels": [
+    {
+      "ChannelId": 71230272,
+      "Name": "tenshi",
+      "QualityRank": 1,
+      "IsLive": true,
+      "LastStreamedAt": "2026-04-18T19:27:43.1730064+02:00"
+    },
+    {
+      "ChannelId": 38926479,
+      "Name": "pisty",
+      "QualityRank": 1,
+      "IsLive": false,
+      "LastStreamedAt": "2026-04-17T01:00:51.0951957+02:00"
+    }
+  ],
+  "Streams": [
+    {
+      "TwitchStreamId": "315480100307",
+      "ChannelId": 71230272,
+      "Title": "DAY 4 OF THE TENSHI SUBATHON!! PLAYING WITH KAYN4TENSHI TODAY HAHAHA",
+      "GameDisplayName": "League of Legends",
+      "ThumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_tenshi-1280x720.jpg",
+      "StartedAt": "2026-04-18T19:27:43.1730064+02:00",
+      "FinishedAt": null,
+      "Status": "Recording",
+      "FolderPath": "Streams\\tenshi\\2026-04-18 19-27-43",
+      "MarkForDeletion": false
+    }
+  ]
+}
