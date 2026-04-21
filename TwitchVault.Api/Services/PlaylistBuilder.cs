@@ -20,6 +20,8 @@ public sealed class PlaylistBuilder : IAsyncDisposable
     private float _totalDuration;
     private bool _isEnded;
 
+    private bool _disposed;
+
     public string? LastSegmentFileName { get; private set; }
     public bool IsInitSegmentSet => !string.IsNullOrWhiteSpace(_initSegmentFileName);
     public long TwitchMediaSequence => _twitchMediaSequence;
@@ -151,7 +153,14 @@ public sealed class PlaylistBuilder : IAsyncDisposable
         {
             string content = Build();
 
-            await using var stream = new FileStream(_playlistPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, 4096, useAsync: true);
+            await using var stream = new FileStream(
+                _playlistPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                4096,
+                useAsync: true);
+
             await using var writer = new StreamWriter(stream, Encoding.UTF8);
             await writer.WriteAsync(content);
         }
@@ -208,17 +217,25 @@ public sealed class PlaylistBuilder : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await FlushAsync();
+        if (_disposed) return;
+        _disposed = true;
 
         _flushTimer.Dispose();
+
+        try
+        {
+            await FlushAsync();
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or OperationCanceledException) { }
+
         _lock.Dispose();
     }
 
-    public record PlaylistEntry(string FileName, float Duration)
+    private record struct PlaylistEntry(string FileName, float Duration)
     {
         public float Duration { get; set; } = Duration;
 
-        public bool IsDiscontinuity => FileName == "#EXT-X-DISCONTINUITY";
+        public readonly bool IsDiscontinuity => FileName == "#EXT-X-DISCONTINUITY";
         public static readonly PlaylistEntry Discontinuity = new("#EXT-X-DISCONTINUITY", 0f);
     }
 }

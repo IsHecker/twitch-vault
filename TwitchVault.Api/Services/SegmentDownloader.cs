@@ -9,11 +9,14 @@ public class SegmentDownloader(TwitchClient twitchClient)
     private float _currentSegmentDuration = 0;
     private string? _currentFileName = null;
 
+    private PlaylistBuilder _playlistBuilder = null!;
+
+    public void SetPlaylist(PlaylistBuilder playlistBuilder) => _playlistBuilder = playlistBuilder;
+
     public async Task DownloadSegmentsAsync(
         IEnumerable<Segment> segments,
         string streamFolderPath,
         int maxSegmentDuration,
-        PlaylistBuilder playlistBuilder,
         CancellationToken cancellationToken)
     {
         FileStream? fileStream = null;
@@ -24,13 +27,13 @@ public class SegmentDownloader(TwitchClient twitchClient)
             {
                 if (segment.IsInit)
                 {
-                    await DownloadInitSegmentAsync(segment.Url, streamFolderPath, playlistBuilder, cancellationToken);
+                    await DownloadInitSegmentAsync(segment.Url, streamFolderPath, _playlistBuilder, cancellationToken);
                     continue;
                 }
 
                 if (fileStream is null)
                 {
-                    var index = NextSegmentIndex(playlistBuilder.LastSegmentFileName);
+                    var index = GetNextSegmentNumber(_playlistBuilder.LastSegmentFileName);
                     _currentFileName = $"{SegmentPrefix}{index}{GetUrlExtension(segment.Url)}";
                     var segmentPath = Path.Combine(streamFolderPath, _currentFileName);
 
@@ -45,7 +48,7 @@ public class SegmentDownloader(TwitchClient twitchClient)
                 if (_currentSegmentDuration < maxSegmentDuration)
                     continue;
 
-                playlistBuilder.AddSegment(_currentFileName!, _currentSegmentDuration);
+                _playlistBuilder.AddSegment(_currentFileName!, _currentSegmentDuration);
 
                 fileStream?.Dispose();
 
@@ -60,12 +63,12 @@ public class SegmentDownloader(TwitchClient twitchClient)
         }
     }
 
-    public void FlushCurrentSegment(PlaylistBuilder playlistBuilder)
+    public void FlushCurrentSegment()
     {
         if (_currentFileName is null || _currentSegmentDuration <= 0)
             return;
 
-        playlistBuilder.AddSegment(_currentFileName, _currentSegmentDuration);
+        _playlistBuilder.AddSegment(_currentFileName, _currentSegmentDuration);
         _currentSegmentDuration = 0f;
         _currentFileName = null;
     }
@@ -95,7 +98,7 @@ public class SegmentDownloader(TwitchClient twitchClient)
     private static string GetUrlExtension(string url) =>
         Path.GetExtension(new Uri(url).AbsolutePath);
 
-    private static int NextSegmentIndex(string? fileName)
+    private static int GetNextSegmentNumber(string? fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             return 1;

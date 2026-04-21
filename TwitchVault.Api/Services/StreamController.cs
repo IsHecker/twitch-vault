@@ -64,7 +64,7 @@ public class StreamController
         await _sessionsLock.WaitAsync();
         try
         {
-            await ResetStaleStreamsAsync(channel.ChannelId, metadata.TwitchStreamId);
+            await ResetStaleStreamsAsync(channel, metadata.TwitchStreamId);
 
             if (_activeSessions.Values.Any(recorder => recorder.Session.Channel.ChannelId == channel.ChannelId))
                 return;
@@ -196,7 +196,7 @@ public class StreamController
     {
         var segmentDownloader = serviceProvider.GetRequiredService<SegmentDownloader>();
         var twitchClient = serviceProvider.GetRequiredService<TwitchClient>();
-        var sessionLogger = serviceProvider.GetRequiredService<ILogger<StreamRecordingSession>>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 
         return new StreamRecordingSession(
             stream,
@@ -207,7 +207,7 @@ public class StreamController
             twitchClient,
             settingsService.Settings,
             pathsOptions.Value,
-            sessionLogger,
+            loggerFactory,
             applicationLifetime.ApplicationStopping);
     }
 
@@ -227,9 +227,9 @@ public class StreamController
         }
     }
 
-    private async Task ResetStaleStreamsAsync(int channelId, string currentTwitchStreamId)
+    private async Task ResetStaleStreamsAsync(Channel channel, string currentTwitchStreamId)
     {
-        var stale = (await streamRepository.GetByChannelIdAsync(channelId))
+        var stale = (await streamRepository.GetByChannelIdAsync(channel.ChannelId))
             .Where(stream =>
                 stream.Status is not StreamStatus.Finished &&
                 stream.TwitchStreamId != currentTwitchStreamId);
@@ -239,7 +239,7 @@ public class StreamController
             stream.Status = StreamStatus.Finished;
             stream.FinishedAt = DateTime.Now;
             await streamRepository.UpdateAsync(stream);
-            logger.LogInformation("Stream {StreamId} for channel {ChannelId} marked as finished — a new broadcast has started.", stream.TwitchStreamId, channelId);
+            logger.LogInformation("Stream {StreamId} for channel {ChannelName} marked as finished — a new broadcast has started.", stream.TwitchStreamId, channel.Name);
         }
     }
 }

@@ -1,22 +1,23 @@
+using TwitchVault.Api.Common;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
+using TwitchVault.Api.Services;
 
 namespace TwitchVault.Api.Endpoints.Streams;
 
 public class DeleteVod : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapDelete("/api/streams/{id}", async (string id, StreamRepository repo) =>
+        app.MapDelete("/api/streams/{id}", async (string id, StreamRepository repo, StreamController controller) =>
         {
             var stream = await repo.GetByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.Status == StreamStatus.Recording)
-                return Results.BadRequest("Cannot delete a stream that is still recording. Stop it first.");
+            if (stream.Status == StreamStatus.Recording || controller.GetSession(id) is not null)
+                return Results.BadRequest("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
-            if (Directory.Exists(stream.FolderPath))
-                Directory.Delete(stream.FolderPath, recursive: true);
+            await IOUtils.DeleteDirectoryWithRetriesAsync(stream.FolderPath);
 
             await repo.DeleteAsync(id);
             return Results.NoContent();
