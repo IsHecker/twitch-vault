@@ -78,7 +78,6 @@ public sealed class PlaylistBuilder : IAsyncDisposable
         }
 
         builder.AddDiscontinuity();
-        // builder._isEnded = lines.Any(l => l == "#EXT-X-ENDLIST");
 
         return builder;
     }

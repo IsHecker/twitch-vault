@@ -4,7 +4,7 @@ public class EventBus
 {
     private readonly Dictionary<Type, List<Delegate>> _handlers = [];
 
-    public void Subscribe<TEvent>(Action<TEvent> handler)
+    public void Subscribe<TEvent>(Func<TEvent, Task> handler)
     {
         var type = typeof(TEvent);
         if (!_handlers.TryGetValue(type, out var handlers))
@@ -12,14 +12,12 @@ public class EventBus
         handlers.Add(handler);
     }
 
-    public void Publish<TEvent>(TEvent e)
+    public async Task PublishAsync<TEvent>(TEvent e)
     {
         if (!_handlers.TryGetValue(typeof(TEvent), out var handlers)) return;
         foreach (var handler in handlers)
-            ((Action<TEvent>)handler)(e);
+        {
+            await ((Func<TEvent, Task>)handler)(e);
+        }
     }
 }
-
-public record QualityChangedEvent(string ChannelName, int QualityRank);
-public record ChannelAddedEvent(int ChannelId);
-public record ChannelRemovedEvent(int ChannelId);

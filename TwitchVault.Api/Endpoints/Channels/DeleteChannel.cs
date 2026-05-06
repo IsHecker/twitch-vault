@@ -1,22 +1,47 @@
+using TwitchVault.Api.Common;
 using TwitchVault.Api.Repositories;
+using TwitchVault.Api.Services;
+using TwitchVault.Api.Twitch.TwitchEventSub;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
 public class DeleteChannel : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapDelete("/api/channels/{id}", async (int id, ChannelRepository repo, StreamRepository streamRepository) =>
+        app.MapDelete("/api/channels/{channelId}", async (
+            string channelId,
+            TwitchSubscriptionService twitchSubscription,
+            ChannelRepository repo,
+            StreamController streamController,
+            StreamRepository streamRepository) =>
         {
-            var channel = await repo.GetByIdAsync(id);
+            var channel = await repo.GetByIdAsync(channelId);
 
             if (channel is null)
                 return Results.NotFound();
 
-            await repo.DeleteAsync(id);
-            foreach (var stream in await streamRepository.GetByChannelIdAsync(id))
+            var streams = await streamRepository.GetStreamsByChannelIdAsync(channelId);
+
+            if (channel.IsLive)
             {
-                await streamRepository.DeleteAsync(stream.TwitchStreamId);
+                var stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
+                if (stream is not null)
+                {
+                    await streamController.ToggleStreamDeletionAsync(stream.TwitchStreamId, true);
+                    await streamController.FinishRecordingAsync(stream.TwitchStreamId);
+                }
             }
+
+            foreach (var stream in streams)
+            {
+                await streamRepository.DeleteStreamAsync(stream.TwitchStreamId);
+                await IOUtils.DeleteDirectoryWithRetriesAsync(stream.FolderPath);
+            }
+
+            await repo.DeleteAsync(channelId);
+
+            _ = twitchSubscription.UnsubscribeChannelAsync(channel, default);
+
             return Results.NoContent();
         })
         .WithName(nameof(DeleteChannel))

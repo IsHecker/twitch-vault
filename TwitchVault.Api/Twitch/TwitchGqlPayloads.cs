@@ -2,56 +2,34 @@ namespace TwitchVault.Api.Twitch;
 
 internal static class TwitchGqlPayloads
 {
-    public static object[] StreamMetadata(string channel) =>
-    [
-        new
-        {
-            operationName = "UseLive",
-            variables = new { channelLogin = channel },
-            extensions = new
-            {
-                persistedQuery = new
-                {
-                    version = 1,
-                    sha256Hash = "639d5f11bfb8bf3053b424d9ef650d04c4ebb7d94711d644afb08fe9a0fad5d9"
+    public static object StreamMetadata(string channel) => new
+    {
+        OperationName = "GetChannelMetadata",
+        Query = """
+                query GetChannelMetadata($login: String!) {
+                    user(login: $login) {
+                        lastBroadcast {
+                            title
+                            game {
+                                name
+                            }
+                        }
+                        stream {
+                            id
+                            title
+                            previewImageURL(width: 1920, height: 1080)
+                            game {
+                                name
+                            }
+                        }
+                    }
                 }
-            }
-        },
-        new
+                """,
+        Variables = new
         {
-            operationName = "VideoPreviewOverlay",
-            variables = new { login = channel },
-            extensions = new
-            {
-                persistedQuery = new
-                {
-                    version = 1,
-                    sha256Hash = "9515480dee68a77e667cb19de634739d33f243572b007e98e67184b1a5d8369f"
-                }
-            }
-        },
-        new
-        {
-            operationName = "NielsenContentMetadata",
-            variables = new
-            {
-                isCollectionContent = false,
-                isLiveContent = true,
-                isVODContent = false,
-                collectionID = "",
-                login = channel,
-                vodID = ""
-            },
-            extensions = new
-            {
-                persistedQuery = new
-                {
-                    version = 1,
-                    sha256Hash = "2dbf505ee929438369e68e72319d1106bb3c142e295332fac157c90638968586"
-                }
-            }
+            login = channel
         }
-    ];
+    };
 
     public static object PlaybackToken(string channel) => new
     {
@@ -84,6 +62,27 @@ internal static class TwitchGqlPayloads
             Login = channel,
             PlayerType = "site",
             Platform = "web"
+        }
+    };
+
+    public static object GetStreamVOD(string channel) => new
+    {
+        OperationName = "GetStreamVOD",
+        Query = """
+                query GetStreamVOD($login: String) {
+                  user(login: $login) {
+                    stream {
+                      id
+                      archiveVideo {
+                        id
+                      }
+                    }
+                  }
+                }
+                """,
+        Variables = new
+        {
+            login = channel
         }
     };
 
@@ -120,6 +119,22 @@ internal static class TwitchGqlPayloads
         Variables = new
         {
             videoID = vodId
+        }
+    };
+
+    public static object GetChannelId(string channel) => new
+    {
+        OperationName = "GetUserId",
+        Query = """
+                query GetUserId($login: String!) {
+                    user(login: $login) {
+                        id
+                    }
+                }
+                """,
+        Variables = new
+        {
+            login = channel
         }
     };
 }

@@ -17,11 +17,7 @@ public sealed class TwitchClient(
         using var response = await SendGqlRequestAsync(payload, cancellationToken);
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
 
-        var root = document!.RootElement;
-
-        var metadata = ParseStreamMetadata(channel, root);
-
-        return metadata.HasValue ? metadata.Value : null;
+        return ParseStreamMetadata(document!.RootElement);
     }
 
     public async Task<string> GetMasterPlaylistAsync(
@@ -60,12 +56,28 @@ public sealed class TwitchClient(
         return await response.Content.ReadAsStreamAsync(cancellationToken);
     }
 
-    public async Task<string?> GetVODThumbnailUrlAsync(string channel, CancellationToken cancellationToken)
+    public async Task<(string? StreamId, string? VodId)> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken)
     {
-        var vodId = await GetLatestVODIdAsync(channel, cancellationToken);
-        if (string.IsNullOrEmpty(vodId))
-            return null;
+        var payload = TwitchGqlPayloads.GetStreamVOD(channel);
+        using var response = await SendGqlRequestAsync(payload, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return (null, null);
 
+        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+
+        var stream = document!.RootElement.GetProperty("data").GetProperty("user").GetProperty("stream");
+        if (stream.ValueKind == JsonValueKind.Null)
+            return (null, null);
+
+        var streamId = stream.GetProperty("id").GetString();
+        var archiveVideo = stream.GetProperty("archiveVideo");
+        var vodId = archiveVideo.ValueKind != JsonValueKind.Null ? archiveVideo.GetProperty("id").GetString() : null;
+
+        return (streamId, vodId);
+    }
+
+    public async Task<string?> GetVODThumbnailUrlAsync(string vodId, CancellationToken cancellationToken)
+    {
         var payload = TwitchGqlPayloads.VideoMetadata(vodId);
         using var response = await SendGqlRequestAsync(payload, cancellationToken);
         if (!response.IsSuccessStatusCode)
@@ -81,24 +93,17 @@ public sealed class TwitchClient(
         return url is null || url.Contains("404_preview") ? null : url;
     }
 
-    private async Task<string?> GetLatestVODIdAsync(string channel, CancellationToken cancellationToken)
+    public async Task<string?> GetChannelIdAsync(string channel, CancellationToken cancellationToken)
     {
-        var payload = TwitchGqlPayloads.GetLatestVOD(channel);
+        var payload = TwitchGqlPayloads.GetChannelId(channel);
         using var response = await SendGqlRequestAsync(payload, cancellationToken);
         if (!response.IsSuccessStatusCode)
             return null;
 
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-
         var user = document!.RootElement.GetProperty("data").GetProperty("user");
-        if (user.ValueKind == JsonValueKind.Null)
-            return null;
 
-        var edges = user.GetProperty("videos").GetProperty("edges");
-        if (edges.GetArrayLength() == 0)
-            return null;
-
-        return edges[0].GetProperty("node").GetProperty("id").GetString();
+        return user.ValueKind == JsonValueKind.Null ? null : user.GetProperty("id").GetString();
     }
 
     private Task<HttpResponseMessage> SendGqlRequestAsync(object payload, CancellationToken cancellationToken)
@@ -131,30 +136,34 @@ public sealed class TwitchClient(
         $"&reassignments_supported=true&sig={token.Signature}&supported_codecs=av1,h265,h264" +
         $"&token={token.Token}&transcode_mode=cbr_v1";
 
-    private static StreamMetadata? ParseStreamMetadata(string channel, JsonElement root)
+    private static StreamMetadata? ParseStreamMetadata(JsonElement root)
     {
-        var useLiveData = root[0].GetProperty("data").GetProperty("user");
-        var videoPreviewData = root[1].GetProperty("data").GetProperty("user");
-        var nielsenData = root[2].GetProperty("data").GetProperty("user");
+        var data = root.GetProperty("data");
+        var user = data.GetProperty("user");
+        
+        var hasStream = user.TryGetProperty("stream", out var stream) && stream.ValueKind != JsonValueKind.Null;
+        var hasLastBroadcast = user.TryGetProperty("lastBroadcast", out var lastBroadcast) && lastBroadcast.ValueKind != JsonValueKind.Null;
 
-        var isLive = useLiveData.GetProperty("stream").ValueKind == JsonValueKind.Object;
-        if (!isLive)
+        if (!hasStream && !hasLastBroadcast)
             return null;
 
-        var twitchStreamId = useLiveData.GetProperty("stream").GetProperty("id").GetString()!;
-        var previewImageUrl = videoPreviewData.GetProperty("stream").GetProperty("previewImageURL").GetString()!;
-        var streamTitle = nielsenData.GetProperty("broadcastSettings").GetProperty("title").GetString()!;
-        var gameDisplayName = nielsenData
-            .GetProperty("stream")
-            .GetProperty("game")
-            .GetProperty("displayName")
-            .GetString()!;
+        var streamId = hasStream ? stream.GetProperty("id").GetString() : string.Empty;
+        var previewImageUrl = hasStream && stream.TryGetProperty("previewImageURL", out var previewUrl) 
+            ? previewUrl.GetString() 
+            : string.Empty;
+
+        var metadataSource = hasLastBroadcast ? lastBroadcast : stream;
+        var streamTitle = metadataSource.GetProperty("title").GetString() ?? string.Empty;
+
+        var game = metadataSource.GetProperty("game");
+        var categoryName = game.ValueKind != JsonValueKind.Null
+            ? game.GetProperty("name").GetString() ?? "Unknown"
+            : "Unknown";
 
         return new StreamMetadata(
-            twitchStreamId,
-            channel,
-            previewImageUrl,
+            streamId ?? string.Empty,
+            previewImageUrl ?? string.Empty,
             streamTitle,
-            gameDisplayName);
+            categoryName);
     }
 }

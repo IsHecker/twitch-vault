@@ -2,7 +2,7 @@ using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Services;
 
-public record struct Segment(string Url, float DurationSeconds, int SequenceNumber = 0)
+public record struct Segment(string Url, float DurationSeconds)
 {
     public readonly bool IsInit => DurationSeconds < 0;
 }

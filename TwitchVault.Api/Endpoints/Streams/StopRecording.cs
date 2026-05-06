@@ -9,11 +9,11 @@ public class StopRecording : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapPatch("/api/streams/{id}/stop", async (string id, StreamRepository repo, StreamController controller) =>
         {
-            var stream = await repo.GetByIdAsync(id);
+            var stream = await repo.GetStreamByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.Status != StreamStatus.Recording)
+            if (stream.StreamSegment.Status != StreamStatus.Recording)
                 return Results.BadRequest("Stream is not currently recording.");
 
             await controller.StopRecordingAsync(id);

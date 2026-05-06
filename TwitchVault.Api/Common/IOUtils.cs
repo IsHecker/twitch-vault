@@ -9,6 +9,7 @@ public static class IOUtils
     {
         if (!Directory.Exists(path))
             return;
+
         for (int i = 0; i < MaxRetries; i++)
         {
             try

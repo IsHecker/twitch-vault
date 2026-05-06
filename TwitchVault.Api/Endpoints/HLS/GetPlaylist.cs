@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
 
@@ -8,11 +9,12 @@ public class GetPlaylist : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/hls/{streamId}/playlist.m3u8", async (
             string streamId,
+            [FromQuery] int? segment,
             StreamRepository streamRepo,
             ChannelRepository channelRepo,
             IWebHostEnvironment env) =>
         {
-            var stream = await streamRepo.GetByIdAsync(streamId);
+            var stream = await streamRepo.GetStreamByIdAsync(streamId);
             if (stream is null)
             {
                 var channel = await channelRepo.GetByNameAsync(streamId);
@@ -20,15 +22,24 @@ public class GetPlaylist : IEndpoint
                 if (channel is null || !channel.IsLive)
                     return Results.NotFound();
 
-                var streams = await streamRepo.GetByChannelIdAsync(channel.ChannelId);
-                stream = streams.OrderByDescending(s => s.StartedAt)
-                    .FirstOrDefault(s => s.Status == StreamStatus.Recording);
+                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
+                stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
 
-                if (stream is null)
+                if (stream is null || stream.StreamSegment.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
 
-            var playlistPath = Path.Combine(env.ContentRootPath, stream.FolderPath, "playlist.m3u8");
+            StreamSegment? targetSegment = stream.StreamSegment;
+            if (segment.HasValue && segment != targetSegment.SegmentNumber)
+            {
+                var segments = await streamRepo.GetSegmentsByStreamIdAsync(streamId);
+                targetSegment = segments.FirstOrDefault(s => s.SegmentNumber == segment.Value);
+            }
+
+            if (targetSegment == null)
+                return Results.NotFound();
+
+            var playlistPath = Path.Combine(env.ContentRootPath, targetSegment.FolderPath, "playlist.m3u8");
 
             if (!File.Exists(playlistPath))
                 return Results.NotFound();

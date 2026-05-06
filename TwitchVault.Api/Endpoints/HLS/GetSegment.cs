@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
 
@@ -6,9 +7,17 @@ namespace TwitchVault.Api.Endpoints.HLS;
 public class GetSegment : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/hls/{streamId}/segments/{segment}", async (string streamId, string segment, StreamRepository streamRepo, ChannelRepository channelRepo, IWebHostEnvironment env) =>
+        app.MapGet("/hls/{streamId}/segments/{segmentName}", async (
+            string streamId,
+            string segmentName,
+            [FromQuery] int? segment,
+            StreamRepository streamRepo,
+            ChannelRepository channelRepo,
+            IWebHostEnvironment env) =>
         {
-            var stream = await streamRepo.GetByIdAsync(streamId);
+            /*
+            
+            var stream = await streamRepo.GetStreamByIdAsync(streamId);
             if (stream is null)
             {
                 var channel = await channelRepo.GetByNameAsync(streamId);
@@ -16,16 +25,60 @@ public class GetSegment : IEndpoint
                 if (channel is null || !channel.IsLive)
                     return Results.NotFound();
 
-                var streams = await streamRepo.GetByChannelIdAsync(channel.ChannelId);
-                stream = streams.OrderByDescending(s => s.StartedAt)
-                    .FirstOrDefault(s => s.Status == StreamStatus.Recording);
+                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
+                stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
 
-                if (stream is null)
+                if (stream is null || stream.StreamSegment.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
 
-            var safeFileName = Path.GetFileName(segment);
-            var filePath = Path.Combine(env.ContentRootPath, stream.FolderPath, safeFileName);
+            StreamSegment? targetSegment = stream.StreamSegment;
+
+            if (segment.HasValue && segment != targetSegment.SegmentNumber)
+            {
+                // 1. User asked for a specific chapter/segment
+                var segments = await streamRepo.GetSegmentsByStreamIdAsync(streamId);
+                targetSegment = segments.FirstOrDefault(s => s.SegmentNumber == segment.Value);
+            }
+
+            if (targetSegment == null)
+                return Results.NotFound();
+
+            var playlistPath = Path.Combine(env.ContentRootPath, targetSegment.FolderPath, "playlist.m3u8");
+
+            if (!File.Exists(playlistPath))
+                return Results.NotFound();
+
+            return Results.File(playlistPath, "application/vnd.apple.mpegurl", enableRangeProcessing: true);
+            
+            */
+            var stream = await streamRepo.GetStreamByIdAsync(streamId);
+            if (stream is null)
+            {
+                var channel = await channelRepo.GetByNameAsync(streamId);
+
+                if (channel is null || !channel.IsLive)
+                    return Results.NotFound();
+
+                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
+                stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
+
+                if (stream is null || stream.StreamSegment.Status != StreamStatus.Recording)
+                    return Results.NotFound();
+            }
+
+            StreamSegment? targetSegment = stream.StreamSegment;
+            if (segment.HasValue && segment != targetSegment.SegmentNumber)
+            {
+                var segments = await streamRepo.GetSegmentsByStreamIdAsync(streamId);
+                targetSegment = segments.FirstOrDefault(s => s.SegmentNumber == segment.Value);
+            }
+
+            if (targetSegment == null)
+                return Results.NotFound();
+
+            var safeFileName = Path.GetFileName(segmentName);
+            var filePath = Path.Combine(env.ContentRootPath, targetSegment.FolderPath, safeFileName);
 
             if (!File.Exists(filePath))
                 return Results.NotFound();

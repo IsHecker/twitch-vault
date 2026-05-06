@@ -6,6 +6,7 @@ using TwitchVault.Api.Events;
 using TwitchVault.Api.Repositories;
 using TwitchVault.Api.Services;
 using TwitchVault.Api.Twitch;
+using TwitchVault.Api.Twitch.TwitchEventSub;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -26,12 +27,17 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ChannelRepository>();
         services.AddSingleton<StreamRepository>();
+        services.AddSingleton<StreamService>();
 
         services.AddTransient<SegmentDownloader>();
 
         services.AddSingleton<StreamController>();
+        services.AddSingleton<TwitchWebSocketClient>();
+        services.AddSingleton<TwitchSubscriptionService>();
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
+        services.ConfigureOptions<TwitchEventSubJobConfiguration>();
+
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 

@@ -5,10 +5,10 @@ namespace TwitchVault.Api.Endpoints.Channels;
 public class UpdateChannelQuality : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPut("/api/channels/{channelId:int}/quality", async (int channelId, Request request, ChannelRepository repo) =>
+        app.MapPut("/api/channels/{channelId}/quality", async (string channelId, Request request, ChannelRepository repo) =>
         {
             var channel = await repo.GetByIdAsync(channelId);
-            if (channel is null) 
+            if (channel is null)
                 return Results.NotFound();
 
             channel.QualityRank = request.QualityRank;

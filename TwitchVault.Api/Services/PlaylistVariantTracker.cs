@@ -54,12 +54,9 @@ public sealed class PlaylistVariantTracker(
 
         _isStabilized = true;
 
-        logger.LogWarning(
-            "Master playlist variants stabilized for {Channel}. Total variants: {Count}",
-            channelName, _playlistVariants.Length);
-
-        for (var i = 0; i < _playlistVariants.Length; i++)
-            logger.LogInformation("Variant Rank {Rank}: {Bandwidth}", i + 1, _playlistVariants[i].Bandwidth);
+        logger.LogInformation(
+            "Master playlist stabilized with {Count} quality variants. (Source: {Bandwidth} bps)",
+            _playlistVariants.Length, _playlistVariants[^1].Bandwidth);
     }
 
     private void UpdateStabilityTracking(MediaPlaylist[] fetched)

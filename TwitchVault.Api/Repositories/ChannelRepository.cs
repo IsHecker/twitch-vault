@@ -9,9 +9,9 @@ public class ChannelRepository(JsonDatabase db)
         return (await db.ReadAsync()).Channels;
     }
 
-    public async Task<Channel?> GetByIdAsync(int id)
+    public async Task<Channel?> GetByIdAsync(string channelId)
     {
-        return (await GetAllAsync()).FirstOrDefault(c => c.ChannelId == id);
+        return (await GetAllAsync()).FirstOrDefault(c => c.ChannelId == channelId);
     }
 
     public async Task<Channel?> GetByNameAsync(string name)
@@ -36,10 +36,10 @@ public class ChannelRepository(JsonDatabase db)
                 data.Channels[index] = channel;
         });
 
-    public Task DeleteAsync(int id) =>
-        db.WriteAsync(data => data.Channels.RemoveAll(c => c.ChannelId == id));
+    public Task DeleteAsync(string channelId) =>
+        db.WriteAsync(data => data.Channels.RemoveAll(c => c.ChannelId == channelId));
 
-    public Task SetLiveAsync(int channelId, bool isLive) =>
+    public Task SetLiveAsync(string channelId, bool isLive) =>
         db.WriteAsync(data =>
         {
             var channel = data.Channels.FirstOrDefault(c => c.ChannelId == channelId);
@@ -48,7 +48,7 @@ public class ChannelRepository(JsonDatabase db)
             channel.IsLive = isLive;
         });
 
-    public Task UpdateLastStreamedAtAsync(int channelId, DateTime lastStreamedAt) =>
+    public Task UpdateLastStreamedAtAsync(string channelId, DateTime lastStreamedAt) =>
         db.WriteAsync(data =>
         {
             var channel = data.Channels.FirstOrDefault(c => c.ChannelId == channelId);
