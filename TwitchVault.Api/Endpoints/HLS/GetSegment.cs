@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
@@ -11,6 +12,7 @@ public class GetSegment : IEndpoint
             string streamId,
             string segmentName,
             [FromQuery] int? segment,
+            [FromQuery] bool? audioOnly,
             StreamRepository streamRepo,
             ChannelRepository channelRepo,
             IWebHostEnvironment env) =>
@@ -84,6 +86,24 @@ public class GetSegment : IEndpoint
                 return Results.NotFound();
 
             return Results.File(filePath, GetContentType(safeFileName), enableRangeProcessing: true);
+
+            // var ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
+            // var arguments = $"-i \"{filePath}\" -vn -acodec copy -f adts -";
+
+            // var startInfo = new ProcessStartInfo
+            // {
+            //     FileName = ffmpegPath,
+            //     Arguments = arguments,
+            //     RedirectStandardOutput = true,
+            //     UseShellExecute = false,
+            //     CreateNoWindow = true
+            // };
+
+            // var process = Process.Start(startInfo);
+            // if (process == null)
+            //     return Results.StatusCode(500);
+
+            // return Results.Stream(process.StandardOutput.BaseStream, "audio/aac");
         })
         .WithName(nameof(GetSegment))
         .WithTags("HLS")

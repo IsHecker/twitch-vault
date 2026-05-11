@@ -113,26 +113,35 @@ public sealed class TwitchClient(
             Content = JsonContent.Create(payload)
         };
 
-        request.Headers.Add("Client-Id", Options.ClientId);
-        request.Headers.Add("Authorization", Options.Authorization);
+        request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
+        request.Headers.TryAddWithoutValidation("Authorization", Options.Authorization);
+        request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
+        request.Headers.TryAddWithoutValidation("Origin", "https://www.twitch.tv");
 
-        request.Headers.Add("Accept", "*/*");
-        request.Headers.Add("Accept-Language", "en-US");
-        request.Headers.Add("Client-Session-Id", "7c9e031af8864dcb");
-        request.Headers.Add("Client-Version", "bb20717f-bafe-4854-92db-64e522efc13d");
-        request.Headers.Add("X-Device-Id", "hr3zoVzUji7t6bVuXT4784lLs1cUJR4x");
-        request.Headers.Add("Referer", "https://www.twitch.tv/");
+        request.Headers.TryAddWithoutValidation("Accept", "*/*");
+        request.Headers.TryAddWithoutValidation("Accept-Language", "en-US");
+        request.Headers.TryAddWithoutValidation("Client-Session-Id", "7c9e031af8864dcb");
+        request.Headers.TryAddWithoutValidation("Client-Version", "aa5594d1-b8dc-4533-8262-11a5a0e9955f");
+        request.Headers.TryAddWithoutValidation("X-Device-Id", "hr3zoVzUji7t6bVuXT4784lLs1cUJR4x");
+        request.Headers.TryAddWithoutValidation("Referer", "https://www.twitch.tv/");
+
+        request.Headers.TryAddWithoutValidation("Authority", "gql.twitch.tv");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua", "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Mobile", "?0");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Platform", "\"Windows\"");
+        request.Headers.TryAddWithoutValidation("sec-fetch-dest", "empty");
+        request.Headers.TryAddWithoutValidation("sec-gpc", "1");
 
         return httpClient.SendAsync(request, cancellationToken);
     }
-
+    //https://usher.ttvnw.net/api/v2/channel/hls/pisty.m3u8?acmb=eyJBcHBWZXJzaW9uIjoiYWE1NTk0ZDEtYjhkYy00NTMzLTgyNjItMTFhNWEwZTk5NTVmIiwiQ2xpZW50QXBwIjoidHdpbGlnaHQifQ%3D%3D&allow_source=true&browser_family=chrome&browser_version=147.0&cdm=wv&enable_score=true&fast_bread=true&include_unavailable=true&lang=en&os_name=Windows&os_version=NT 10.0&p=8343545&platform=web&play_session_id=f4261c511c1b49e9b94c023814baebde&player_backend=mediaplayer&player_version=1.52.0-rc.3&playlist_include_framerate=true&reassignments_supported=true&sig=a62e5cea49e309ab72bf5905a283bea284d9e23f&supported_codecs=av1,h265,h264&token={"adblock"%3Afalse%2C"authorization"%3A{"forbidden"%3Afalse%2C"reason"%3A""}%2C"blackout_enabled"%3Afalse%2C"channel"%3A"pisty"%2C"channel_id"%3A54507525%2C"chansub"%3A{"restricted_bitrates"%3A%5B%5D%2C"view_until"%3A1924905600}%2C"ci_gb"%3Afalse%2C"geoblock_reason"%3A""%2C"device_id"%3Anull%2C"expires"%3A1778117079%2C"extended_history_allowed"%3Afalse%2C"game"%3A""%2C"hide_ads"%3Afalse%2C"https_required"%3Atrue%2C"mature"%3Afalse%2C"notification_id"%3Anull%2C"partner"%3Afalse%2C"platform"%3A"web"%2C"player_type"%3A"site"%2C"private"%3A{"allowed_to_view"%3Atrue}%2C"privileged"%3Afalse%2C"role"%3A""%2C"server_ads"%3Atrue%2C"show_ads"%3Atrue%2C"subscriber"%3Afalse%2C"turbo"%3Afalse%2C"user_id"%3A763880187%2C"user_ip"%3A"41.35.177.35"%2C"version"%3A3%2C"maximum_resolution"%3A"FULL_HD"%2C"maximum_video_bitrate_kbps"%3A12500%2C"maximum_resolution_reasons"%3A{"QUAD_HD"%3A%5B"AUTHZ_GEO"%5D%2C"ULTRA_HD"%3A%5B"AUTHZ_GEO"%5D}%2C"maximum_video_bitrate_kbps_reasons"%3A%5B"AUTHZ_DISALLOWED_BITRATE"%5D}&transcode_mode=cbr_v1
     private static string BuildMasterPlaylistUrl(string channel, PlaybackToken token) =>
         $"https://usher.ttvnw.net/api/v2/channel/hls/{channel}.m3u8" +
-        $"?acmb=eyJBcHBWZXJzaW9uIjoiYmIyMDcxN2YtYmFmZS00ODU0LTkyZGItNjRlNTIyZWZjMTNkIiwiQ2xpZW50QXBwIjoid2ViIn0%3D" +
-        $"&allow_source=true&browser_family=chrome&browser_version=146.0&cdm=wv&enable_score=true" +
-        $"&fast_bread=true&include_unavailable=true&lang=en&multigroup_video=false&os_name=Windows" +
-        $"&os_version=NT%2010.0&p=5517154&platform=web&play_session_id=0e7f21f7fdff40c09bd7c7865ed8beff" +
-        $"&player_backend=mediaplayer&player_version=1.50.0-rc.4&playlist_include_framerate=true" +
+        $"?acmb=eyJBcHBWZXJzaW9uIjoiYWE1NTk0ZDEtYjhkYy00NTMzLTgyNjItMTFhNWEwZTk5NTVmIiwiQ2xpZW50QXBwIjoidHdpbGlnaHQifQ%3D%3D" +
+        $"&allow_source=true&browser_family=chrome&browser_version=147.0&cdm=wv&enable_score=true" +
+        $"&fast_bread=true&include_unavailable=true&lang=en&os_name=Windows" +
+        $"&os_version=NT%2010.0&p=8343545&platform=pwa&play_session_id=f4261c511c1b49e9b94c023814baebde" +
+        $"&player_backend=mediaplayer&player_version=1.52.0-rc.3&playlist_include_framerate=true" +
         $"&reassignments_supported=true&sig={token.Signature}&supported_codecs=av1,h265,h264" +
         $"&token={token.Token}&transcode_mode=cbr_v1";
 
@@ -140,7 +149,7 @@ public sealed class TwitchClient(
     {
         var data = root.GetProperty("data");
         var user = data.GetProperty("user");
-        
+
         var hasStream = user.TryGetProperty("stream", out var stream) && stream.ValueKind != JsonValueKind.Null;
         var hasLastBroadcast = user.TryGetProperty("lastBroadcast", out var lastBroadcast) && lastBroadcast.ValueKind != JsonValueKind.Null;
 
@@ -148,8 +157,8 @@ public sealed class TwitchClient(
             return null;
 
         var streamId = hasStream ? stream.GetProperty("id").GetString() : string.Empty;
-        var previewImageUrl = hasStream && stream.TryGetProperty("previewImageURL", out var previewUrl) 
-            ? previewUrl.GetString() 
+        var previewImageUrl = hasStream && stream.TryGetProperty("previewImageURL", out var previewUrl)
+            ? previewUrl.GetString()
             : string.Empty;
 
         var metadataSource = hasLastBroadcast ? lastBroadcast : stream;

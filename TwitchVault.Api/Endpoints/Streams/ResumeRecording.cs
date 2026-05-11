@@ -38,7 +38,7 @@ public class ResumeRecording : IEndpoint
             if (metadata.Value.TwitchStreamId != stream.TwitchStreamId)
                 return Results.BadRequest("A different stream is now live on this channel.");
 
-            await streamController.ResumeSessionAsync(stream, channel);
+            await streamController.ResumeStreamAsync(stream, channel);
             return Results.NoContent();
         })
         .WithName(nameof(ResumeRecording))

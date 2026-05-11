@@ -1,4 +1,3 @@
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
@@ -6,73 +5,71 @@ using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Services;
 
-public sealed class StreamRecordingSession(
-    Models.Stream stream,
-    StreamSegment streamSegment,
-    Channel channel,
-    SegmentDownloader segmentDownloader,
-    StreamRepository streamRepository,
-    StreamService streamService,
-    ChannelRepository channelRepository,
-    TwitchClient twitchClient,
-    AppSettings settings,
-    PathsOptions pathsOptions,
-    ILoggerFactory loggerFactory,
-    CancellationToken parentCancellationToken) : IAsyncDisposable
+public sealed class StreamRecordingSession : IAsyncDisposable
 {
-    public Channel Channel => channel;
+    private abstract record SessionEndReason;
+    private record StreamEnded : SessionEndReason;
+    private record StreamSplit : SessionEndReason;
+    private record StreamStopped : SessionEndReason;
+    private record StreamError(Exception Ex) : SessionEndReason;
 
-    private CancellationTokenSource _cts = null!;
-    private PlaylistBuilder _playlistBuilder = null!;
-    private PlaylistVariantTracker _variantTracker = null!;
-    private ThumbnailManager _thumbnailManager = null!;
-    private ILogger<StreamRecordingSession> logger = null!;
+
+    private readonly Models.Stream _stream;
+    private readonly StreamSegment _streamSegment;
+    private readonly Channel _channel;
+    private readonly SegmentDownloader _segmentDownloader;
+    private readonly StreamRepository _streamRepository;
+    private readonly StreamService _streamService;
+    private readonly ChannelRepository _channelRepository;
+    private readonly TwitchClient _twitchClient;
+    private readonly AppSettings _settings;
+    private readonly PathsOptions _pathsOptions;
+    private readonly ILogger<StreamRecordingSession> _logger;
+
+    private readonly CancellationTokenSource _cts;
+    private readonly PlaylistBuilder _playlistBuilder;
+    private readonly PlaylistVariantTracker _variantTracker;
+    private readonly ThumbnailManager _thumbnailManager;
+
+    private SessionEndReason? _finalizeReason;
     private bool _disposed;
-    private bool _forcedFinish = false;
-    private string? _finalizeReason;
 
-    public async Task StartAsync()
+    public Channel Channel => _channel;
+
+    // -------------------------------------------------------------------------
+    // Construction — use the static factory so async init stays off the
+    // constructor, but all fields are set exactly once and are readonly.
+    // -------------------------------------------------------------------------
+
+    private StreamRecordingSession(
+        Models.Stream stream,
+        StreamSegment streamSegment,
+        Channel channel,
+        SegmentDownloader segmentDownloader,
+        StreamRepository streamRepository,
+        StreamService streamService,
+        ChannelRepository channelRepository,
+        TwitchClient twitchClient,
+        AppSettings settings,
+        PathsOptions pathsOptions,
+        PlaylistBuilder playlistBuilder,
+        ILoggerFactory loggerFactory,
+        CancellationToken parentCancellationToken)
     {
-        await InitializeAsync();
-        logger.LogInformation("Recording started: {Title} ({Category})",
-            streamSegment.Title, streamSegment.CategoryName);
-        await RecordStreamAsync(_cts.Token);
-    }
-
-    public async Task StopAsync()
-    {
-        _finalizeReason = "Recording manually stopped.";
-        streamSegment.MarkAsStopped();
-        await streamRepository.UpdateSegmentAsync(streamSegment);
-        await _cts.CancelAsync();
-    }
-
-    public async Task FinishAsync()
-    {
-        _finalizeReason = $"Segment '{streamSegment.SegmentNumber}' finished (Metadata split).";
-        _forcedFinish = true;
-        await _cts.CancelAsync();
-    }
-
-    public async Task ToggleStreamDeletion(bool markForDeletion)
-    {
-        streamSegment.MarkForDeletion = markForDeletion;
-        await streamRepository.UpdateSegmentAsync(streamSegment);
-    }
-
-
-    private async Task InitializeAsync()
-    {
-        Directory.CreateDirectory(streamSegment.FolderPath);
+        _stream = stream;
+        _streamSegment = streamSegment;
+        _channel = channel;
+        _segmentDownloader = segmentDownloader;
+        _streamRepository = streamRepository;
+        _streamService = streamService;
+        _channelRepository = channelRepository;
+        _twitchClient = twitchClient;
+        _settings = settings;
+        _pathsOptions = pathsOptions;
+        _playlistBuilder = playlistBuilder;
+        _logger = loggerFactory.CreateLogger<StreamRecordingSession>();
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
-        logger = loggerFactory.CreateLogger<StreamRecordingSession>();
-
-        _playlistBuilder = await PlaylistBuilder.LoadOrCreateAsync(
-            streamSegment.FolderPath,
-            settings.Vault.PlaylistFlushIntervalInSec, _cts.Token);
-
-        segmentDownloader.SetPlaylist(_playlistBuilder);
 
         _variantTracker = new PlaylistVariantTracker(
             channel.Name,
@@ -85,111 +82,166 @@ public sealed class StreamRecordingSession(
             streamRepository,
             twitchClient,
             loggerFactory.CreateLogger<ThumbnailManager>());
+    }
+
+    public static async Task<StreamRecordingSession> CreateAsync(
+        Models.Stream stream,
+        StreamSegment streamSegment,
+        Channel channel,
+        SegmentDownloader segmentDownloader,
+        StreamRepository streamRepository,
+        StreamService streamService,
+        ChannelRepository channelRepository,
+        TwitchClient twitchClient,
+        AppSettings settings,
+        PathsOptions pathsOptions,
+        ILoggerFactory loggerFactory,
+        CancellationToken parentCancellationToken)
+    {
+        Directory.CreateDirectory(streamSegment.FolderPath);
+
+        var playlistBuilder = await PlaylistBuilder.LoadOrCreateAsync(
+            streamSegment.FolderPath,
+            settings.Vault.PlaylistFlushIntervalInSec,
+            parentCancellationToken);
+
+        var session = new StreamRecordingSession(
+            stream, streamSegment, channel,
+            segmentDownloader, streamRepository, streamService,
+            channelRepository, twitchClient, settings, pathsOptions,
+            playlistBuilder, loggerFactory, parentCancellationToken);
+
+        segmentDownloader.SetPlaylist(playlistBuilder);
 
         streamSegment.ThumbnailUrl = BuildLiveThumbnailUrl(channel.Name);
         await streamRepository.UpdateSegmentAsync(streamSegment);
+
+        return session;
     }
 
-    private async Task RecordStreamAsync(CancellationToken cancellationToken)
+    public async Task StartAsync()
     {
+        _logger.LogInformation("Recording started: {Title} ({Category})",
+            _streamSegment.Title, _streamSegment.CategoryName);
+
         try
         {
-            int consecutiveErrors = 0;
-            int retriesRemaining = settings.Vault.MaxConsecutiveEmptyPolls;
-            int lastQualityRank = -1;
-            string? lastVariantUrl = null;
-
-            while (!cancellationToken.IsCancellationRequested && retriesRemaining > 0)
-            {
-                try
-                {
-                    await _thumbnailManager.TryCaptureSnapshotAsync(channel.Name);
-
-                    var playlistVariants = await _variantTracker.GetVariantsAsync(cancellationToken);
-                    if (playlistVariants.Length == 0)
-                    {
-                        retriesRemaining--;
-                        logger.LogWarning("Stream source unavailable. Retrying... ({Retries} left)", retriesRemaining);
-
-                        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-                        continue;
-                    }
-
-                    var (qualityRank, variantUrl) = await ResolveQualityAsync(playlistVariants);
-                    if (lastQualityRank != qualityRank || lastVariantUrl != variantUrl)
-                    {
-                        segmentDownloader.FlushCurrentSegment();
-                        _playlistBuilder.AddDiscontinuity();
-
-                        (lastQualityRank, lastVariantUrl) = (qualityRank, variantUrl);
-
-                        logger.LogInformation("Streaming quality: {Rank} ({Bandwidth} bps)",
-                            qualityRank + 1, playlistVariants[qualityRank].Bandwidth);
-                    }
-
-                    var playlistContent = await twitchClient.GetPlaylistContentAsync(variantUrl, cancellationToken);
-                    if (string.IsNullOrWhiteSpace(playlistContent))
-                    {
-                        retriesRemaining--;
-                        logger.LogWarning("Playlist file not found. Retrying... ({Retries} left)", retriesRemaining);
-
-                        var metadata = await twitchClient.GetStreamMetadataAsync(channel.Name, cancellationToken);
-                        if (metadata.HasValue && metadata.Value.TwitchStreamId != stream.TwitchStreamId)
-                            break;
-
-                        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                        continue;
-                    }
-
-                    retriesRemaining = settings.Vault.MaxConsecutiveEmptyPolls;
-                    consecutiveErrors = 0;
-
-                    var segments = SegmentParser.ParseNewSegments(playlistContent, _playlistBuilder);
-                    await segmentDownloader.DownloadSegmentsAsync(
-                        segments,
-                        streamSegment.FolderPath,
-                        settings.Vault.MaxSegmentDurationInSec,
-                        cancellationToken);
-
-                    if (playlistContent.AsSpan().Contains("#EXT-X-ENDLIST", StringComparison.Ordinal))
-                    {
-                        _forcedFinish = true;
-                        break;
-                    }
-
-                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    consecutiveErrors++;
-                    if (consecutiveErrors > 5)
-                        throw;
-
-                    logger.LogWarning("Network issue detected. Retry {Count}/5.", consecutiveErrors);
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-                }
-            }
+            await RecordStreamAsync(_cts.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _finalizeReason = "Recording failed due to an error.";
-            logger.LogError(ex, "Unhandled error in recording session.");
+            SetEndReason(new StreamError(ex));
+            _logger.LogError(ex, "Unhandled error in recording session.");
         }
         finally
         {
-            await HandleStreamEndAsync();
+            await FinalizeSessionAsync();
+        }
+    }
+
+    public async Task StopAsync()
+    {
+        SetEndReason(new StreamStopped());
+        await _cts.CancelAsync();
+    }
+
+    public async Task FinishAsync()
+    {
+        SetEndReason(new StreamSplit());
+        await _cts.CancelAsync();
+    }
+
+    public async Task ToggleStreamDeletion(bool markForDeletion)
+    {
+        _streamSegment.MarkForDeletion = markForDeletion;
+        await _streamRepository.UpdateSegmentAsync(_streamSegment);
+    }
+
+
+    private async Task RecordStreamAsync(CancellationToken cancellationToken)
+    {
+        int consecutiveNetworkErrors = 0;
+        int retriesRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+        int lastQualityRank = -1;
+        string? lastVariantUrl = null;
+
+        while (!cancellationToken.IsCancellationRequested && retriesRemaining > 0)
+        {
+            try
+            {
+                await _thumbnailManager.TryCaptureSnapshotAsync(_channel.Name);
+
+                var variants = await _variantTracker.GetVariantsAsync(cancellationToken);
+                if (variants.Length == 0)
+                {
+                    _logger.LogWarning("Stream source unavailable. Retrying… ({Retries} left)", --retriesRemaining);
+                    await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                    continue;
+                }
+
+                var (qualityRank, variantUrl) = await ResolveQualityAsync(variants);
+                if (lastQualityRank != qualityRank || lastVariantUrl != variantUrl)
+                {
+                    _segmentDownloader.FlushCurrentSegment();
+                    _playlistBuilder.AddDiscontinuity();
+
+                    (lastQualityRank, lastVariantUrl) = (qualityRank, variantUrl);
+
+                    _logger.LogInformation("Streaming quality: {Rank} ({Bandwidth} bps)",
+                        qualityRank + 1, variants[qualityRank].Bandwidth);
+                }
+
+                var playlistContent = await _twitchClient.GetPlaylistContentAsync(variantUrl, cancellationToken);
+                if (string.IsNullOrWhiteSpace(playlistContent))
+                {
+                    _logger.LogWarning("Playlist not found. Retrying... ({Retries} left)", --retriesRemaining);
+
+                    var metadata = await _twitchClient.GetStreamMetadataAsync(_channel.Name, cancellationToken);
+                    if (metadata.HasValue && metadata.Value.TwitchStreamId != _stream.TwitchStreamId)
+                        break;
+
+                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                    continue;
+                }
+
+                retriesRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+                consecutiveNetworkErrors = 0;
+
+                var segments = SegmentParser.ParseNewSegments(playlistContent, _playlistBuilder);
+                await _segmentDownloader.DownloadSegmentsAsync(
+                    segments,
+                    _streamSegment.FolderPath,
+                    _settings.Vault.MaxSegmentDurationInSec,
+                    cancellationToken);
+
+                if (playlistContent.AsSpan().Contains("#EXT-X-ENDLIST", StringComparison.Ordinal))
+                {
+                    SetEndReason(new StreamEnded());
+                    return;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                consecutiveNetworkErrors++;
+                if (consecutiveNetworkErrors > 5) throw;
+
+                _logger.LogWarning("Network issue detected. Retry {Count}/5.", consecutiveNetworkErrors);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
         }
     }
 
     private async Task<(int rank, string url)> ResolveQualityAsync(MediaPlaylist[] variants)
     {
-        var channels = await channelRepository.GetAllAsync();
-        var requestedRank = channels.First(c => c.Name == channel.Name).QualityRank - 1;
+        var channels = await _channelRepository.GetAllAsync();
+        var requestedRank = channels.First(c => c.Name == _channel.Name).QualityRank - 1;
         var clampedRank = Math.Clamp(requestedRank, 0, variants.Length - 1);
 
         if (requestedRank != clampedRank)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Requested quality rank {Requested} but only {Count} variants available. Clamped to {Clamped}.",
                 requestedRank + 1, variants.Length, clampedRank + 1);
         }
@@ -197,99 +249,133 @@ public sealed class StreamRecordingSession(
         return (clampedRank, variants[clampedRank].Url);
     }
 
-    private async Task HandleStreamEndAsync()
+    private async Task FinalizeSessionAsync()
     {
         try
         {
-            if (!_forcedFinish)
-                await channelRepository.SetLiveAsync(channel.ChannelId, false);
+            FlushAndFinalizePlaylist();
 
             if (File.Exists(_thumbnailManager.LocalThumbnailPath))
-                streamSegment.ThumbnailUrl = BuildLocalThumbnailUrl(_thumbnailManager.LocalThumbnailPath);
+                _streamSegment.ThumbnailUrl = BuildLocalThumbnailUrl(_thumbnailManager.LocalThumbnailPath);
 
-            if (_playlistBuilder is not null)
-            {
-                segmentDownloader.FlushCurrentSegment();
-                await _playlistBuilder.FinalizeAsync();
-            }
-
+            await _streamRepository.UpdateSegmentAsync(_streamSegment);
             await DisposeAsync();
 
-            if (streamSegment.MarkForDeletion)
+            if (_streamSegment.MarkForDeletion)
             {
-                await DeleteStreamSegmentAsync();
+                await DeleteSegmentAsync();
                 return;
             }
 
-            if (streamSegment.Status == StreamStatus.Stopped)
+            switch (_finalizeReason)
             {
-                await streamRepository.UpdateSegmentAsync(streamSegment);
-                return;
-            }
+                case StreamStopped:
+                    _streamSegment.MarkAsStopped();
+                    await _streamRepository.UpdateSegmentAsync(_streamSegment);
+                    _logger.LogInformation("Recording manually stopped.");
+                    return;
 
-            if (await IsStreamStillLiveAsync())
-            {
-                streamSegment.Status = StreamStatus.Interrupted;
-                await streamRepository.UpdateSegmentAsync(streamSegment);
-                logger.LogWarning("Stream disconnected but still online on Twitch. Marking as interrupted.");
-                return;
-            }
-            if (!_forcedFinish)
-            {
-                stream.StreamSegment = (await streamRepository.GetSegmentsByStreamIdAsync(stream.TwitchStreamId)).First();
-                stream.FinishedAt = DateTime.Now;
-            }
+                case StreamSplit:
+                    _streamSegment.MarkAsFinished();
+                    await _streamRepository.UpdateSegmentAsync(_streamSegment);
 
-            streamSegment.MarkAsFinished();
-            await _thumbnailManager.TrySaveVodThumbnailAsync(channel.Name);
-            await streamRepository.UpdateStreamAsync(stream);
-            await streamRepository.UpdateSegmentAsync(streamSegment);
+                    _logger.LogInformation("Segment '{SegmentNumber}' closed (metadata split).",
+                        _streamSegment.SegmentNumber);
+                    return;
 
-            var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
-            logger.LogInformation("{Reason} Total duration: {Duration}", _finalizeReason ?? "Stream finished.", duration);
+                case StreamError(var ex):
+                    _logger.LogError(ex, "Session ended due to an error.");
+
+                    if (!await IsStreamStillLiveAsync())
+                        return;
+
+                    _streamSegment.Status = StreamStatus.Interrupted;
+                    await _streamRepository.UpdateSegmentAsync(_streamSegment);
+                    _logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
+                    return;
+
+                case StreamEnded:
+                case null:
+                    await HandleStreamEndedAsync();
+                    return;
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Error during finalization.");
+            _logger.LogError(ex, "Error during session finalization.");
         }
+    }
+
+    private async Task HandleStreamEndedAsync()
+    {
+        // if (await IsStreamStillLiveAsync())
+        // {
+        //     _streamSegment.Status = StreamStatus.Interrupted;
+        //     await _streamRepository.UpdateSegmentAsync(_streamSegment);
+        //     _logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
+        //     return;
+        // }
+
+        _stream.StreamSegment = (await _streamRepository.GetSegmentsByStreamIdAsync(_stream.TwitchStreamId)).First();
+        _stream.FinishedAt = DateTime.Now;
+
+        _streamSegment.MarkAsFinished();
+
+        await _thumbnailManager.TrySaveVodThumbnailAsync(_channel.Name);
+        await _streamRepository.UpdateStreamAsync(_stream);
+        await _streamRepository.UpdateSegmentAsync(_streamSegment);
+
+        await _channelRepository.SetLiveAsync(_channel.ChannelId, false);
+
+        var duration = (_stream.FinishedAt - _stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
+        _logger.LogInformation("Stream finished. Total duration: {Duration}", duration);
+    }
+
+    private void FlushAndFinalizePlaylist()
+    {
+        _segmentDownloader.FlushCurrentSegment();
+        _ = _playlistBuilder.FinalizeAsync();
     }
 
     private async Task<bool> IsStreamStillLiveAsync()
     {
-        var liveInfo = await twitchClient.GetStreamMetadataAsync(channel.Name, CancellationToken.None);
-        return liveInfo?.TwitchStreamId == stream.TwitchStreamId && !_forcedFinish;
+        var metadata = await _twitchClient.GetStreamMetadataAsync(_channel.Name, CancellationToken.None);
+        return metadata?.TwitchStreamId == _stream.TwitchStreamId;
     }
 
-    private async Task DeleteStreamSegmentAsync()
+    private async Task DeleteSegmentAsync()
     {
         try
         {
-            await streamService.DeleteSegmentAsync(stream.TwitchStreamId, streamSegment.Id);
+            await _streamService.DeleteSegmentAsync(_stream.TwitchStreamId, _streamSegment.Id);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to delete segment {SegmentNumber} for stream {StreamId}.", streamSegment.SegmentNumber, stream.TwitchStreamId);
+            _logger.LogError(ex,
+                "Failed to delete segment {SegmentNumber} for stream {StreamId}.",
+                _streamSegment.SegmentNumber, _stream.TwitchStreamId);
         }
     }
+
+    private void SetEndReason(SessionEndReason reason) =>
+        Interlocked.CompareExchange(ref _finalizeReason, reason, null);
 
     private static string BuildLiveThumbnailUrl(string channelName) =>
         $"https://static-cdn.jtvnw.net/previews-ttv/live_user_{channelName}-1280x720.jpg";
 
     private string BuildLocalThumbnailUrl(string localPath) =>
-        new Uri(pathsOptions.BaseUrl + $"/{localPath}").AbsoluteUri;
+        new Uri(_pathsOptions.BaseUrl + $"/{localPath}").AbsoluteUri;
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposed)
+            return;
 
+        _disposed = true;
         if (!_cts.IsCancellationRequested)
             await _cts.CancelAsync();
 
-        if (_playlistBuilder is not null)
-            await _playlistBuilder.DisposeAsync();
-
+        await _playlistBuilder.DisposeAsync();
         _cts.Dispose();
     }
 }

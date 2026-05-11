@@ -61,7 +61,7 @@ internal static class TwitchGqlPayloads
             IsLive = true,
             Login = channel,
             PlayerType = "site",
-            Platform = "web"
+            Platform = "pwa"
         }
     };
 

@@ -1,5 +1,3 @@
-using TwitchVault.Api.Common;
-
 namespace TwitchVault.Api.Models;
 
 public enum StreamStatus
