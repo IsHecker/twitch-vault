@@ -34,17 +34,11 @@ public class TwitchEventSubJob(
         try
         {
             await wsClient.ConnectAsync(cancellationToken);
-            await HandleWelcomeAsync(cancellationToken);
-
-            while (wsClient.State == WebSocketState.Open)
-            {
-                var json = await wsClient.ReceiveAsync(cancellationToken);
-                if (json is null)
-                    break;
-
-                var message = JsonSerializer.Deserialize<EventSubMessage>(json, JsonOptions);
-                await HandleMessageAsync(message, cancellationToken);
-            }
+            await RunLoopAsync(cancellationToken);
+        }
+        catch (KeepaliveTimeoutException ex)
+        {
+            logger.LogWarning(ex.Message);
         }
         catch (Exception ex)
         {
@@ -56,16 +50,43 @@ public class TwitchEventSubJob(
         }
     }
 
-    private async Task HandleWelcomeAsync(CancellationToken cancellationToken)
+    private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
+        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        var receiveTask = ReceiveLoopAsync(heartbeatCts.Token);
+        var heartbeatTask = wsClient.MonitorHeartbeatAsync(heartbeatCts.Token);
+
+        var completed = await Task.WhenAny(receiveTask, heartbeatTask);
+
+        // Cancel the other task.
+        await heartbeatCts.CancelAsync();
+
+        // Propagate exceptions from whichever task finished.
+        await completed;
+    }
+
+    private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
+    {
+        while (wsClient.State == WebSocketState.Open)
+        {
+            var json = await wsClient.ReceiveAsync(cancellationToken);
+            if (json is null)
+                break;
+
+            wsClient.ResetHeartbeat();
+
+            var message = JsonSerializer.Deserialize<EventSubMessage>(json, JsonOptions);
+            await HandleMessageAsync(message, cancellationToken);
+        }
+    }
+
+    private async Task HandleWelcomeAsync(string sessionId, int keepaliveTimeoutSeconds, CancellationToken cancellationToken)
+    {
+        wsClient.ConfigureHeartbeat(keepaliveTimeoutSeconds);
+
         subscriptionService.Reset();
-        var json = await wsClient.ReceiveAsync(cancellationToken) ?? throw new InvalidOperationException("Connection closed before welcome.");
-        var message = JsonSerializer.Deserialize<EventSubMessage>(json, JsonOptions);
-
-        if (message.Metadata.MessageType != "session_welcome")
-            throw new InvalidOperationException($"Expected session_welcome message but received {message.Metadata.MessageType}");
-
-        subscriptionService.SessionId = message.Payload.Session.Id;
+        subscriptionService.SessionId = sessionId;
         await subscriptionService.SubscribeAllAsync(cancellationToken);
     }
 
@@ -77,7 +98,10 @@ public class TwitchEventSubJob(
                 return;
 
             case "session_welcome":
-                subscriptionService.SessionId = message.Payload.Session.Id;
+                if (subscriptionService.SessionId != message.Payload.Session.Id)
+                    await HandleWelcomeAsync(message.Payload.Session.Id, message.Payload.Session.KeepaliveTimeoutSeconds ?? 10, cancellationToken);
+
+                await wsClient.CloseOldConnectionAsync();
                 return;
 
             case "session_reconnect":
@@ -87,17 +111,11 @@ public class TwitchEventSubJob(
 
             case "notification":
                 if (message.Payload.Subscription.Type == StreamOnlineEvent.EventName)
-                {
                     await PublishStreamOnlineAsync(message.Payload.Event.RootElement);
-                }
                 else if (message.Payload.Subscription.Type == ChannelUpdateEvent.EventName)
-                {
                     await PublishChannelUpdateAsync(message.Payload.Event.RootElement);
-                }
                 else
-                {
                     logger.LogWarning("Unhandled event type: {Type}", message.Payload.Subscription.Type);
-                }
                 return;
         }
     }

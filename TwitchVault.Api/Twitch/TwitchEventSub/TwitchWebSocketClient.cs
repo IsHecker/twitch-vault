@@ -6,10 +6,14 @@ namespace TwitchVault.Api.Twitch.TwitchEventSub;
 public sealed class TwitchWebSocketClient : IAsyncDisposable
 {
     private const string TwitchWssUrl = "wss://eventsub.wss.twitch.tv/ws";
+    private const int HeartbeatGraceSeconds = 5;
     private readonly byte[] _buffer = new byte[8192];
 
     private ClientWebSocket _webSocket = null!;
-    private readonly MemoryStream _memoryStream = new();
+    private ClientWebSocket? _oldSocket;
+
+    private int _keepaliveTimeoutSeconds;
+    private CancellationTokenSource _heartbeatCts = new();
 
     public WebSocketState State => _webSocket.State;
 
@@ -22,42 +26,99 @@ public sealed class TwitchWebSocketClient : IAsyncDisposable
 
     public async Task ReconnectAsync(string reconnectUrl, CancellationToken cancellationToken)
     {
-        var oldSocket = _webSocket;
+        _oldSocket = _webSocket;
         _webSocket = new ClientWebSocket();
         _webSocket.Options.KeepAliveInterval = Timeout.InfiniteTimeSpan;
 
         await _webSocket.ConnectAsync(new Uri(reconnectUrl), cancellationToken);
+        ResetHeartbeat();
+    }
 
-        _ = Task.Run(async () =>
+    public async Task CloseOldConnectionAsync()
+    {
+        if (_oldSocket is null)
+            return;
+
+        try
         {
-            try
-            {
-                await oldSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnecting", CancellationToken.None);
-            }
-            catch { }
-            finally { oldSocket.Dispose(); }
-        }, CancellationToken.None);
+            if (_oldSocket.State == WebSocketState.Open)
+                await _oldSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnected", CancellationToken.None);
+        }
+        catch { }
+        finally
+        {
+            _oldSocket.Dispose();
+            _oldSocket = null;
+        }
     }
 
     public async Task<string?> ReceiveAsync(CancellationToken cancellationToken)
     {
-        _memoryStream.SetLength(0);
+        var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(_buffer), cancellationToken);
 
-        while (true)
+        if (result.MessageType == WebSocketMessageType.Close)
+            return null;
+
+        return Encoding.UTF8.GetString(_buffer, 0, result.Count);
+    }
+
+    /// <summary>
+    /// Configures the keepalive timeout received from Twitch's session_welcome message
+    /// and resets the heartbeat countdown.
+    /// </summary>
+    public void ConfigureHeartbeat(int timeoutSeconds)
+    {
+        _keepaliveTimeoutSeconds = timeoutSeconds;
+        ResetHeartbeat();
+    }
+
+    /// <summary>
+    /// Resets the heartbeat countdown. Call this on every received message.
+    /// </summary>
+    public void ResetHeartbeat()
+    {
+        var old = _heartbeatCts;
+        _heartbeatCts = new CancellationTokenSource();
+        old.Cancel();
+        old.Dispose();
+    }
+
+    /// <summary>
+    /// Monitors the heartbeat. Completes normally when cancelled (graceful shutdown),
+    /// or throws <see cref="KeepaliveTimeoutException"/> if no message arrives within
+    /// the configured timeout + grace period.
+    /// </summary>
+    public async Task MonitorHeartbeatAsync(CancellationToken cancellationToken)
+    {
+        var totalTimeout = TimeSpan.FromSeconds(_keepaliveTimeoutSeconds + HeartbeatGraceSeconds);
+
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(_buffer), cancellationToken);
-            _memoryStream.Write(_buffer, 0, result.Count);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+                _heartbeatCts.Token, cancellationToken);
 
-            if (result.MessageType == WebSocketMessageType.Close)
-                return null;
+            var isTimedOut = await WaitForTimeoutAsync(totalTimeout, linked.Token);
 
-            if (result.EndOfMessage)
-                return Encoding.UTF8.GetString(_memoryStream.ToArray());
+            if (isTimedOut)
+                throw new KeepaliveTimeoutException(totalTimeout);
         }
+    }
+
+    private static async Task<bool> WaitForTimeoutAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(timeout, cancellationToken);
+            return true;
+        }
+        catch { return false; }
     }
 
     public async ValueTask DisposeAsync()
     {
+        _heartbeatCts.Cancel();
+        _heartbeatCts.Dispose();
+
         if (_webSocket.State == WebSocketState.Open)
             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
         _webSocket.Dispose();

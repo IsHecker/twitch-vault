@@ -56,24 +56,23 @@ public sealed class TwitchClient(
         return await response.Content.ReadAsStreamAsync(cancellationToken);
     }
 
-    public async Task<(string? StreamId, string? VodId)> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken)
+    public async Task<string?> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken)
     {
         var payload = TwitchGqlPayloads.GetStreamVOD(channel);
         using var response = await SendGqlRequestAsync(payload, cancellationToken);
         if (!response.IsSuccessStatusCode)
-            return (null, null);
+            return null;
 
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
 
         var stream = document!.RootElement.GetProperty("data").GetProperty("user").GetProperty("stream");
         if (stream.ValueKind == JsonValueKind.Null)
-            return (null, null);
+            return null;
 
-        var streamId = stream.GetProperty("id").GetString();
         var archiveVideo = stream.GetProperty("archiveVideo");
         var vodId = archiveVideo.ValueKind != JsonValueKind.Null ? archiveVideo.GetProperty("id").GetString() : null;
 
-        return (streamId, vodId);
+        return vodId;
     }
 
     public async Task<string?> GetVODThumbnailUrlAsync(string vodId, CancellationToken cancellationToken)

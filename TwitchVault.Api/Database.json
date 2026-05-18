@@ -32,44 +32,5 @@
       "ShouldRecord": true,
       "LastStreamedAt": "2026-05-11T18:05:41.9685252+03:00"
     }
-  ],
-  "Streams": [
-    {
-      "TwitchStreamId": "317104127463",
-      "TwitchVodId": null,
-      "ChannelId": "595850827",
-      "FolderPath": "Streams\\snowar12\\2026-05-11 18-05-41",
-      "TotalSegments": 1,
-      "StartedAt": "2026-05-11T18:05:41.9685252+03:00",
-      "FinishedAt": null,
-      "StreamSegment": {
-        "Id": "175f78c6-e2d8-4f50-abed-9083ee9f1ffe",
-        "StreamId": "317104127463",
-        "SegmentNumber": 1,
-        "Title": "Ya rab",
-        "CategoryName": "League of Legends",
-        "ThumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_snowar12-1280x720.jpg",
-        "StartedAt": "2026-05-11T18:05:41.9680927+03:00",
-        "FinishedAt": null,
-        "Status": "Recording",
-        "FolderPath": "Streams\\snowar12\\2026-05-11 18-05-41\\1",
-        "MarkForDeletion": false
-      }
-    }
-  ],
-  "StreamSegments": [
-    {
-      "Id": "175f78c6-e2d8-4f50-abed-9083ee9f1ffe",
-      "StreamId": "317104127463",
-      "SegmentNumber": 1,
-      "Title": "Ya rab",
-      "CategoryName": "League of Legends",
-      "ThumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_snowar12-1280x720.jpg",
-      "StartedAt": "2026-05-11T18:05:41.9680927+03:00",
-      "FinishedAt": null,
-      "Status": "Recording",
-      "FolderPath": "Streams\\snowar12\\2026-05-11 18-05-41\\1",
-      "MarkForDeletion": false
-    }
   ]
 }

@@ -26,6 +26,7 @@ public record struct Payload(
 public record struct Session(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("keepalive_timeout_seconds")] int? KeepaliveTimeoutSeconds,
     [property: JsonPropertyName("reconnect_url")] string? ReconnectUrl);
 
 public record struct Subscription(

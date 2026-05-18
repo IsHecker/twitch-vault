@@ -78,17 +78,13 @@ public sealed class ThumbnailManager(
 
     private async Task DiscoverVodIdAsync(string channelName)
     {
-        try
-        {
-            var (streamId, vodId) = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
-            if (streamId != stream.TwitchStreamId || string.IsNullOrEmpty(vodId))
-                return;
+        var vodId = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
+        if (string.IsNullOrEmpty(vodId))
+            return;
 
-            stream.TwitchVodId = vodId;
-            await streamRepository.UpdateStreamAsync(stream);
-            logger.LogInformation("Thumbnail: Linked to VOD {VodId}.", vodId);
-        }
-        catch { }
+        stream.TwitchVodId = vodId;
+        await streamRepository.UpdateStreamAsync(stream);
+        logger.LogInformation("Thumbnail: Linked to VOD {VodId}.", vodId);
     }
 
     private bool CanCaptureSnapshot()

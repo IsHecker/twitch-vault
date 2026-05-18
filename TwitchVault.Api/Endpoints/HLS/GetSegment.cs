@@ -17,43 +17,6 @@ public class GetSegment : IEndpoint
             ChannelRepository channelRepo,
             IWebHostEnvironment env) =>
         {
-            /*
-            
-            var stream = await streamRepo.GetStreamByIdAsync(streamId);
-            if (stream is null)
-            {
-                var channel = await channelRepo.GetByNameAsync(streamId);
-
-                if (channel is null || !channel.IsLive)
-                    return Results.NotFound();
-
-                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
-                stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
-
-                if (stream is null || stream.StreamSegment.Status != StreamStatus.Recording)
-                    return Results.NotFound();
-            }
-
-            StreamSegment? targetSegment = stream.StreamSegment;
-
-            if (segment.HasValue && segment != targetSegment.SegmentNumber)
-            {
-                // 1. User asked for a specific chapter/segment
-                var segments = await streamRepo.GetSegmentsByStreamIdAsync(streamId);
-                targetSegment = segments.FirstOrDefault(s => s.SegmentNumber == segment.Value);
-            }
-
-            if (targetSegment == null)
-                return Results.NotFound();
-
-            var playlistPath = Path.Combine(env.ContentRootPath, targetSegment.FolderPath, "playlist.m3u8");
-
-            if (!File.Exists(playlistPath))
-                return Results.NotFound();
-
-            return Results.File(playlistPath, "application/vnd.apple.mpegurl", enableRangeProcessing: true);
-            
-            */
             var stream = await streamRepo.GetStreamByIdAsync(streamId);
             if (stream is null)
             {
@@ -86,24 +49,6 @@ public class GetSegment : IEndpoint
                 return Results.NotFound();
 
             return Results.File(filePath, GetContentType(safeFileName), enableRangeProcessing: true);
-
-            // var ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-            // var arguments = $"-i \"{filePath}\" -vn -acodec copy -f adts -";
-
-            // var startInfo = new ProcessStartInfo
-            // {
-            //     FileName = ffmpegPath,
-            //     Arguments = arguments,
-            //     RedirectStandardOutput = true,
-            //     UseShellExecute = false,
-            //     CreateNoWindow = true
-            // };
-
-            // var process = Process.Start(startInfo);
-            // if (process == null)
-            //     return Results.StatusCode(500);
-
-            // return Results.Stream(process.StandardOutput.BaseStream, "audio/aac");
         })
         .WithName(nameof(GetSegment))
         .WithTags("HLS")
