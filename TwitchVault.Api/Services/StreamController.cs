@@ -61,12 +61,12 @@ public sealed class StreamController : IAsyncDisposable
 
     private async Task OnStreamOnlineAsync(StreamOnlineEvent e)
     {
-        _logger.LogInformation("Online notification received for {Channel}.", e.ChannelName);
+        _logger.LogInformation("{Channel} went live", e.ChannelName);
 
         var channel = await _channelRepository.GetByIdAsync(e.ChannelId);
         if (channel is null)
         {
-            _logger.LogError("Channel '{Name}' not found in database.", e.ChannelName);
+            _logger.LogWarning("Channel '{Channel}' not found in database.", e.ChannelName);
             return;
         }
 
@@ -82,7 +82,7 @@ public sealed class StreamController : IAsyncDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Failed to initialize recording for '{Name}'.", channel.Name);
+            _logger.LogError(ex, "Failed to initialize recording for '{Channel}'.", channel.Name);
         }
     }
 
@@ -93,11 +93,13 @@ public sealed class StreamController : IAsyncDisposable
         try
         {
             var channel = await _channelRepository.GetByIdAsync(e.ChannelId);
-            if (!channel!.IsLive)
+
+            using var _chnlScope = _logger.BeginScope("{Channel}", channel!.Name);
+            using var _metaScope = _logger.BeginScope("'{Title}' ({Category})", e.Title, e.CategoryName);
+
+            if (!channel.IsLive)
             {
-                _logger.LogWarning(
-                    "[{Channel}] Metadata change ignored: channel is not live. Metadata: '{Title}' ({Category})",
-                    channel.Name, e.Title, e.CategoryName);
+                _logger.LogWarning("Metadata change ignored: channel is not live.");
                 return;
             }
 
@@ -108,24 +110,18 @@ public sealed class StreamController : IAsyncDisposable
             var activeSegment = activeStream.StreamSegment;
             if (activeSegment.Title == e.Title && activeSegment.CategoryName == e.CategoryName)
             {
-                _logger.LogInformation("[{Channel}] Metadata change ignored: title and category unchanged.",
-                    channel.Name);
+                _logger.LogInformation("Metadata change ignored: title and category unchanged.");
                 return;
             }
 
             var isFinished = await FinishRecordingAsync(activeStream.TwitchStreamId);
             if (!isFinished)
             {
-                _logger.LogWarning("[{Channel}] Metadata change ignored: No active session is found for stream {streamId}",
-                    channel.Name, activeStream.TwitchStreamId);
+                _logger.LogError("Metadata change ignored: No active session is found");
                 return;
             }
 
-            _logger.LogInformation(
-                "[{Channel}] Metadata split: '{OldTitle}' ({OldCat}) → '{NewTitle}' ({NewCat})",
-                channel.Name,
-                activeSegment.Title, activeSegment.CategoryName,
-                e.Title, e.CategoryName);
+            _logger.LogInformation("Metadata split triggered");
 
             var nextSegment = await BuildNextSegmentAsync(activeStream, e.Title, e.CategoryName);
             await _streamRepository.AddSegmentAsync(nextSegment);
@@ -322,11 +318,8 @@ public sealed class StreamController : IAsyncDisposable
         if (tasks.Length == 0)
             return;
 
-        _logger.LogInformation("Waiting for {Count} recording session(s) to shut down...", tasks.Length);
+        _logger.LogDebug("Waiting for {Count} recording session(s) to shut down...", tasks.Length);
 
-        // Run the async wait on a thread-pool thread so we don't block the
-        // stopping thread, which can cause a deadlock when sessions themselves
-        // need to complete async I/O during finalization.
         Task.Run(async () =>
         {
             try
@@ -350,7 +343,6 @@ public sealed class StreamController : IAsyncDisposable
         foreach (var channel in channels.Where(c => c.IsLive))
         {
             await _channelRepository.SetLiveAsync(channel.ChannelId, false);
-            _logger.LogInformation("Corrected stale IsLive state for {Name}.", channel.Name);
         }
     }
 

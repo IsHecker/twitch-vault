@@ -16,6 +16,6 @@ public sealed class TwitchEventSubJobConfiguration() : IConfigureOptions<QuartzO
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever()));
+                        schedule.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever()));
     }
 }

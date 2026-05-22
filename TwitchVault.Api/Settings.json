@@ -5,7 +5,7 @@
   },
   "Twitch": {
     "ClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
-    "Authorization": "OAuth 534yikldpe9nce90js4k5id373chs4"
+    "Authorization": "534yikldpe9nce90js4k5id373chs4"
   },
   "Vault": {
     "MaxSegmentDurationInSec": 10,

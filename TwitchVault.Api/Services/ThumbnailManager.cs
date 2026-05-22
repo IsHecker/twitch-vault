@@ -27,14 +27,12 @@ public sealed class ThumbnailManager(
         try
         {
             if (string.IsNullOrEmpty(stream.TwitchVodId))
-            {
                 await DiscoverVodIdAsync(channelName);
-            }
 
             await SaveThumbnailAsync(streamSegment.ThumbnailUrl);
             _lastSnapshotTime = DateTime.Now;
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "Captured live thumbnail snapshot for segment {SegmentNumber}",
                 streamSegment.SegmentNumber);
         }
@@ -42,36 +40,6 @@ public sealed class ThumbnailManager(
         {
             logger.LogWarning(ex,
                 "Failed to capture live thumbnail snapshot for segment {SegmentNumber}",
-                streamSegment.SegmentNumber);
-        }
-    }
-
-    public async Task TrySaveVodThumbnailAsync(string channelName)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(stream.TwitchVodId))
-            {
-                await DiscoverVodIdAsync(channelName);
-            }
-
-            if (string.IsNullOrEmpty(stream.TwitchVodId))
-                return;
-
-            var thumbnailUrl = await twitchClient.GetVODThumbnailUrlAsync(stream.TwitchVodId, CancellationToken.None);
-            if (string.IsNullOrEmpty(thumbnailUrl))
-                return;
-
-            await SaveThumbnailAsync(thumbnailUrl);
-
-            logger.LogInformation(
-                "Updated thumbnail for segment {SegmentNumber} to VOD thumbnail {VodId}",
-                streamSegment.SegmentNumber, stream.TwitchVodId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex,
-                "Failed to update VOD thumbnail for segment {SegmentNumber}",
                 streamSegment.SegmentNumber);
         }
     }

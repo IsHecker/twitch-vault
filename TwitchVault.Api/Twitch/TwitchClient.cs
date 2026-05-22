@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TwitchVault.Api.Services;
+using TwitchVault.Api.Twitch.TwitchEventSub;
 
 namespace TwitchVault.Api.Twitch;
 
@@ -105,6 +106,28 @@ public sealed class TwitchClient(
         return user.ValueKind == JsonValueKind.Null ? null : user.GetProperty("id").GetString();
     }
 
+    public async Task<int?> GetEventSubsCountAsync(CancellationToken cancellationToken)
+    {
+        const string url = "https://api.twitch.tv/helix/eventsub/subscriptions?status=enabled";
+        using var response = await SendHelixRequestAsync(HttpMethod.Get, url, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        var subs = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+        return subs?.RootElement.GetProperty("total_cost").GetInt32();
+    }
+
+    private Task<HttpResponseMessage> SendHelixRequestAsync(HttpMethod method, string url, CancellationToken cancellationToken)
+    {
+        var request = new HttpRequestMessage(method, url);
+
+        request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + Options.Authorization);
+
+        return httpClient.SendAsync(request, cancellationToken);
+    }
+
     private Task<HttpResponseMessage> SendGqlRequestAsync(object payload, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, TwitchGqlUrl)
@@ -113,8 +136,9 @@ public sealed class TwitchClient(
         };
 
         request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
-        request.Headers.TryAddWithoutValidation("Authorization", Options.Authorization);
-        request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
+        // request.Headers.TryAddWithoutValidation("Authorization", "OAuth " + Options.Authorization);
+        request.Headers.TryAddWithoutValidation("User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
         request.Headers.TryAddWithoutValidation("Origin", "https://www.twitch.tv");
 
         request.Headers.TryAddWithoutValidation("Accept", "*/*");
@@ -133,7 +157,7 @@ public sealed class TwitchClient(
 
         return httpClient.SendAsync(request, cancellationToken);
     }
-    //https://usher.ttvnw.net/api/v2/channel/hls/pisty.m3u8?acmb=eyJBcHBWZXJzaW9uIjoiYWE1NTk0ZDEtYjhkYy00NTMzLTgyNjItMTFhNWEwZTk5NTVmIiwiQ2xpZW50QXBwIjoidHdpbGlnaHQifQ%3D%3D&allow_source=true&browser_family=chrome&browser_version=147.0&cdm=wv&enable_score=true&fast_bread=true&include_unavailable=true&lang=en&os_name=Windows&os_version=NT 10.0&p=8343545&platform=web&play_session_id=f4261c511c1b49e9b94c023814baebde&player_backend=mediaplayer&player_version=1.52.0-rc.3&playlist_include_framerate=true&reassignments_supported=true&sig=a62e5cea49e309ab72bf5905a283bea284d9e23f&supported_codecs=av1,h265,h264&token={"adblock"%3Afalse%2C"authorization"%3A{"forbidden"%3Afalse%2C"reason"%3A""}%2C"blackout_enabled"%3Afalse%2C"channel"%3A"pisty"%2C"channel_id"%3A54507525%2C"chansub"%3A{"restricted_bitrates"%3A%5B%5D%2C"view_until"%3A1924905600}%2C"ci_gb"%3Afalse%2C"geoblock_reason"%3A""%2C"device_id"%3Anull%2C"expires"%3A1778117079%2C"extended_history_allowed"%3Afalse%2C"game"%3A""%2C"hide_ads"%3Afalse%2C"https_required"%3Atrue%2C"mature"%3Afalse%2C"notification_id"%3Anull%2C"partner"%3Afalse%2C"platform"%3A"web"%2C"player_type"%3A"site"%2C"private"%3A{"allowed_to_view"%3Atrue}%2C"privileged"%3Afalse%2C"role"%3A""%2C"server_ads"%3Atrue%2C"show_ads"%3Atrue%2C"subscriber"%3Afalse%2C"turbo"%3Afalse%2C"user_id"%3A763880187%2C"user_ip"%3A"41.35.177.35"%2C"version"%3A3%2C"maximum_resolution"%3A"FULL_HD"%2C"maximum_video_bitrate_kbps"%3A12500%2C"maximum_resolution_reasons"%3A{"QUAD_HD"%3A%5B"AUTHZ_GEO"%5D%2C"ULTRA_HD"%3A%5B"AUTHZ_GEO"%5D}%2C"maximum_video_bitrate_kbps_reasons"%3A%5B"AUTHZ_DISALLOWED_BITRATE"%5D}&transcode_mode=cbr_v1
+
     private static string BuildMasterPlaylistUrl(string channel, PlaybackToken token) =>
         $"https://usher.ttvnw.net/api/v2/channel/hls/{channel}.m3u8" +
         $"?acmb=eyJBcHBWZXJzaW9uIjoiYWE1NTk0ZDEtYjhkYy00NTMzLTgyNjItMTFhNWEwZTk5NTVmIiwiQ2xpZW50QXBwIjoidHdpbGlnaHQifQ%3D%3D" +

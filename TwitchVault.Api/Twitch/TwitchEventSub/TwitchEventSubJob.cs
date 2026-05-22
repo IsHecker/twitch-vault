@@ -10,6 +10,7 @@ namespace TwitchVault.Api.Twitch.TwitchEventSub;
 [DisallowConcurrentExecution]
 public class TwitchEventSubJob(
     TwitchWebSocketClient wsClient,
+    TwitchClient twitchClient,
     TwitchSubscriptionService subscriptionService,
     ChannelRepository channelRepository,
     EventBus eventBus,
@@ -36,13 +37,9 @@ public class TwitchEventSubJob(
             await wsClient.ConnectAsync(cancellationToken);
             await RunLoopAsync(cancellationToken);
         }
-        catch (KeepaliveTimeoutException ex)
-        {
-            logger.LogWarning(ex.Message);
-        }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error in Twitch EventSub job. Waiting 5s before next attempt.");
+            logger.LogError(ex, "Error in Twitch EventSub job. Restarting...");
         }
         finally
         {
@@ -57,13 +54,9 @@ public class TwitchEventSubJob(
         var receiveTask = ReceiveLoopAsync(heartbeatCts.Token);
         var heartbeatTask = wsClient.MonitorHeartbeatAsync(heartbeatCts.Token);
 
-        var completed = await Task.WhenAny(receiveTask, heartbeatTask);
-
-        // Cancel the other task.
+        var completedTask = await Task.WhenAny(receiveTask, heartbeatTask);
         await heartbeatCts.CancelAsync();
-
-        // Propagate exceptions from whichever task finished.
-        await completed;
+        await completedTask;
     }
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
@@ -83,7 +76,7 @@ public class TwitchEventSubJob(
 
     private async Task HandleWelcomeAsync(string sessionId, int keepaliveTimeoutSeconds, CancellationToken cancellationToken)
     {
-        wsClient.ConfigureHeartbeat(keepaliveTimeoutSeconds);
+        wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
 
         subscriptionService.Reset();
         subscriptionService.SessionId = sessionId;
@@ -102,6 +95,9 @@ public class TwitchEventSubJob(
                     await HandleWelcomeAsync(message.Payload.Session.Id, message.Payload.Session.KeepaliveTimeoutSeconds ?? 10, cancellationToken);
 
                 await wsClient.CloseOldConnectionAsync();
+
+                var subsCount = await twitchClient.GetEventSubsCountAsync(cancellationToken);
+                logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
                 return;
 
             case "session_reconnect":

@@ -34,13 +34,6 @@ public sealed class StreamRecordingSession : IAsyncDisposable
     private SessionEndReason? _finalizeReason;
     private bool _disposed;
 
-    public Channel Channel => _channel;
-
-    // -------------------------------------------------------------------------
-    // Construction — use the static factory so async init stays off the
-    // constructor, but all fields are set exactly once and are readonly.
-    // -------------------------------------------------------------------------
-
     private StreamRecordingSession(
         Models.Stream stream,
         StreamSegment streamSegment,
@@ -187,7 +180,7 @@ public sealed class StreamRecordingSession : IAsyncDisposable
 
                     (lastQualityRank, lastVariantUrl) = (qualityRank, variantUrl);
 
-                    _logger.LogInformation("Streaming quality: {Rank} ({Bandwidth} bps)",
+                    _logger.LogDebug("Streaming quality: {Rank} ({Bandwidth} bps)",
                         qualityRank + 1, variants[qualityRank].Bandwidth);
                 }
 
@@ -241,7 +234,7 @@ public sealed class StreamRecordingSession : IAsyncDisposable
 
         if (requestedRank != clampedRank)
         {
-            _logger.LogWarning(
+            _logger.LogInformation(
                 "Requested quality rank {Requested} but only {Count} variants available. Clamped to {Clamped}.",
                 requestedRank + 1, variants.Length, clampedRank + 1);
         }
@@ -272,14 +265,14 @@ public sealed class StreamRecordingSession : IAsyncDisposable
                 case StreamStopped:
                     _streamSegment.MarkAsStopped();
                     await _streamRepository.UpdateSegmentAsync(_streamSegment);
-                    _logger.LogInformation("Recording manually stopped.");
+                    _logger.LogDebug("Recording manually stopped.");
                     return;
 
                 case StreamSplit:
                     _streamSegment.MarkAsFinished();
                     await _streamRepository.UpdateSegmentAsync(_streamSegment);
 
-                    _logger.LogInformation("Segment '{SegmentNumber}' closed (metadata split).",
+                    _logger.LogDebug("Segment '{SegmentNumber}' closed (metadata split).",
                         _streamSegment.SegmentNumber);
                     return;
 
@@ -308,20 +301,11 @@ public sealed class StreamRecordingSession : IAsyncDisposable
 
     private async Task HandleStreamEndedAsync()
     {
-        // if (await IsStreamStillLiveAsync())
-        // {
-        //     _streamSegment.Status = StreamStatus.Interrupted;
-        //     await _streamRepository.UpdateSegmentAsync(_streamSegment);
-        //     _logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
-        //     return;
-        // }
-
         _stream.StreamSegment = (await _streamRepository.GetSegmentsByStreamIdAsync(_stream.TwitchStreamId)).First();
         _stream.FinishedAt = DateTime.Now;
 
         _streamSegment.MarkAsFinished();
 
-        await _thumbnailManager.TrySaveVodThumbnailAsync(_channel.Name);
         await _streamRepository.UpdateStreamAsync(_stream);
         await _streamRepository.UpdateSegmentAsync(_streamSegment);
 
