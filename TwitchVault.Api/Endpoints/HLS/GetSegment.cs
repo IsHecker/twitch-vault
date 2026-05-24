@@ -11,7 +11,6 @@ public class GetSegment : IEndpoint
         app.MapGet("/hls/{streamId}/segments/{segmentName}", async (
             string streamId,
             string segmentName,
-            [FromQuery] int? segment,
             [FromQuery] bool? audioOnly,
             StreamRepository streamRepo,
             ChannelRepository channelRepo,
@@ -28,22 +27,12 @@ public class GetSegment : IEndpoint
                 var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
                 stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
 
-                if (stream is null || stream.StreamSegment.Status != StreamStatus.Recording)
+                if (stream is null || stream.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
 
-            StreamSegment? targetSegment = stream.StreamSegment;
-            if (segment.HasValue && segment != targetSegment.SegmentNumber)
-            {
-                var segments = await streamRepo.GetSegmentsByStreamIdAsync(streamId);
-                targetSegment = segments.FirstOrDefault(s => s.SegmentNumber == segment.Value);
-            }
-
-            if (targetSegment == null)
-                return Results.NotFound();
-
             var safeFileName = Path.GetFileName(segmentName);
-            var filePath = Path.Combine(env.ContentRootPath, targetSegment.FolderPath, safeFileName);
+            var filePath = Path.Combine(env.ContentRootPath, stream.FolderPath, safeFileName);
 
             if (!File.Exists(filePath))
                 return Results.NotFound();

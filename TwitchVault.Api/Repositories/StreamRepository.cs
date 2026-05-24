@@ -30,7 +30,7 @@ public class StreamRepository(JsonDatabase db)
             data.Streams.Add(stream);
         });
 
-    public Task UpdateStreamAsync(Models.Stream stream) =>
+    public Task UpdateAsync(Models.Stream stream) =>
         db.WriteAsync(data =>
         {
             var index = data.Streams.FindIndex(s => s.TwitchStreamId == stream.TwitchStreamId);
@@ -38,45 +38,9 @@ public class StreamRepository(JsonDatabase db)
                 data.Streams[index] = stream;
         });
 
-    public async Task<List<StreamSegment>> GetSegmentsByStreamIdAsync(string twitchStreamId)
-    {
-        var data = await db.ReadAsync();
-        return data.StreamSegments
-            .Where(s => s.StreamId == twitchStreamId)
-            .OrderBy(s => s.SegmentNumber)
-            .ToList();
-    }
-
-    public async Task<StreamSegment?> GetActiveSegmentAsync(string twitchStreamId)
-    {
-        var data = await db.ReadAsync();
-        return data.StreamSegments.FirstOrDefault(s => s.StreamId == twitchStreamId && s.Status == StreamStatus.Recording);
-    }
-
-    public Task AddSegmentAsync(StreamSegment segment) =>
-        db.WriteAsync(data =>
-        {
-            data.StreamSegments.Add(segment);
-        });
-
-    public Task UpdateSegmentAsync(StreamSegment segment) =>
-        db.WriteAsync(data =>
-        {
-            var index = data.StreamSegments.FindIndex(s => s.Id == segment.Id);
-            if (index >= 0)
-                data.StreamSegments[index] = segment;
-        });
-
     public Task DeleteStreamAsync(string twitchStreamId) =>
         db.WriteAsync(data =>
         {
             data.Streams.RemoveAll(s => s.TwitchStreamId == twitchStreamId);
-            data.StreamSegments.RemoveAll(s => s.StreamId == twitchStreamId);
-        });
-
-    public Task DeleteSegmentAsync(StreamSegment segment) =>
-        db.WriteAsync(data =>
-        {
-            data.StreamSegments.RemoveAll(s => s.Id == segment.Id);
         });
 }

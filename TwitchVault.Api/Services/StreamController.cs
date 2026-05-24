@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Events;
@@ -12,10 +11,9 @@ namespace TwitchVault.Api.Services;
 
 public sealed record BackgroundRecorder(StreamRecordingSession Session, Task BackgroundTask);
 
-public sealed class StreamController : IAsyncDisposable
+public sealed class StreamController
 {
     private readonly Dictionary<string, BackgroundRecorder> _activeRecorders = [];
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _channelLocks = new();
     private readonly SemaphoreSlim _sessionsLock = new(1, 1);
 
     private readonly TwitchClient _twitchClient;
@@ -56,7 +54,6 @@ public sealed class StreamController : IAsyncDisposable
         appLifetime.ApplicationStopping.Register(OnApplicationStopping);
 
         eventBus.Subscribe<StreamOnlineEvent>(OnStreamOnlineAsync);
-        eventBus.Subscribe<ChannelUpdateEvent>(OnMetadataChangedAsync);
     }
 
     private async Task OnStreamOnlineAsync(StreamOnlineEvent e)
@@ -86,55 +83,6 @@ public sealed class StreamController : IAsyncDisposable
         }
     }
 
-    private async Task OnMetadataChangedAsync(ChannelUpdateEvent e)
-    {
-        var channelLock = _channelLocks.GetOrAdd(e.ChannelId, _ => new SemaphoreSlim(1, 1));
-        await channelLock.WaitAsync(_appLifetime.ApplicationStopping);
-        try
-        {
-            var channel = await _channelRepository.GetByIdAsync(e.ChannelId);
-
-            using var _chnlScope = _logger.BeginScope("{Channel}", channel!.Name);
-            using var _metaScope = _logger.BeginScope("'{Title}' ({Category})", e.Title, e.CategoryName);
-
-            if (!channel.IsLive)
-            {
-                _logger.LogWarning("Metadata change ignored: channel is not live.");
-                return;
-            }
-
-            var activeStream = (await _streamRepository.GetStreamsByChannelIdAsync(e.ChannelId))
-                .OrderByDescending(s => s.StartedAt)
-                .First();
-
-            var activeSegment = activeStream.StreamSegment;
-            if (activeSegment.Title == e.Title && activeSegment.CategoryName == e.CategoryName)
-            {
-                _logger.LogInformation("Metadata change ignored: title and category unchanged.");
-                return;
-            }
-
-            var isFinished = await FinishRecordingAsync(activeStream.TwitchStreamId);
-            if (!isFinished)
-            {
-                _logger.LogError("Metadata change ignored: No active session is found");
-                return;
-            }
-
-            _logger.LogInformation("Metadata split triggered");
-
-            var nextSegment = await BuildNextSegmentAsync(activeStream, e.Title, e.CategoryName);
-            await _streamRepository.AddSegmentAsync(nextSegment);
-
-            await StartRecordingSessionAsync(activeStream, channel);
-        }
-        catch (OperationCanceledException) { }
-        finally
-        {
-            channelLock.Release();
-        }
-    }
-
     public async Task StartAsync(Channel channel, StreamMetadata metadata)
     {
         await _sessionsLock.WaitAsync();
@@ -154,7 +102,7 @@ public sealed class StreamController : IAsyncDisposable
                 return;
             }
 
-            if (existing.StreamSegment.Status is StreamStatus.Interrupted or StreamStatus.Recording)
+            if (existing.Status is StreamStatus.Interrupted or StreamStatus.Recording)
                 await ResumeStreamAsync(existing, channel);
         }
         finally
@@ -172,18 +120,6 @@ public sealed class StreamController : IAsyncDisposable
             return;
         }
         await session.StopAsync();
-    }
-
-    public async Task<bool> FinishRecordingAsync(string streamId)
-    {
-        var session = GetSession(streamId);
-        if (session is null)
-        {
-            _logger.LogWarning("FinishRecording: no active session for stream {StreamId}.", streamId);
-            return false;
-        }
-        await session.FinishAsync();
-        return true;
     }
 
     public async Task ToggleStreamDeletionAsync(string streamId, bool markForDeletion)
@@ -206,27 +142,19 @@ public sealed class StreamController : IAsyncDisposable
     {
         var rootFolderPath = BuildStreamFolderPath(channel.Name);
 
-        var segment = new StreamSegment
-        {
-            StreamId = metadata.TwitchStreamId,
-            Title = metadata.Title,
-            CategoryName = metadata.CategoryName,
-            ThumbnailUrl = metadata.PreviewImageUrl,
-            Status = StreamStatus.Recording,
-            SegmentNumber = 1,
-            MarkForDeletion = false,
-            FolderPath = Path.Combine(rootFolderPath, "1"),
-        };
-
         var stream = new Models.Stream
         {
             ChannelId = channel.ChannelId,
-            StreamSegment = segment,
             TwitchStreamId = metadata.TwitchStreamId,
             FolderPath = rootFolderPath,
+            ThumbnailUrl = metadata.PreviewImageUrl,
+            Status = StreamStatus.Recording,
+            MarkForDeletion = false,
+            Chapters = []
         };
 
-        await _streamRepository.AddSegmentAsync(segment);
+        stream.AddChapter(metadata.Title, metadata.CategoryName);
+
         await _streamRepository.AddStreamAsync(stream);
         await _channelRepository.SetLiveAsync(channel.ChannelId, true);
         await _channelRepository.UpdateLastStreamedAtAsync(channel.ChannelId, stream.StartedAt);
@@ -236,32 +164,12 @@ public sealed class StreamController : IAsyncDisposable
 
     public async Task ResumeStreamAsync(Models.Stream stream, Channel channel)
     {
-        stream.StreamSegment.Status = StreamStatus.Recording;
         stream.FinishedAt = null;
 
-        await _streamRepository.UpdateStreamAsync(stream);
-        await _streamRepository.UpdateSegmentAsync(stream.StreamSegment);
+        await _streamRepository.UpdateAsync(stream);
         await _channelRepository.SetLiveAsync(channel.ChannelId, true);
 
         await StartRecordingSessionAsync(stream, channel);
-    }
-
-    private async Task<StreamSegment> BuildNextSegmentAsync(Models.Stream stream, string title, string categoryName)
-    {
-        var nextSegmentNumber = ++stream.TotalSegments;
-        stream.StreamSegment = new StreamSegment
-        {
-            StreamId = stream.TwitchStreamId,
-            Title = title,
-            CategoryName = categoryName,
-            Status = StreamStatus.Recording,
-            SegmentNumber = nextSegmentNumber,
-            MarkForDeletion = false,
-            FolderPath = Path.Combine(stream.FolderPath, nextSegmentNumber.ToString())
-        };
-        await _streamRepository.UpdateStreamAsync(stream);
-
-        return stream.StreamSegment;
     }
 
     private async Task StartRecordingSessionAsync(Models.Stream stream, Channel channel)
@@ -272,6 +180,7 @@ public sealed class StreamController : IAsyncDisposable
         {
             using var channelContext = LogContext.PushProperty("Channel", channel.Name);
             using var streamContext = LogContext.PushProperty("StreamId", stream.TwitchStreamId);
+            using var titleContext = LogContext.PushProperty("Title", stream.CurrentChapter.Title);
 
             try
             {
@@ -283,7 +192,6 @@ public sealed class StreamController : IAsyncDisposable
             }
             finally
             {
-                _channelLocks.TryRemove(channel.ChannelId, out _);
                 _activeRecorders.Remove(stream.TwitchStreamId);
             }
         });
@@ -294,11 +202,11 @@ public sealed class StreamController : IAsyncDisposable
     private async Task<StreamRecordingSession> CreateSessionAsync(Models.Stream stream, Channel channel)
     {
         var segmentDownloader = _serviceProvider.GetRequiredService<SegmentDownloader>();
+        var eventBus = _serviceProvider.GetRequiredService<EventBus>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
         return await StreamRecordingSession.CreateAsync(
             stream,
-            stream.StreamSegment,
             channel,
             segmentDownloader,
             _streamRepository,
@@ -307,6 +215,7 @@ public sealed class StreamController : IAsyncDisposable
             _twitchClient,
             _settingsService.Settings,
             _pathsOptions.Value,
+            eventBus,
             loggerFactory,
             _appLifetime.ApplicationStopping);
     }
@@ -350,32 +259,5 @@ public sealed class StreamController : IAsyncDisposable
     {
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
         return Path.Combine(_pathsOptions.Value.Streams, channelName, timestamp);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_isDisposed)
-            return;
-        _isDisposed = true;
-
-        await _sessionsLock.WaitAsync();
-        try
-        {
-            foreach (var recorder in _activeRecorders.Values)
-                await recorder.Session.DisposeAsync();
-
-            _activeRecorders.Clear();
-        }
-        finally
-        {
-            _sessionsLock.Release();
-        }
-
-        _sessionsLock.Dispose();
-
-        foreach (var sem in _channelLocks.Values)
-            sem.Dispose();
-
-        _channelLocks.Clear();
     }
 }

@@ -19,7 +19,7 @@ public class ResumeRecording : IEndpoint
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.StreamSegment.Status != StreamStatus.Stopped)
+            if (stream.Status != StreamStatus.Stopped)
                 return Results.BadRequest("Stream is not stopped.");
 
             var channel = await channelRepository.GetByIdAsync(stream.ChannelId);
@@ -29,8 +29,8 @@ public class ResumeRecording : IEndpoint
             var metadata = await twitchClient.GetStreamMetadataAsync(channel.Name, default);
             if (metadata is null)
             {
-                stream.StreamSegment.Status = StreamStatus.Finished;
-                await streamRepository.UpdateSegmentAsync(stream.StreamSegment);
+                stream.MarkAsFinished();
+                await streamRepository.UpdateAsync(stream);
 
                 return Results.BadRequest("Channel is not currently live.");
             }

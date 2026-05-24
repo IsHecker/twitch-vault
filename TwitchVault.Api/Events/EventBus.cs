@@ -1,15 +1,25 @@
+using System.Collections.Concurrent;
+
 namespace TwitchVault.Api.Events;
 
 public class EventBus
 {
-    private readonly Dictionary<Type, List<Delegate>> _handlers = [];
+    private readonly ConcurrentDictionary<Type, List<Delegate>> _handlers = [];
 
     public void Subscribe<TEvent>(Func<TEvent, Task> handler)
     {
-        var type = typeof(TEvent);
-        if (!_handlers.TryGetValue(type, out var handlers))
-            _handlers[type] = handlers = [];
+        if (!_handlers.TryGetValue(typeof(TEvent), out var handlers))
+            _handlers[typeof(TEvent)] = handlers = [];
+
         handlers.Add(handler);
+    }
+
+    public void UnSubscribe<TEvent>(Func<TEvent, Task> handler)
+    {
+        if (!_handlers.TryGetValue(typeof(TEvent), out var handlers))
+            return;
+
+        handlers.Remove(handler);
     }
 
     public async Task PublishAsync<TEvent>(TEvent e)

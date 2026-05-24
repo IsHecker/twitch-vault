@@ -7,16 +7,20 @@ namespace TwitchVault.Api.Endpoints.Streams;
 public class ToggleStreamDeletion : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPatch("/api/streams/{id}/deletion-mark/{state:bool}", async (string id, bool state, StreamRepository repo, StreamController controller) =>
+        app.MapPatch("/api/streams/{id}/deletion-mark", async (
+            string id,
+            Request request,
+            StreamRepository repo,
+            StreamController controller) =>
         {
             var stream = await repo.GetStreamByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.StreamSegment.Status == StreamStatus.Finished)
+            if (stream.Status == StreamStatus.Finished)
                 return Results.BadRequest("Cannot mark a finished stream for deletion — delete it directly.");
 
-            await controller.ToggleStreamDeletionAsync(id, state);
+            await controller.ToggleStreamDeletionAsync(id, request.State);
             return Results.NoContent();
         })
         .WithName(nameof(ToggleStreamDeletion))
@@ -25,4 +29,6 @@ public class ToggleStreamDeletion : IEndpoint
         .Produces(StatusCodes.Status204NoContent)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status400BadRequest);
+
+    internal readonly record struct Request(bool State);
 }

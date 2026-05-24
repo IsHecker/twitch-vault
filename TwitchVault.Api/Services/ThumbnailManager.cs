@@ -1,13 +1,9 @@
-using TwitchVault.Api.Models;
-using TwitchVault.Api.Repositories;
 using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Services;
 
 public sealed class ThumbnailManager(
     Models.Stream stream,
-    StreamSegment streamSegment,
-    StreamRepository streamRepository,
     TwitchClient twitchClient,
     ILogger<ThumbnailManager> logger)
 {
@@ -17,42 +13,24 @@ public sealed class ThumbnailManager(
     private readonly DateTime _sessionStartTime = DateTime.Now;
     private DateTime _lastSnapshotTime = DateTime.MinValue;
 
-    public string LocalThumbnailPath => Path.Combine(streamSegment.FolderPath, "thumbnail.jpg");
+    public string LocalThumbnailPath => Path.Combine(stream.FolderPath, "thumbnail.jpg");
 
-    public async Task TryCaptureSnapshotAsync(string channelName)
+    public async Task TryCaptureSnapshotAsync()
     {
         if (!CanCaptureSnapshot())
             return;
 
         try
         {
-            if (string.IsNullOrEmpty(stream.TwitchVodId))
-                await DiscoverVodIdAsync(channelName);
-
-            await SaveThumbnailAsync(streamSegment.ThumbnailUrl);
+            await SaveThumbnailAsync(stream.ThumbnailUrl);
             _lastSnapshotTime = DateTime.Now;
 
-            logger.LogDebug(
-                "Captured live thumbnail snapshot for segment {SegmentNumber}",
-                streamSegment.SegmentNumber);
+            logger.LogDebug("Captured live thumbnail snapshot");
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex,
-                "Failed to capture live thumbnail snapshot for segment {SegmentNumber}",
-                streamSegment.SegmentNumber);
+            logger.LogWarning(ex, "Failed to capture live thumbnail snapshot");
         }
-    }
-
-    private async Task DiscoverVodIdAsync(string channelName)
-    {
-        var vodId = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
-        if (string.IsNullOrEmpty(vodId))
-            return;
-
-        stream.TwitchVodId = vodId;
-        await streamRepository.UpdateStreamAsync(stream);
-        logger.LogInformation("Thumbnail: Linked to VOD {VodId}.", vodId);
     }
 
     private bool CanCaptureSnapshot()

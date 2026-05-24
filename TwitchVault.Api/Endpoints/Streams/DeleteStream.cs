@@ -1,4 +1,3 @@
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
 using TwitchVault.Api.Services;
@@ -18,7 +17,7 @@ public class DeleteStream : IEndpoint
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.StreamSegment.Status == StreamStatus.Recording || controller.GetSession(id) is not null)
+            if (stream.Status == StreamStatus.Recording || controller.GetSession(id) is not null)
                 return Results.BadRequest("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
             await streamService.DeleteStreamAsync(id);

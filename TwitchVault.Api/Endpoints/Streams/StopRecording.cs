@@ -13,7 +13,7 @@ public class StopRecording : IEndpoint
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.StreamSegment.Status != StreamStatus.Recording)
+            if (stream.Status != StreamStatus.Recording)
                 return Results.BadRequest("Stream is not currently recording.");
 
             await controller.StopRecordingAsync(id);

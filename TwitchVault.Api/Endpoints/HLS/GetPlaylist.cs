@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using TwitchVault.Api.Models;
 using TwitchVault.Api.Repositories;
 
@@ -9,7 +8,6 @@ public class GetPlaylist : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/hls/{streamId}/playlist.m3u8", async (
             string streamId,
-            [FromQuery] int? segment,
             StreamRepository streamRepo,
             ChannelRepository channelRepo,
             IWebHostEnvironment env) =>
@@ -25,21 +23,11 @@ public class GetPlaylist : IEndpoint
                 var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
                 stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
 
-                if (stream is null || stream.StreamSegment.Status != StreamStatus.Recording)
+                if (stream is null || stream.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
 
-            StreamSegment? targetSegment = stream.StreamSegment;
-            if (segment.HasValue && segment != targetSegment.SegmentNumber)
-            {
-                var segments = await streamRepo.GetSegmentsByStreamIdAsync(streamId);
-                targetSegment = segments.FirstOrDefault(s => s.SegmentNumber == segment.Value);
-            }
-
-            if (targetSegment == null)
-                return Results.NotFound();
-
-            var playlistPath = Path.Combine(env.ContentRootPath, targetSegment.FolderPath, "playlist.m3u8");
+            var playlistPath = Path.Combine(env.ContentRootPath, stream.FolderPath, "playlist.m3u8");
 
             if (!File.Exists(playlistPath))
                 return Results.NotFound();

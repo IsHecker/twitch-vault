@@ -1,4 +1,5 @@
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Repositories;
 using TwitchVault.Api.Services;
 using TwitchVault.Api.Twitch.TwitchEventSub;
@@ -13,7 +14,8 @@ public class DeleteChannel : IEndpoint
             TwitchSubscriptionService twitchSubscription,
             ChannelRepository repo,
             StreamController streamController,
-            StreamRepository streamRepository) =>
+            StreamRepository streamRepository,
+            PathsOptions pathsOptions) =>
         {
             var channel = await repo.GetByIdAsync(channelId);
 
@@ -28,17 +30,12 @@ public class DeleteChannel : IEndpoint
                 if (stream is not null)
                 {
                     await streamController.ToggleStreamDeletionAsync(stream.TwitchStreamId, true);
-                    await streamController.FinishRecordingAsync(stream.TwitchStreamId);
+                    await streamController.StopRecordingAsync(stream.TwitchStreamId);
                 }
             }
 
-            foreach (var stream in streams)
-            {
-                await streamRepository.DeleteStreamAsync(stream.TwitchStreamId);
-                await IOUtils.DeleteDirectoryWithRetriesAsync(stream.FolderPath);
-            }
-
             await repo.DeleteAsync(channelId);
+            await IOUtils.DeleteDirectoryWithRetriesAsync(Path.Combine(pathsOptions.Streams, channel.Name));
 
             _ = twitchSubscription.UnsubscribeChannelAsync(channel, default);
 
