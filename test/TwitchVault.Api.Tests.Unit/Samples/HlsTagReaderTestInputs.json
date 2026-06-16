@@ -1,0 +1,25 @@
+{
+  "ReadTagValue_ShouldReturnCorrectValue_WhenTagExists": [
+    {
+      "tag": "EXTINF",
+      "endChar": ",",
+      "expected": "2.000"
+    },
+    {
+      "tag": "#EXT-X-PROGRAM-DATE-TIME",
+      "endChar": "\n",
+      "expected": "2026-06-12T11:43:20.214Z"
+    },
+    {
+      "tag": "EXT-X-MEDIA-SEQUENCE",
+      "endChar": "\n",
+      "expected": ""
+    }
+  ],
+  "ReadTagValue_ShouldReturnEmpty_WhenTagDoesntExist": [
+    {
+      "tag": "#TAG-THAT-DOESNT-EXIST",
+      "endChar": "\n"
+    }
+  ]
+}

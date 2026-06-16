@@ -1,0 +1,24 @@
+using TwitchVault.Api.Persistence;
+using TwitchVault.Api.Recording.HLS;
+
+using TwitchVault.Api.Events;
+namespace TwitchVault.Api.Endpoints.Channels;
+
+
+public class UpdateChannelQuality : IEndpoint
+{
+    public void MapEndpoint(IEndpointRouteBuilder app) =>
+        app.MapPut("/api/channels/{channelId}/quality", async (string channelId, Request request, ChannelRepository repo) =>
+        {
+            var channel = await repo.GetByIdAsync(channelId);
+            if (channel is null)
+                return Results.NotFound();
+            channel.QualityRank = request.QualityRank;
+            await repo.UpdateAsync(channel);
+            return Results.Ok(channel);
+        })
+        .WithName(nameof(UpdateChannelQuality))
+        .WithTags("Channels")
+        .WithSummary("Update the quality rank of a channel");
+    internal record struct Request(int QualityRank);
+}

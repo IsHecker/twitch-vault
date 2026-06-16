@@ -1,0 +1,186 @@
+{
+  "Channels": [
+    {
+      "ChannelId": "54507525",
+      "Name": "pisty",
+      "QualityRank": 2,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-06-10T00:07:34.1575324+02:00"
+    },
+    {
+      "ChannelId": "1131131080",
+      "Name": "keewidraws",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-06-10T03:34:24.6183268+02:00"
+    },
+    {
+      "ChannelId": "153423171",
+      "Name": "vnnh_",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-05-10T04:34:27.9586013+02:00"
+    },
+    {
+      "ChannelId": "151283108",
+      "Name": "gothamchess",
+      "QualityRank": 2,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-05-25T23:35:25.0285224+02:00"
+    },
+    {
+      "ChannelId": "177029122",
+      "Name": "nyyxxii",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": false,
+      "LastStreamedAt": null
+    },
+    {
+      "ChannelId": "183945752",
+      "Name": "zhanarii",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": false,
+      "LastStreamedAt": null
+    }
+  ],
+  "Streams": [
+    {
+      "TwitchStreamId": "450410214400",
+      "TwitchVodId": null,
+      "ChannelId": "151283108",
+      "FolderPath": "Streams\\gothamchess\\2026-04-10 21-44-00",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-04-10T21:44:00+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "315652074861",
+      "TwitchVodId": null,
+      "ChannelId": "54507525",
+      "FolderPath": "Streams\\pisty\\2026-05-08 01-12-32",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-08T01:12:32.2932915+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "317082722392",
+      "TwitchVodId": null,
+      "ChannelId": "1131131080",
+      "FolderPath": "Streams\\keewidraws\\2026-05-09 04-24-01",
+      "ThumbnailUrl": null,
+      "Status": "Finished",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-09T04:24:01.9193904+02:00",
+      "FinishedAt": "2026-06-10T03:34:24.6013749+02:00",
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "319208510938",
+      "TwitchVodId": null,
+      "ChannelId": "153423171",
+      "FolderPath": "Streams\\vnnh_\\2026-05-10 04-34-27",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-10T04:34:27.9586013+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "317785960919",
+      "TwitchVodId": null,
+      "ChannelId": "1131131080",
+      "FolderPath": "Streams\\keewidraws\\2026-05-17 03-59-48",
+      "ThumbnailUrl": null,
+      "Status": "Finished",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-17T03:59:48.8108678+02:00",
+      "FinishedAt": "2026-06-10T03:34:24.6111572+02:00",
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "317798192599",
+      "TwitchVodId": null,
+      "ChannelId": "1131131080",
+      "FolderPath": "Streams\\keewidraws\\2026-05-18 03-10-11",
+      "ThumbnailUrl": null,
+      "Status": "Finished",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-18T03:10:11.3832251+02:00",
+      "FinishedAt": "2026-06-10T03:34:24.6131181+02:00",
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "319345491929",
+      "TwitchVodId": "2777573411",
+      "ChannelId": "151283108",
+      "FolderPath": "Streams\\gothamchess\\2026-05-21 21-28-38",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-21T21:28:38.258684+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "315681538796",
+      "TwitchVodId": "2777641096",
+      "ChannelId": "54507525",
+      "FolderPath": "Streams\\pisty\\2026-05-21 23-09-23",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-21T23:09:23.2949576+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "315681677804",
+      "TwitchVodId": "2777667448",
+      "ChannelId": "54507525",
+      "FolderPath": "Streams\\pisty\\2026-05-21 23-57-28",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-21T23:57:28.5256818+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "315693605612",
+      "TwitchVodId": "2780029533",
+      "ChannelId": "54507525",
+      "FolderPath": "Streams\\pisty\\2026-05-24 22-14-14",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-24T22:14:14.3168879+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    },
+    {
+      "TwitchStreamId": "319420134105",
+      "TwitchVodId": "2780877456",
+      "ChannelId": "151283108",
+      "FolderPath": "Streams\\gothamchess\\2026-05-25 23-35-25",
+      "ThumbnailUrl": null,
+      "Status": "Recording",
+      "MarkForDeletion": false,
+      "StartedAt": "2026-05-25T23:35:25.0285224+02:00",
+      "FinishedAt": null,
+      "Chapters": []
+    }
+  ]
+}

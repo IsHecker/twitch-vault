@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVault.Api", "TwitchVault.Api\TwitchVault.Api.csproj", "{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0C88DD14-F956-CE84-757C-A364CCF449FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVault.Api.Tests.Unit", "test\TwitchVault.Api.Tests.Unit\TwitchVault.Api.Tests.Unit.csproj", "{9A881206-155A-4F29-93D8-B990936026C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVault.Api", "src\TwitchVault.Api\TwitchVault.Api.csproj", "{6457EBC6-235A-4684-B9D4-E3990314DE9F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,20 +19,36 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Debug|x64.Build.0 = Debug|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Debug|x86.Build.0 = Debug|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Release|x64.ActiveCfg = Release|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Release|x64.Build.0 = Release|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Release|x86.ActiveCfg = Release|Any CPU
-		{F784CA1C-AAB8-4AF5-92E3-7C0E88425C16}.Release|x86.Build.0 = Release|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Debug|x64.Build.0 = Debug|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Debug|x86.Build.0 = Debug|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Release|x64.ActiveCfg = Release|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Release|x64.Build.0 = Release|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Release|x86.ActiveCfg = Release|Any CPU
+		{9A881206-155A-4F29-93D8-B990936026C1}.Release|x86.Build.0 = Release|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Debug|x64.Build.0 = Debug|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Debug|x86.Build.0 = Debug|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Release|x64.ActiveCfg = Release|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Release|x64.Build.0 = Release|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Release|x86.ActiveCfg = Release|Any CPU
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9A881206-155A-4F29-93D8-B990936026C1} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
+		{6457EBC6-235A-4684-B9D4-E3990314DE9F} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 	EndGlobalSection
 EndGlobal
