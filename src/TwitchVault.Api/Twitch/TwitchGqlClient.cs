@@ -19,7 +19,9 @@ public sealed class TwitchGqlClient(
         return ParseStreamMetadata(document!.RootElement);
     }
 
-    public async Task<Dictionary<Domain.Channel, StreamMetadata?>> GetStreamMetadataAsync(List<Domain.Channel> channels, CancellationToken cancellationToken)
+    public async Task<Dictionary<Domain.Channel, StreamMetadata?>> GetStreamMetadataAsync(
+        List<Domain.Channel> channels,
+        CancellationToken cancellationToken)
     {
         var payloads = channels.Select(c => TwitchGqlPayloads.StreamMetadata(c.Name));
         using var response = await SendGqlRequestAsync(payloads, cancellationToken);
@@ -167,9 +169,8 @@ public sealed class TwitchGqlClient(
             return null;
 
         var hasStream = user.TryGetProperty("stream", out var stream) && stream.ValueKind != JsonValueKind.Null;
-        var hasLastBroadcast = user.TryGetProperty("lastBroadcast", out var lastBroadcast) && lastBroadcast.ValueKind != JsonValueKind.Null;
 
-        if (!hasStream && !hasLastBroadcast)
+        if (!hasStream)
             return null;
 
         var streamId = hasStream ? stream.GetProperty("id").GetString() : string.Empty;
@@ -177,9 +178,8 @@ public sealed class TwitchGqlClient(
             ? previewUrl.GetString()
             : string.Empty;
 
-        var metadataSource = hasLastBroadcast ? lastBroadcast : stream;
-        var streamTitle = metadataSource.GetProperty("title").GetString() ?? string.Empty;
-        var game = metadataSource.GetProperty("game");
+        var streamTitle = stream.GetProperty("title").GetString() ?? string.Empty;
+        var game = stream.GetProperty("game");
         var categoryName = game.ValueKind != JsonValueKind.Null
             ? game.GetProperty("name").GetString() ?? "Unknown"
             : "Unknown";

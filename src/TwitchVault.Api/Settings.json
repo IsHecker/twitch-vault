@@ -13,11 +13,7 @@
     "PlaylistFlushIntervalInSec": 2
   },
   "ChannelMonitor": {
-    "Enabled": false,
+    "Enabled": true,
     "RunIntervalInMinutes": 1
-  },
-  "StoppedStreamCheck": {
-    "Enabled": false,
-    "RunIntervalInMinutes": 0.1
   }
 }

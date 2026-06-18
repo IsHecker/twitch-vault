@@ -11,7 +11,8 @@ namespace TwitchVault.Api.Twitch.EventSub;
 [DisallowConcurrentExecution]
 public class TwitchEventSubJob(
     TwitchWebSocketClient wsClient,
-    TwitchHelixClient TwitchHelixClient,
+    ITwitchGqlClient twitchGqlClient,
+    TwitchHelixClient twitchHelixClient,
     TwitchSubscriptionService subscriptionService,
     ChannelRepository channelRepository,
     EventBus eventBus,
@@ -74,7 +75,10 @@ public class TwitchEventSubJob(
         }
     }
 
-    private async Task HandleWelcomeAsync(string sessionId, int? keepaliveTimeoutSeconds, CancellationToken cancellationToken)
+    private async Task HandleWelcomeAsync(
+        string sessionId,
+        int? keepaliveTimeoutSeconds,
+        CancellationToken cancellationToken)
     {
         wsClient.SetHeartbeat(keepaliveTimeoutSeconds ?? 10);
 
@@ -98,7 +102,7 @@ public class TwitchEventSubJob(
                         cancellationToken);
 
                 await wsClient.CloseOldConnectionAsync();
-                var subsCount = await TwitchHelixClient.GetEventSubsCountAsync(cancellationToken);
+                var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
                 logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
                 return;
 
@@ -109,7 +113,7 @@ public class TwitchEventSubJob(
 
             case "notification":
                 if (message.Payload.Subscription.Type == "stream.online")
-                    await PublishStreamOnlineAsync(message.Payload.Event.RootElement);
+                    await PublishStreamOnlineAsync(message.Payload.Event.RootElement, cancellationToken);
                 else if (message.Payload.Subscription.Type == ChannelUpdateEvent.EventName)
                     await PublishChannelUpdateAsync(message.Payload.Event.RootElement);
                 else
@@ -118,10 +122,14 @@ public class TwitchEventSubJob(
         }
     }
 
-    private async Task PublishStreamOnlineAsync(JsonElement e) =>
+    private async Task PublishStreamOnlineAsync(JsonElement e, CancellationToken cancellationToken)
+    {
+        var channelName = e.GetProperty("broadcaster_user_login").GetString()!;
+
+        var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, cancellationToken);
         await streamController.HandleStreamOnlineAsync(
-            e.GetProperty("broadcaster_user_id").GetString()!,
-            e.GetProperty("broadcaster_user_login").GetString()!);
+            e.GetProperty("broadcaster_user_id").GetString()!, channelName, metadata.Value);
+    }
 
     private async Task PublishChannelUpdateAsync(JsonElement e) =>
         await eventBus.PublishAsync(new ChannelUpdateEvent(

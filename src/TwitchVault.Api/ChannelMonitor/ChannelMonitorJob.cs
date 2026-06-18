@@ -19,6 +19,7 @@ public sealed class ChannelMonitorJob(
     {
         if (!settingsService.Settings.ChannelMonitor.Enabled)
             return;
+
         try
         {
             var channels = (await channelRepository.GetAllAsync())

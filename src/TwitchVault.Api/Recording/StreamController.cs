@@ -18,7 +18,6 @@ public sealed class StreamController
     private readonly Dictionary<string, BackgroundRecorder> _activeRecorders = [];
     private readonly ConcurrentDictionary<string, byte> _processingChannels = new();
     private readonly SemaphoreSlim _sessionsLock = new(1, 1);
-    private readonly ITwitchGqlClient _twitchClient;
     private readonly ChannelRepository _channelRepository;
     private readonly IStreamRepository _streamRepository;
     private readonly StreamService _streamService;
@@ -30,7 +29,6 @@ public sealed class StreamController
     private readonly IHostApplicationLifetime _appLifetime;
 
     public StreamController(
-        ITwitchGqlClient twitchGqlClient,
         ChannelRepository channelRepository,
         IStreamRepository streamRepository,
         StreamService streamService,
@@ -41,7 +39,6 @@ public sealed class StreamController
         ILogger<StreamController> logger,
         IHostApplicationLifetime appLifetime)
     {
-        _twitchClient = twitchGqlClient;
         _channelRepository = channelRepository;
         _streamRepository = streamRepository;
         _streamService = streamService;
@@ -56,35 +53,29 @@ public sealed class StreamController
         appLifetime.ApplicationStopping.Register(OnApplicationStopping);
     }
 
-    public async Task HandleStreamOnlineAsync(string channelId, string channelName, StreamMetadata? metadata = null)
+    public async Task HandleStreamOnlineAsync(string channelId, string channelName, StreamMetadata metadata)
     {
         if (!_processingChannels.TryAdd(channelId, 0))
         {
-            _logger.LogDebug("{Channel} live stream is being recorded.", channelName);
+            _logger.LogDebug("{Channel} live stream is already being recorded.", channelName);
             return;
         }
 
         try
         {
-            _logger.LogInformation("{Channel} went live", channelName);
+            _logger.LogInformation("{Channel} went live.", channelName);
             var channel = await _channelRepository.GetByIdAsync(channelId);
             if (channel is null)
             {
-                _logger.LogWarning("Channel '{Channel}' not found in database.", channelName);
+                _logger.LogWarning("Channel {Channel} not found in database.", channelName);
                 return;
             }
 
-            metadata ??= await _twitchClient.GetStreamMetadataAsync(
-                    channel.Name, _appLifetime.ApplicationStopping);
-
-            if (metadata is null)
-                return;
-
-            await StartAsync(channel, metadata.Value);
+            await StartAsync(channel, metadata);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Failed to initialize recording for '{Channel}'.", channelName);
+            _logger.LogError(ex, "Failed to initialize recording for {Channel}.", channelName);
         }
         finally
         {
@@ -92,38 +83,12 @@ public sealed class StreamController
         }
     }
 
-    // public async Task HandleStreamOnlineAsync(string channelId, string channelName)
-    // {
-    //     _logger.LogInformation("{Channel} went live", channelName);
-    //     var channel = await _channelRepository.GetByIdAsync(channelId);
-    //     if (channel is null)
-    //     {
-    //         _logger.LogWarning("Channel '{Channel}' not found in database.", channelName);
-    //         return;
-    //     }
-
-    //     try
-    //     {
-    //         var metadata = await _twitchClient.GetStreamMetadataAsync(
-    //                 channel.Name, _appLifetime.ApplicationStopping);
-
-    //         if (metadata is null)
-    //             return;
-
-    //         await StartAsync(channel, metadata.Value);
-    //     }
-    //     catch (Exception ex) when (ex is not OperationCanceledException)
-    //     {
-    //         _logger.LogError(ex, "Failed to initialize recording for '{Channel}'.", channel.Name);
-    //     }
-    // }
-
     public async Task StartAsync(Channel channel, StreamMetadata metadata)
     {
         await _sessionsLock.WaitAsync();
         try
         {
-            await _streamService.ResetStaleStreamsAsync(channel.ChannelId, metadata.TwitchStreamId);
+            // await _streamService.ResetStaleStreamsAsync(channel.ChannelId, metadata.TwitchStreamId);
 
             var existing = (await _streamRepository.GetStreamsByChannelIdAsync(channel.ChannelId))
                 .FirstOrDefault(s => s.TwitchStreamId == metadata.TwitchStreamId);
@@ -232,6 +197,7 @@ public sealed class StreamController
     {
         var segmentDownloader = _serviceProvider.GetRequiredService<SegmentDownloader>();
         var eventBus = _serviceProvider.GetRequiredService<EventBus>();
+        var twitchGqlClient = _serviceProvider.GetRequiredService<ITwitchGqlClient>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
         return await StreamRecorder.CreateAsync(
@@ -241,7 +207,7 @@ public sealed class StreamController
             _streamRepository,
             _streamService,
             _channelRepository,
-            _twitchClient,
+            twitchGqlClient,
             _settingsService.Settings,
             _pathsOptions.Value,
             eventBus,

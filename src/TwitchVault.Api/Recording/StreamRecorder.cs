@@ -136,7 +136,7 @@ public sealed class StreamRecorder : IAsyncDisposable
             return;
         }
 
-        _logger.LogInformation("Metadata split triggered");
+        _logger.LogInformation("Metadata split triggered.");
         _stream.AddChapter(e.Title, e.CategoryName, _dateTimeProvider.DateTimeNow);
         await _streamRepository.UpdateAsync(_stream);
     }
@@ -185,7 +185,7 @@ public sealed class StreamRecorder : IAsyncDisposable
                 var variants = await _variantTracker.GetVariantsAsync(cancellationToken);
                 if (variants.Length == 0)
                 {
-                    _logger.LogWarning("Stream source unavailable. Retrying… ({Retries} left)", --retriesRemaining);
+                    _logger.LogWarning("Stream source unavailable. Retrying... ({Retries} left).", --retriesRemaining);
                     await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
                     continue;
                 }
@@ -196,7 +196,7 @@ public sealed class StreamRecorder : IAsyncDisposable
                     _segmentDownloader.FlushCurrentSegment();
                     _playlistBuilder.AddDiscontinuity();
                     (lastQualityRank, lastVariantUrl) = (qualityRank, variantUrl);
-                    _logger.LogDebug("Streaming quality: {Rank} ({Bandwidth} bps)",
+                    _logger.LogDebug("Streaming quality: {Rank} ({Bandwidth} bps).",
                         qualityRank + 1, variants[qualityRank].Bandwidth);
                 }
 
@@ -235,7 +235,9 @@ public sealed class StreamRecorder : IAsyncDisposable
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 consecutiveNetworkErrors++;
-                if (consecutiveNetworkErrors > 5) throw;
+                if (consecutiveNetworkErrors > 5)
+                    throw;
+
                 _logger.LogWarning("Network issue detected. Retry {Count}/5.", consecutiveNetworkErrors);
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
@@ -308,7 +310,7 @@ public sealed class StreamRecorder : IAsyncDisposable
         await _streamRepository.UpdateAsync(_stream);
         await _channelRepository.SetLiveAsync(_channel.ChannelId, false);
         var duration = (_stream.FinishedAt - _stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
-        _logger.LogInformation("Stream finished. Total duration: {Duration}", duration);
+        _logger.LogInformation("Stream finished. Total duration: {Duration}.", duration);
     }
 
     private async Task FinalizePlaylistAsync()
