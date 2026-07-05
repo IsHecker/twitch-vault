@@ -1,11 +1,8 @@
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Persistence;
 
 
-public class ChannelRepository(JsonDatabase db)
+public class ChannelRepository(JsonDatabase db) : IChannelRepository
 {
     public async Task<List<Channel>> GetAllAsync()
     {
@@ -14,7 +11,7 @@ public class ChannelRepository(JsonDatabase db)
 
     public async Task<Channel?> GetByIdAsync(string channelId)
     {
-        return (await GetAllAsync()).FirstOrDefault(c => c.ChannelId == channelId);
+        return (await GetAllAsync()).FirstOrDefault(c => c.Id == channelId);
     }
 
     public async Task<Channel?> GetByNameAsync(string name)
@@ -32,16 +29,16 @@ public class ChannelRepository(JsonDatabase db)
     public Task UpdateAsync(Channel channel) =>
         db.WriteAsync(data =>
         {
-            var index = data.Channels.FindIndex(c => c.ChannelId == channel.ChannelId);
+            var index = data.Channels.FindIndex(c => c.Id == channel.Id);
             if (index >= 0)
                 data.Channels[index] = channel;
         });
     public Task DeleteAsync(string channelId) =>
-        db.WriteAsync(data => data.Channels.RemoveAll(c => c.ChannelId == channelId));
+        db.WriteAsync(data => data.Channels.RemoveAll(c => c.Id == channelId));
     public Task SetLiveAsync(string channelId, bool isLive) =>
         db.WriteAsync(data =>
         {
-            var channel = data.Channels.FirstOrDefault(c => c.ChannelId == channelId);
+            var channel = data.Channels.FirstOrDefault(c => c.Id == channelId);
             if (channel is null)
                 return;
             channel.IsLive = isLive;
@@ -49,7 +46,7 @@ public class ChannelRepository(JsonDatabase db)
     public Task UpdateLastStreamedAtAsync(string channelId, DateTime lastStreamedAt) =>
         db.WriteAsync(data =>
         {
-            var channel = data.Channels.FirstOrDefault(c => c.ChannelId == channelId);
+            var channel = data.Channels.FirstOrDefault(c => c.Id == channelId);
             if (channel is not null)
                 channel.LastStreamedAt = lastStreamedAt;
         });

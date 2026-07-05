@@ -1,50 +1,46 @@
+using System.Runtime.CompilerServices;
+using TwitchVault.Api.Common;
 using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public class SegmentDownloader(ITwitchGqlClient twitchGqlClient)
+public class SegmentDownloader(
+    ITwitchGqlClient twitchGqlClient,
+    SegmentStateTracker segmentStateTracker,
+    IFileSystem fileSystem)
 {
-    private const string SegmentPrefix = "seg_";
-    private float _currentSegmentDuration = 0;
-    private string? _currentFileName = null;
-    private HlsPlaylist _playlistBuilder = null!;
-    public void SetPlaylist(HlsPlaylist playlistBuilder) => _playlistBuilder = playlistBuilder;
-
-    public async Task DownloadSegmentsAsync(
-        PlaylistResult playlistResult,
+    public async IAsyncEnumerable<(string FileName, float Duration)> DownloadSegmentsAsync(
         string streamFolderPath,
-        int maxSegmentDuration,
-        CancellationToken cancellationToken)
+        ManifestExtractionResult manifestResult,
+        HlsPlaylist hlsPlaylist,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        FileStream? fileStream = null;
+        Stream? fileStream = null;
+
         try
         {
-            await TryDownloadInitSegmentAsync(playlistResult.InitSegmentUrl, streamFolderPath, _playlistBuilder, cancellationToken);
+            if (!string.IsNullOrEmpty(manifestResult.InitSegmentUrl) && !hlsPlaylist.HasInitSegment)
+                yield return await DownloadInitSegmentAsync(manifestResult.InitSegmentUrl, streamFolderPath, cancellationToken);
 
-            foreach (var segment in playlistResult.Segments)
+            foreach (var segment in manifestResult.Segments)
             {
                 if (fileStream is null)
                 {
-                    var index = GetNextSegmentNumber(_playlistBuilder.LastSegmentFileName);
-                    _currentFileName = $"{SegmentPrefix}{index}{GetUrlExtension(segment.Url)}";
-                    var segmentPath = Path.Combine(streamFolderPath, _currentFileName);
-                    fileStream = OpenSegmentFile(segmentPath, FileMode.Append);
+                    string fileName = segmentStateTracker.GetOrStartSegment(hlsPlaylist.LastSegmentFileName, GetUrlExtension(segment.Url));
+                    fileStream = fileSystem.OpenWrite(Path.Combine(streamFolderPath, fileName), FileMode.Append);
                 }
 
                 await using var segmentStream = await twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken);
-                await segmentStream.CopyToAsync(fileStream, cancellationToken);
+                await segmentStream.CopyToAsync(fileStream!, cancellationToken);
 
-                _currentSegmentDuration += segment.DurationSeconds;
-                if (_currentSegmentDuration < maxSegmentDuration)
+                segmentStateTracker.AddDuration(segment.Duration);
+                if (!segmentStateTracker.IsFull)
                     continue;
 
-                _playlistBuilder.AddSegment(_currentFileName!, _currentSegmentDuration);
-                await _playlistBuilder.FlushAsync(cancellationToken);
-                _currentSegmentDuration = 0f;
+                yield return CloseSegment();
 
                 fileStream?.Dispose();
                 fileStream = null;
-                _currentFileName = null;
             }
         }
         finally
@@ -53,45 +49,21 @@ public class SegmentDownloader(ITwitchGqlClient twitchGqlClient)
         }
     }
 
-    public void FlushCurrentSegment()
-    {
-        if (_currentFileName is null || _currentSegmentDuration <= 0)
-            return;
+    public (string FileName, float Duration) CloseSegment() => segmentStateTracker.CloseSegment();
 
-        _playlistBuilder.AddSegment(_currentFileName, _currentSegmentDuration);
-        _currentSegmentDuration = 0f;
-        _currentFileName = null;
-    }
-
-    private async Task TryDownloadInitSegmentAsync(
-        string? url,
+    private async Task<(string FileName, float Duration)> DownloadInitSegmentAsync(
+        string url,
         string streamFolderPath,
-        HlsPlaylist playlistBuilder,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(url) || playlistBuilder.HasInitSegment)
-            return;
-
         var initFileName = $"init{GetUrlExtension(url)}";
         var initPath = Path.Combine(streamFolderPath, initFileName);
         await using var initStream = await twitchGqlClient.DownloadAsStreamAsync(url, cancellationToken);
-        await using var fileStream = OpenSegmentFile(initPath, FileMode.Create);
+        await using var fileStream = fileSystem.OpenWrite(initPath, FileMode.Create);
         await initStream.CopyToAsync(fileStream, cancellationToken);
-        playlistBuilder.AddInitSegment(initFileName);
+        return (initFileName, 0);
     }
-
-    private static FileStream OpenSegmentFile(string path, FileMode mode) =>
-        new(path, mode, FileAccess.Write, FileShare.Read, bufferSize: 8192, useAsync: true);
 
     private static string GetUrlExtension(string url) =>
         Path.GetExtension(new Uri(url).AbsolutePath);
-
-    private static int GetNextSegmentNumber(string? fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-            return 1;
-
-        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        return int.Parse(nameWithoutExtension[SegmentPrefix.Length..]) + 1;
-    }
 }

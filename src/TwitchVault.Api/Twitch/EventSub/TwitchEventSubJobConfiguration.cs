@@ -1,8 +1,5 @@
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Twitch.EventSub;
 
 

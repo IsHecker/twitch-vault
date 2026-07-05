@@ -11,7 +11,7 @@ public class ToggleStreamDeletion : IEndpoint
             string id,
             Request request,
             IStreamRepository repo,
-            StreamController controller) =>
+            RecordingOrchestrator controller) =>
         {
             var stream = await repo.GetStreamByIdAsync(id);
             if (stream is null)

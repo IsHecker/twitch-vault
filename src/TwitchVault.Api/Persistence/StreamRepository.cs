@@ -14,7 +14,7 @@ public class StreamRepository(JsonDatabase db) : IStreamRepository
         return data.Streams.FirstOrDefault(s => s.TwitchStreamId == twitchStreamId);
     }
 
-    public Task AddStreamAsync(Domain.Stream stream) =>
+    public Task AddAsync(Domain.Stream stream) =>
         db.WriteAsync(data =>
         {
             if (data.Streams.Any(s => s.TwitchStreamId == stream.TwitchStreamId))

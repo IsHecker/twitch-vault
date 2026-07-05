@@ -1,10 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using TwitchVault.Api.Recording.HLS;
 
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Endpoints;
-
 
 public static class EndpointExtensions
 {

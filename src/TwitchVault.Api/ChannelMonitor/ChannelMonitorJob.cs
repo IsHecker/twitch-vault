@@ -9,8 +9,8 @@ namespace TwitchVault.Api.ChannelMonitor;
 
 [DisallowConcurrentExecution]
 public sealed class ChannelMonitorJob(
-    StreamController streamController,
-    ChannelRepository channelRepository,
+    RecordingOrchestrator streamController,
+    IChannelRepository channelRepository,
     ITwitchGqlClient twitchGqlClient,
     SettingsService settingsService,
     ILogger<ChannelMonitorJob> logger) : IJob
@@ -49,7 +49,7 @@ public sealed class ChannelMonitorJob(
 
             try
             {
-                await streamController.HandleStreamOnlineAsync(channel.ChannelId, channel.Name, metadata.Value);
+                await streamController.HandleStreamOnlineAsync(channel.Id, channel.Name, metadata.Value);
             }
             catch (Exception ex)
             {

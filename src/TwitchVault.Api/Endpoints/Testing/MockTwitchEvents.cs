@@ -12,7 +12,7 @@ public class MockTwitchEvents : IEndpoint
         group.MapPost("/online", async (
             string channelId,
             string channelName,
-            StreamController controller,
+            RecordingOrchestrator controller,
             ITwitchGqlClient twitchGqlClient) =>
         {
             var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, default);

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
+using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
@@ -15,11 +17,13 @@ public class StreamServiceTests
     private readonly StreamService _sut;
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
     private readonly ILogger<StreamService> _logger = Substitute.For<ILogger<StreamService>>();
 
     public StreamServiceTests()
     {
-        _sut = new StreamService(_streamRepository, _dateTimeProvider, _logger);
+        _pathsOptions.Value.Returns(new PathsOptions { Streams = "Streams" });
+        _sut = new StreamService(_streamRepository, _dateTimeProvider, _pathsOptions, _logger);
     }
 
     [Fact]

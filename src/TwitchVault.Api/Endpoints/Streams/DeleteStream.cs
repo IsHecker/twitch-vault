@@ -9,14 +9,14 @@ public class DeleteStream : IEndpoint
         app.MapDelete("/api/streams/{id}", async (
             string id,
             IStreamRepository repo,
-            StreamService streamService,
-            StreamController controller) =>
+            IStreamService streamService,
+            RecordingOrchestrator controller) =>
         {
             var stream = await repo.GetStreamByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
-            if (stream.Status == StreamStatus.Recording || controller.GetSession(id) is not null)
+            if (stream.Status == StreamStatus.Recording)
                 return Results.BadRequest("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
             await streamService.DeleteStreamAsync(id);

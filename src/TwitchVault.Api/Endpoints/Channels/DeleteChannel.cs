@@ -13,10 +13,11 @@ public class DeleteChannel : IEndpoint
         app.MapDelete("/api/channels/{channelId}", async (
             string channelId,
             TwitchSubscriptionService twitchSubscription,
-            ChannelRepository repo,
-            StreamController recordingController,
+            IChannelRepository repo,
+            RecordingOrchestrator recordingController,
             IStreamRepository streamRepository,
-            IOptions<PathsOptions> pathsOptions) =>
+            IOptions<PathsOptions> pathsOptions,
+            IWebHostEnvironment env) =>
         {
             var channel = await repo.GetByIdAsync(channelId);
             if (channel is null)

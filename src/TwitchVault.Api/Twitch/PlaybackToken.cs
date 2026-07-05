@@ -1,7 +1,4 @@
 using System.Text.Json.Serialization;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Twitch;
 
 

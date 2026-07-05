@@ -1,7 +1,4 @@
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 using TwitchVault.Api.Configuration;
 namespace TwitchVault.Api.Endpoints.Settings;
 

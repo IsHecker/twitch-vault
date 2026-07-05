@@ -7,7 +7,7 @@ namespace TwitchVault.Api.Twitch.EventSub;
 
 public sealed class TwitchSubscriptionService(
     TwitchHelixClient twitchHelixClient,
-    ChannelRepository channelRepository,
+    IChannelRepository channelRepository,
     ILogger<TwitchSubscriptionService> logger)
 {
     private const int MaxChannels = 5;
@@ -60,7 +60,7 @@ public sealed class TwitchSubscriptionService(
         if (SessionId is null)
             return;
 
-        if (_subscriptionIds.ContainsKey(channel.ChannelId))
+        if (_subscriptionIds.ContainsKey(channel.Id))
             return;
 
         await SubscribeAsync(channel, "stream.online", version: "1", cancellationToken);
@@ -70,7 +70,7 @@ public sealed class TwitchSubscriptionService(
 
     public async Task UnsubscribeChannelAsync(Channel channel, CancellationToken cancellationToken)
     {
-        if (!_subscriptionIds.TryGetValue(channel.ChannelId, out var ids))
+        if (!_subscriptionIds.TryGetValue(channel.Id, out var ids))
             return;
 
         foreach (var id in ids)
@@ -84,7 +84,7 @@ public sealed class TwitchSubscriptionService(
                     id, channel.Name, response.StatusCode);
         }
 
-        _subscriptionIds.Remove(channel.ChannelId, out _);
+        _subscriptionIds.Remove(channel.Id, out _);
     }
 
     private async Task SubscribeAsync(
@@ -96,7 +96,7 @@ public sealed class TwitchSubscriptionService(
         for (int attempt = 1; attempt <= MaxRetries; attempt++)
         {
             using var response = await twitchHelixClient.CreateEventSubSubscriptionAsync(
-                channel.ChannelId,
+                channel.Id,
                 SessionId,
                 type,
                 version,
@@ -114,8 +114,8 @@ public sealed class TwitchSubscriptionService(
             }
 
             var message = await response.Content.ReadFromJsonAsync<EventSubSubscriptionResponse>(cancellationToken);
-            if (!_subscriptionIds.TryGetValue(channel.ChannelId, out var ids))
-                _subscriptionIds[channel.ChannelId] = ids = [];
+            if (!_subscriptionIds.TryGetValue(channel.Id, out var ids))
+                _subscriptionIds[channel.Id] = ids = [];
 
             if (message.Data.Length > 0)
             {

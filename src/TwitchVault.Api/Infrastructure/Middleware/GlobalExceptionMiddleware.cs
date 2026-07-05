@@ -1,8 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Infrastructure.Middleware;
 
 

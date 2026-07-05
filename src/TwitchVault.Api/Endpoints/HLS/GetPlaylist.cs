@@ -9,7 +9,7 @@ public class GetPlaylist : IEndpoint
         app.MapGet("/hls/{streamId}/playlist.m3u8", async (
             string streamId,
             IStreamRepository streamRepo,
-            ChannelRepository channelRepo,
+            IChannelRepository channelRepo,
             IWebHostEnvironment env) =>
         {
             var stream = await streamRepo.GetStreamByIdAsync(streamId);
@@ -18,15 +18,17 @@ public class GetPlaylist : IEndpoint
                 var channel = await channelRepo.GetByNameAsync(streamId);
                 if (channel is null || !channel.IsLive)
                     return Results.NotFound();
-                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
+                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.Id);
                 stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
                 if (stream is null || stream.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
 
-            var playlistPath = Path.Combine(env.ContentRootPath, stream.FolderPath, "playlist.m3u8");
+            var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
+
             if (!File.Exists(playlistPath))
                 return Results.NotFound();
+
             return Results.File(playlistPath, "application/vnd.apple.mpegurl", enableRangeProcessing: true);
         })
         .WithName(nameof(GetPlaylist))

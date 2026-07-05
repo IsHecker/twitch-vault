@@ -2,16 +2,16 @@ using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public record struct MediaPlaylist(int Bandwidth, string Url);
+public record struct StreamVariant(int Bandwidth, string Url);
 
-public static class MasterPlaylistParser
+public static class StreamVariantExtractor
 {
     private static readonly char[] separator = ['\n', '\r'];
 
-    public static MediaPlaylist[] ParseVariants(string masterPlaylist)
+    public static StreamVariant[] ExtractVariants(string masterPlaylist)
     {
         var lines = masterPlaylist.Split(separator, StringSplitOptions.RemoveEmptyEntries);
-        var variants = new List<MediaPlaylist>();
+        var variants = new List<StreamVariant>();
         for (int i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();

@@ -1,7 +1,4 @@
 using Microsoft.OpenApi.Models;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Infrastructure.Swagger;
 
 

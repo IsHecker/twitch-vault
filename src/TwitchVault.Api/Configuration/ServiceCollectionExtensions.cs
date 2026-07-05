@@ -9,6 +9,7 @@ using TwitchVault.Api.Twitch.EventSub;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.ChannelMonitor;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Endpoints.Testing;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -24,20 +25,26 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<TwitchHelixClient>();
 
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<IFileSystem, PhysicalFileSystem>();
         services.AddSingleton<EventBus>();
         services.AddSingleton<SettingsService>();
 
         services.AddSingleton<JsonDatabase>();
 
-        services.AddSingleton<ChannelRepository>();
+        services.AddSingleton<IChannelRepository, ChannelRepository>();
         services.AddSingleton<IStreamRepository, StreamRepository>();
-        services.AddSingleton<StreamService>();
+        services.AddSingleton<IStreamService, StreamService>();
 
+        services.AddTransient<SegmentStateTracker>();
         services.AddTransient<SegmentDownloader>();
+        services.AddTransient<ManifestPoller>();
+        services.AddTransient<ThumbnailManager>();
 
-        services.AddSingleton<StreamController>();
+        services.AddSingleton<RecordingOrchestrator>();
         services.AddSingleton<TwitchWebSocketClient>();
         services.AddSingleton<TwitchSubscriptionService>();
+        services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
+        services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchEventSubJobConfiguration>();
@@ -46,6 +53,9 @@ public static class ServiceCollectionExtensions
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         services.AddEndpoints(Assembly.GetExecutingAssembly());
+
+
+        services.AddSingleton<HlsPlaylistTestHarness>();
         return services;
     }
 }

@@ -5,128 +5,81 @@ using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Recording.HLS;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording;
 
-public sealed class StreamRecorder : IAsyncDisposable
+public interface IStreamRecorder : IAsyncDisposable
+{
+    Task StartAsync(Domain.Stream stream, Channel channel);
+    Task StopAsync();
+    Task ToggleStreamDeletionAsync(bool markForDeletion);
+}
+
+public sealed class StreamRecorder : IStreamRecorder, IAsyncDisposable
 {
     private abstract record SessionEndReason;
     private record StreamEnded : SessionEndReason;
     private record StreamStopped : SessionEndReason;
     private record StreamError(Exception Ex) : SessionEndReason;
 
-    private readonly Domain.Stream _stream;
-    private readonly Channel _channel;
+    private Domain.Stream _stream = null!;
+    private Channel _channel = null!;
     private readonly SegmentDownloader _segmentDownloader;
+    private readonly ThumbnailManager _thumbnailManager;
+    private readonly HlsPlaylist _hlsPlaylist;
     private readonly IStreamRepository _streamRepository;
-    private readonly StreamService _streamService;
-    private readonly ChannelRepository _channelRepository;
+    private readonly IStreamService _streamService;
+    private readonly IChannelRepository _channelRepository;
     private readonly ITwitchGqlClient _twitchClient;
     private readonly AppSettings _settings;
     private readonly PathsOptions _pathsOptions;
     private readonly EventBus _eventBus;
     private readonly ILogger<StreamRecorder> _logger;
     private readonly CancellationTokenSource _cts;
-    private readonly HlsPlaylist _playlistBuilder;
-    private readonly PlaylistVariantTracker _variantTracker;
-    private readonly ThumbnailManager _thumbnailManager;
+    private readonly ManifestPoller _playlistVariantTracker;
     private readonly IDateTimeProvider _dateTimeProvider;
     private SessionEndReason? _finalizeReason;
-    private bool _disposed;
 
-    private StreamRecorder(
-        Domain.Stream stream,
-        Channel channel,
+    public StreamRecorder(
         SegmentDownloader segmentDownloader,
-        HlsPlaylist playlistBuilder,
+        ManifestPoller playlistVariantTracker,
+        ThumbnailManager thumbnailManager,
+        HlsPlaylist hlsPlaylist,
         IStreamRepository streamRepository,
-        StreamService streamService,
-        ChannelRepository channelRepository,
+        IStreamService streamService,
+        IChannelRepository channelRepository,
         ITwitchGqlClient twitchGqlClient,
-        AppSettings settings,
-        PathsOptions pathsOptions,
+        SettingsService settingsService,
+        IOptions<PathsOptions> pathsOptions,
         EventBus eventBus,
         IDateTimeProvider dateTimeProvider,
-        ILoggerFactory loggerFactory,
+        ILogger<StreamRecorder> logger,
         CancellationToken parentCancellationToken)
     {
-        _stream = stream;
-        _channel = channel;
         _segmentDownloader = segmentDownloader;
+        _playlistVariantTracker = playlistVariantTracker;
+        _thumbnailManager = thumbnailManager;
         _streamRepository = streamRepository;
         _streamService = streamService;
         _channelRepository = channelRepository;
         _twitchClient = twitchGqlClient;
-        _settings = settings;
-        _pathsOptions = pathsOptions;
-        _playlistBuilder = playlistBuilder;
+        _settings = settingsService.Settings;
+        _pathsOptions = pathsOptions.Value;
+        _hlsPlaylist = hlsPlaylist;
         _eventBus = eventBus;
         _dateTimeProvider = dateTimeProvider;
-        _logger = loggerFactory.CreateLogger<StreamRecorder>();
+        _logger = logger;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
-
-        _variantTracker = new PlaylistVariantTracker(
-            channel.Name,
-            twitchGqlClient,
-            dateTimeProvider,
-            loggerFactory.CreateLogger<PlaylistVariantTracker>());
-
-        _thumbnailManager = new ThumbnailManager(
-            stream,
-            dateTimeProvider,
-            twitchGqlClient,
-            loggerFactory.CreateLogger<ThumbnailManager>());
 
         eventBus.Subscribe<ChannelUpdateEvent>(OnMetadataChangedAsync);
     }
 
-    public static async Task<StreamRecorder> CreateAsync(
-        Domain.Stream stream,
-        Channel channel,
-        SegmentDownloader segmentDownloader,
-        IStreamRepository streamRepository,
-        StreamService streamService,
-        ChannelRepository channelRepository,
-        ITwitchGqlClient twitchGqlClient,
-        AppSettings settings,
-        PathsOptions pathsOptions,
-        EventBus eventBus,
-        IDateTimeProvider dateTimeProvider,
-        ILoggerFactory loggerFactory,
-        CancellationToken parentCancellationToken)
-    {
-        Directory.CreateDirectory(stream.FolderPath);
-        var playlistBuilder = await HlsPlaylist.LoadOrCreateAsync(
-            stream.FolderPath,
-            dateTimeProvider,
-            settings.Vault.PlaylistFlushIntervalInSec);
-
-        var session = new StreamRecorder(
-            stream,
-            channel,
-            segmentDownloader,
-            playlistBuilder,
-            streamRepository,
-            streamService,
-            channelRepository,
-            twitchGqlClient,
-            settings,
-            pathsOptions,
-            eventBus,
-            dateTimeProvider,
-            loggerFactory,
-            parentCancellationToken);
-
-        segmentDownloader.SetPlaylist(playlistBuilder);
-        stream.ThumbnailUrl = BuildLiveThumbnailUrl(channel.Name);
-        await streamRepository.UpdateAsync(stream);
-        return session;
-    }
-
     private async Task OnMetadataChangedAsync(ChannelUpdateEvent e)
     {
-        if (_channel.ChannelId != e.ChannelId)
+        if (_channel.Id != e.ChannelId)
             return;
+
         using var _chnlScope = _logger.BeginScope("{Channel}", _channel.Name);
         using var _metaScope = _logger.BeginScope("'{Title}' ({Category})", e.Title, e.CategoryName);
 
@@ -141,11 +94,13 @@ public sealed class StreamRecorder : IAsyncDisposable
         await _streamRepository.UpdateAsync(_stream);
     }
 
-    public async Task StartAsync()
+    public async Task StartAsync(Domain.Stream stream, Channel channel)
     {
-        _logger.LogInformation("Recording started for '{Channel}'", _channel.Name);
+        _logger.LogInformation("Recording started for '{Channel}'", channel.Name);
         try
         {
+            _channel = channel;
+            _stream = stream;
             await RecordStreamAsync(_cts.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -165,7 +120,7 @@ public sealed class StreamRecorder : IAsyncDisposable
         await _cts.CancelAsync();
     }
 
-    public async Task ToggleStreamDeletion(bool markForDeletion)
+    public async Task ToggleStreamDeletionAsync(bool markForDeletion)
     {
         _stream.MarkForDeletion = markForDeletion;
         await _streamRepository.UpdateAsync(_stream);
@@ -174,60 +129,58 @@ public sealed class StreamRecorder : IAsyncDisposable
     private async Task RecordStreamAsync(CancellationToken cancellationToken)
     {
         int consecutiveNetworkErrors = 0;
-        int retriesRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
-        int lastQualityRank = -1;
-        string? lastVariantUrl = null;
-        while (!cancellationToken.IsCancellationRequested && retriesRemaining > 0)
+        int emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+
+        while (!cancellationToken.IsCancellationRequested && emptyPollsRemaining > 0)
         {
             try
             {
-                await _thumbnailManager.TryCaptureSnapshotAsync();
-                var variants = await _variantTracker.GetVariantsAsync(cancellationToken);
-                if (variants.Length == 0)
+                await _thumbnailManager.TryCaptureSnapshotAsync(_stream);
+
+                var (manifest, hasQualityChanged) = await _playlistVariantTracker
+                    .GetNextManifestAsync(_channel.Name, cancellationToken);
+
+                if (manifest is null)
                 {
-                    _logger.LogWarning("Stream source unavailable. Retrying... ({Retries} left).", --retriesRemaining);
+                    _logger.LogWarning("No manifest available. Retrying... ({Remaining} attempts left)",
+                    emptyPollsRemaining--);
                     await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
                     continue;
                 }
 
-                var (qualityRank, variantUrl) = await ResolveQualityAsync(variants);
-                if (lastQualityRank != qualityRank || lastVariantUrl != variantUrl)
+                if (hasQualityChanged)
                 {
-                    _segmentDownloader.FlushCurrentSegment();
-                    _playlistBuilder.AddDiscontinuity();
-                    (lastQualityRank, lastVariantUrl) = (qualityRank, variantUrl);
-                    _logger.LogDebug("Streaming quality: {Rank} ({Bandwidth} bps).",
-                        qualityRank + 1, variants[qualityRank].Bandwidth);
+                    var (FileName, Duration) = _segmentDownloader.CloseSegment();
+                    await _hlsPlaylist.AddSegmentAsync(FileName, Duration, cancellationToken);
+                    await _hlsPlaylist.AddDiscontinuityAsync(cancellationToken);
+                    _logger.LogDebug("Quality switch detected.");
                 }
 
-                var playlistContent = await _twitchClient.GetPlaylistContentAsync(variantUrl, cancellationToken);
-                if (string.IsNullOrWhiteSpace(playlistContent))
-                {
-                    _logger.LogWarning("Playlist not found. Retrying... ({Retries} left)", --retriesRemaining);
-                    var metadata = await _twitchClient.GetStreamMetadataAsync(_channel.Name, cancellationToken);
-                    if (metadata.HasValue && metadata.Value.TwitchStreamId != _stream.TwitchStreamId)
-                        break;
-                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                    continue;
-                }
 
-                var playlistResult = SegmentParser.ParseNewSegments(playlistContent, _playlistBuilder.LastMediaSequence);
+                var manifestResult = ManifestSegmentExtractor.ExtractNewSegments(manifest, _hlsPlaylist.LastTwitchMediaSequence);
+                _hlsPlaylist.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
 
-                await _segmentDownloader.DownloadSegmentsAsync(
-                    playlistResult,
-                    _stream.FolderPath,
-                    _settings.Vault.MaxSegmentDurationInSec,
+                var downloadedSegments = _segmentDownloader.DownloadSegmentsAsync(
+                    _stream.Folder.RelativePath,
+                    manifestResult,
+                    _hlsPlaylist,
                     cancellationToken);
 
-                _playlistBuilder.UpdateMediaSequence(playlistResult.LastMediaSequence);
+                await foreach (var (FileName, Duration) in downloadedSegments)
+                {
+                    if (!string.IsNullOrWhiteSpace(manifestResult.InitSegmentUrl) && !_hlsPlaylist.HasInitSegment)
+                        await _hlsPlaylist.SetInitSegmentAsync(FileName, cancellationToken);
+                    else
+                        await _hlsPlaylist.AddSegmentAsync(FileName, Duration, cancellationToken);
+                }
 
-                if (playlistResult.IsStreamEnded)
+                if (manifestResult.IsStreamEnded)
                 {
                     SetEndReason(new StreamEnded());
                     return;
                 }
 
-                retriesRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+                emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
                 consecutiveNetworkErrors = 0;
 
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
@@ -244,27 +197,12 @@ public sealed class StreamRecorder : IAsyncDisposable
         }
     }
 
-    private async Task<(int rank, string url)> ResolveQualityAsync(MediaPlaylist[] variants)
-    {
-        var channels = await _channelRepository.GetAllAsync();
-        var requestedRank = channels.First(c => c.Name == _channel.Name).QualityRank - 1;
-        var clampedRank = Math.Clamp(requestedRank, 0, variants.Length - 1);
-        if (requestedRank != clampedRank)
-        {
-            _logger.LogInformation(
-                "Requested quality rank {Requested} but only {Count} variants available. Clamped to {Clamped}.",
-                requestedRank + 1, variants.Length, clampedRank + 1);
-        }
-
-        return (clampedRank, variants[clampedRank].Url);
-    }
-
     private async Task FinalizeRecorderAsync()
     {
         try
         {
             await FinalizePlaylistAsync();
-            _stream.ThumbnailUrl = BuildLocalThumbnailUrl(_thumbnailManager.LocalThumbnailPath);
+            _stream.SetThumbnailUrl(_stream.Folder.GetThumbnailUrl(_pathsOptions.BaseUrl));
             await _streamRepository.UpdateAsync(_stream);
             await DisposeAsync();
 
@@ -284,7 +222,7 @@ public sealed class StreamRecorder : IAsyncDisposable
 
                 case StreamError(var ex):
                     _logger.LogError(ex, "Session ended due to an error.");
-                    if (!await IsStreamStillLiveAsync())
+                    if (!await IsChannelLiveAsync())
                         return;
 
                     _stream.MarkAsInterrupted();
@@ -308,18 +246,18 @@ public sealed class StreamRecorder : IAsyncDisposable
     {
         _stream.MarkAsFinished(_dateTimeProvider.DateTimeNow);
         await _streamRepository.UpdateAsync(_stream);
-        await _channelRepository.SetLiveAsync(_channel.ChannelId, false);
+        await _channelRepository.SetLiveAsync(_channel.Id, false);
         var duration = (_stream.FinishedAt - _stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
         _logger.LogInformation("Stream finished. Total duration: {Duration}.", duration);
     }
 
     private async Task FinalizePlaylistAsync()
     {
-        _segmentDownloader.FlushCurrentSegment();
-        await _playlistBuilder.FinalizeAsync();
+        _segmentDownloader.CloseSegment();
+        await _hlsPlaylist.FinalizeAsync();
     }
 
-    private async Task<bool> IsStreamStillLiveAsync()
+    private async Task<bool> IsChannelLiveAsync()
     {
         var metadata = await _twitchClient.GetStreamMetadataAsync(_channel.Name, CancellationToken.None);
         return metadata?.TwitchStreamId == _stream.TwitchStreamId;
@@ -328,23 +266,12 @@ public sealed class StreamRecorder : IAsyncDisposable
     private void SetEndReason(SessionEndReason reason) =>
         Interlocked.CompareExchange(ref _finalizeReason, reason, null);
 
-    private static string BuildLiveThumbnailUrl(string channelName) =>
-        $"https://static-cdn.jtvnw.net/previews-ttv/live_user_{channelName}-1280x720.jpg";
-
-    private string BuildLocalThumbnailUrl(string localPath) =>
-        new Uri(_pathsOptions.BaseUrl + $"/{localPath}").AbsoluteUri;
-
     public async ValueTask DisposeAsync()
     {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-
         if (!_cts.IsCancellationRequested)
             await _cts.CancelAsync();
 
-        await _playlistBuilder.DisposeAsync();
+        await _hlsPlaylist.DisposeAsync();
         _eventBus.UnSubscribe<ChannelUpdateEvent>(OnMetadataChangedAsync);
         _cts.Dispose();
     }

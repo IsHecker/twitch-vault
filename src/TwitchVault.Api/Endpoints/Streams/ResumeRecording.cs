@@ -12,8 +12,8 @@ public class ResumeRecording : IEndpoint
         app.MapPatch("/api/streams/{streamId}/resume", async (
             string streamId,
             IStreamRepository streamRepository,
-            ChannelRepository channelRepository,
-            StreamController RecordingController,
+            IChannelRepository channelRepository,
+            RecordingOrchestrator RecordingController,
             ITwitchGqlClient twitchGqlClient,
             IDateTimeProvider dateTimeProvider) =>
         {

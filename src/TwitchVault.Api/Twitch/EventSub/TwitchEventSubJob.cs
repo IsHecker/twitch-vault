@@ -14,9 +14,9 @@ public class TwitchEventSubJob(
     ITwitchGqlClient twitchGqlClient,
     TwitchHelixClient twitchHelixClient,
     TwitchSubscriptionService subscriptionService,
-    ChannelRepository channelRepository,
+    IChannelRepository channelRepository,
     EventBus eventBus,
-    StreamController streamController,
+    RecordingOrchestrator streamController,
     ILogger<TwitchEventSubJob> logger) : IJob
 {
     private static readonly JsonSerializerOptions JsonOptions = new()

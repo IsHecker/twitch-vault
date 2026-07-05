@@ -6,7 +6,7 @@ namespace TwitchVault.Api.Endpoints.Streams;
 public class StopRecording : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPatch("/api/streams/{id}/stop", async (string id, IStreamRepository repo, StreamController controller) =>
+        app.MapPatch("/api/streams/{id}/stop", async (string id, IStreamRepository repo, RecordingOrchestrator controller) =>
         {
             var stream = await repo.GetStreamByIdAsync(id);
             if (stream is null)

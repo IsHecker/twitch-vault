@@ -2,21 +2,21 @@ using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public record struct HlsSegment(string Url, float DurationSeconds);
+public record struct HlsSegment(string Url, float Duration);
 
-public record struct PlaylistResult(
+public record struct ManifestExtractionResult(
     IReadOnlyList<HlsSegment> Segments,
-    string? InitSegmentUrl,        // null when not present or already handled
+    string? InitSegmentUrl,
     long LastMediaSequence,
     bool IsStreamEnded);
 
-public static class SegmentParser
+public static class ManifestSegmentExtractor
 {
-    public static PlaylistResult ParseNewSegments(string manifestContent, long lastKnownSequence)
+    public static ManifestExtractionResult ExtractNewSegments(string manifestContent, long lastMediaSequence)
     {
         var sequenceStr = HlsTagReader.ReadTagValue(manifestContent, "#EXT-X-MEDIA-SEQUENCE");
         if (!long.TryParse(sequenceStr, out var firstSequence))
-            return new PlaylistResult([], null, lastKnownSequence, IsStreamEnded: false);
+            return new ManifestExtractionResult([], null, lastMediaSequence, IsStreamEnded: false);
 
         var segments = new List<HlsSegment>();
         string? initSegmentUrl = null;
@@ -38,7 +38,7 @@ public static class SegmentParser
             if (!line.StartsWith("#EXTINF", StringComparison.Ordinal))
                 continue;
 
-            if (++currentSequence <= lastKnownSequence)
+            if (++currentSequence <= lastMediaSequence)
                 continue;
 
             var duration = float.Parse(HlsTagReader.ReadTagValue(line, "#EXTINF", ','));
@@ -50,6 +50,6 @@ public static class SegmentParser
 
         // var isStreamEnded = manifestSpan[lineRanges[^1]].Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
         var isStreamEnded = manifestContent.AsSpan().Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
-        return new PlaylistResult(segments, initSegmentUrl, currentSequence, isStreamEnded);
+        return new ManifestExtractionResult(segments, initSegmentUrl, currentSequence, isStreamEnded);
     }
 }

@@ -4,25 +4,23 @@ using TwitchVault.Api.Twitch;
 namespace TwitchVault.Api.Recording;
 
 public sealed class ThumbnailManager(
-    Domain.Stream stream,
-    IDateTimeProvider dateTimeProvider,
     ITwitchGqlClient twitchGqlClient,
+    IDateTimeProvider dateTimeProvider,
     ILogger<ThumbnailManager> logger)
 {
     private static readonly TimeSpan LiveSnapshotCooldown = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan LiveSnapshotWindow = TimeSpan.FromMinutes(30);
     private readonly DateTime _sessionStartTime = dateTimeProvider.DateTimeNow;
     private DateTime _lastSnapshotTime = DateTime.MinValue;
-    public string LocalThumbnailPath => Path.Combine(stream.FolderPath, "thumbnail.jpg");
 
-    public async Task TryCaptureSnapshotAsync()
+    public async Task TryCaptureSnapshotAsync(Domain.Stream stream)
     {
         if (!CanCaptureSnapshot())
             return;
 
         try
         {
-            await SaveThumbnailAsync(stream.ThumbnailUrl);
+            await SaveThumbnailAsync(stream.ThumbnailUrl, stream.Folder.ThumbnailPath);
             _lastSnapshotTime = dateTimeProvider.DateTimeNow;
             logger.LogDebug("Captured live thumbnail snapshot");
         }
@@ -42,11 +40,11 @@ public sealed class ThumbnailManager(
             && timeSinceLastSnapshot >= LiveSnapshotCooldown;
     }
 
-    private async Task SaveThumbnailAsync(string imageUrl)
+    private async Task SaveThumbnailAsync(string imageUrl, string savePath)
     {
         using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, CancellationToken.None);
 
-        await using var fileStream = File.Create(LocalThumbnailPath);
+        await using var fileStream = File.Create(savePath);
         await imageStream.CopyToAsync(fileStream, CancellationToken.None);
     }
 }

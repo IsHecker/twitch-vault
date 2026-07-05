@@ -11,7 +11,7 @@ public class GetSegment : IEndpoint
             string segmentName,
             [FromQuery] bool? audioOnly,
             IStreamRepository streamRepo,
-            ChannelRepository channelRepo,
+            IChannelRepository channelRepo,
             IWebHostEnvironment env) =>
         {
             var stream = await streamRepo.GetStreamByIdAsync(streamId);
@@ -21,14 +21,14 @@ public class GetSegment : IEndpoint
                 if (channel is null || !channel.IsLive)
                     return Results.NotFound();
 
-                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.ChannelId);
+                var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.Id);
                 stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
                 if (stream is null || stream.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
 
             var safeFileName = Path.GetFileName(segmentName);
-            var filePath = Path.Combine(env.ContentRootPath, stream.FolderPath, safeFileName);
+            var filePath = stream.Folder.GetAbsoluteSegmentPath(env.ContentRootPath, safeFileName);
             if (!File.Exists(filePath))
                 return Results.NotFound();
 

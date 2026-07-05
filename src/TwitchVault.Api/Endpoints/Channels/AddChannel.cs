@@ -12,7 +12,7 @@ public class AddChannel : IEndpoint
             Request request,
             ITwitchGqlClient twitchGqlClient,
             TwitchSubscriptionService twitchSubscription,
-            ChannelRepository repo) =>
+            IChannelRepository repo) =>
         {
             var channelId = await twitchGqlClient.GetChannelIdAsync(request.ChannelName, default);
             if (string.IsNullOrWhiteSpace(channelId))
@@ -20,7 +20,7 @@ public class AddChannel : IEndpoint
 
             var channel = new Channel
             {
-                ChannelId = channelId,
+                Id = channelId,
                 Name = request.ChannelName,
                 QualityRank = request.QualityRank,
                 ShouldRecord = request.ShouldRecord,
@@ -31,7 +31,7 @@ public class AddChannel : IEndpoint
                 _ = twitchSubscription.SubscribeChannelAsync(channel, default);
 
             await repo.AddAsync(channel);
-            return Results.Created($"/api/channels/{channel.ChannelId}", channel);
+            return Results.Created($"/api/channels/{channel.Id}", channel);
         })
         .WithName(nameof(AddChannel))
         .WithTags("Channels")

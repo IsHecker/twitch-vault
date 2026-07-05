@@ -5,7 +5,7 @@ namespace TwitchVault.Api.Endpoints.Streams;
 public class ListStreamsByChannel : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/channels/{channelId}/streams", async (string channelId, IStreamRepository repo, ChannelRepository channelRepo) =>
+        app.MapGet("/api/channels/{channelId}/streams", async (string channelId, IStreamRepository repo, IChannelRepository channelRepo) =>
         {
             var channel = await channelRepo.GetByIdAsync(channelId);
             if (channel is null)

@@ -1,14 +1,11 @@
 using TwitchVault.Api.Persistence;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Endpoints.Channels;
 
 
 public class UpdateChannelQuality : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPut("/api/channels/{channelId}/quality", async (string channelId, Request request, ChannelRepository repo) =>
+        app.MapPut("/api/channels/{channelId}/quality", async (string channelId, Request request, IChannelRepository repo) =>
         {
             var channel = await repo.GetByIdAsync(channelId);
             if (channel is null)

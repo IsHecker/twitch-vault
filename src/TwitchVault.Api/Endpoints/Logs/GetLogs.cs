@@ -1,8 +1,5 @@
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Recording.HLS;
-
-using TwitchVault.Api.Events;
 namespace TwitchVault.Api.Endpoints.Logs;
 
 

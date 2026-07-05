@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace TwitchVault.Api.Domain;
 
@@ -15,14 +15,16 @@ public sealed class Stream
     public string TwitchStreamId { get; set; } = null!;
     public string? TwitchVodId { get; set; }
     public string ChannelId { get; set; } = null!;
-    public string FolderPath { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = null!;
+
+    // [JsonIgnore]
+    public StreamFolder Folder { get; set; } = StreamFolder.Empty;
+    public string ThumbnailUrl { get; private set; } = null!;
     public StreamStatus Status { get; private set; } = StreamStatus.Recording;
     public bool MarkForDeletion { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; private set; }
 
-    public List<Chapter> Chapters { get; private set; } = [];
+    public List<Chapter> Chapters { get; init; } = [];
 
     [JsonIgnore]
     public Chapter CurrentChapter => Chapters.LastOrDefault()!;
@@ -66,4 +68,6 @@ public sealed class Stream
 
         Chapters.Add(new Chapter { Title = title, Category = category, StartedAt = startedAt });
     }
+
+    public void SetThumbnailUrl(string thumbnailUrl) => ThumbnailUrl = thumbnailUrl;
 }

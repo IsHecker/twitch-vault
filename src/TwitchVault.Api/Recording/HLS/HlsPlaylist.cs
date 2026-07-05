@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using TwitchVault.Api.Common;
 
@@ -6,153 +5,74 @@ namespace TwitchVault.Api.Recording.HLS;
 
 public sealed class HlsPlaylist : IAsyncDisposable
 {
-    public long LastMediaSequence { get; private set; } = -1;
-    public string? LastSegmentFileName { get; private set; }
-    public bool HasInitSegment => !string.IsNullOrWhiteSpace(_initSegmentFileName);
+    private const string PlaylistFileName = "playlist.m3u8";
+    private const int TargetDurationDigits = 3;
+    private const int MediaSequenceDigits = 12;
+    private const string TotalSecondsFormat = "000000000000.000";
 
-    private readonly string _playlistPath;
+    public long LastTwitchMediaSequence { get; private set; }
+    public string? LastSegmentFileName { get; private set; }
+    public bool HasInitSegment { get; private set; }
+
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private readonly FileStream _fileStream;
-    private readonly StreamWriter _streamWriter;
-    private readonly PeriodicTimer _flushTimer;
-    private readonly List<PlaylistEntry> _entries = [];
-    private readonly DateTime _startTime;
-    private string? _initSegmentFileName;
+    private readonly Stream _fileStream;
     private float _targetDuration;
+    private bool _lastEntryWasDiscontinuity;
+    private int _flushedEntryCount = 0;
+
+
+    private readonly DateTime _startTime;
     private float _totalDuration;
     private bool _isFinalized;
-    private bool _isDisposed;
 
-    private HlsPlaylist(
-        string playlistPath,
-        DateTime startTime,
-        int flushIntervalInSec)
+    private HlsPlaylist(Stream fileStream, PlaylistState state)
     {
-        _playlistPath = playlistPath;
-        _startTime = startTime;
-        _flushTimer = new PeriodicTimer(TimeSpan.FromSeconds(flushIntervalInSec));
+        _fileStream = fileStream;
+        _startTime = state.StartTime;
 
-        _fileStream = new FileStream(
-            _playlistPath,
-            FileMode.OpenOrCreate,
-            FileAccess.Write,
-            FileShare.ReadWrite,
-            bufferSize: 4096,
-            useAsync: true);
-
-        _streamWriter = new StreamWriter(_fileStream, Encoding.UTF8);
+        LastTwitchMediaSequence = state.SegmentCount;
+        LastSegmentFileName = state.LastSegmentFileName;
+        HasInitSegment = state.HasInitSegment;
+        _isFinalized = state.IsFinalized;
     }
 
     public static async Task<HlsPlaylist> LoadOrCreateAsync(
         string streamFolderPath,
         IDateTimeProvider dateTimeProvider,
-        int flushIntervalInSec)
+        IFileSystem fileSystem,
+        CancellationToken cancellationToken = default)
     {
-        var playlistPath = Path.Combine(streamFolderPath, "playlist.m3u8");
-        if (!File.Exists(playlistPath))
-            return new(playlistPath, dateTimeProvider.DateTimeNow, flushIntervalInSec);
+        var path = Path.Combine(streamFolderPath, PlaylistFileName);
+        var exists = fileSystem.Exists(path);
 
-        var lines = await File.ReadAllLinesAsync(playlistPath);
-        var playlist = new HlsPlaylist(playlistPath, ParseStartTime(lines, dateTimeProvider), flushIntervalInSec);
-        playlist.RestoreFrom(lines);
+        var state = exists
+            ? PlaylistStateRestorer.Restore(await fileSystem.ReadAllLinesAsync(path, cancellationToken))
+            : PlaylistState.Empty(dateTimeProvider.DateTimeNow);
+
+        var fileStream = fileSystem.OpenWrite(path, FileMode.OpenOrCreate);
+
+        var playlist = new HlsPlaylist(fileStream, state);
+
+        if (!exists)
+            await playlist.WriteHeaderAsync(cancellationToken);
+        else if (!state.IsFinalized)
+            await playlist.AddDiscontinuityAsync(cancellationToken);
 
         return playlist;
     }
 
-    public void AddInitSegment(string fileName) => _initSegmentFileName = fileName;
-
-    public void UpdateMediaSequence(long mediaSequence) => LastMediaSequence = mediaSequence;
-
-    public void AddSegment(string fileName, float duration)
-    {
-        _lock.Wait();
-        try
-        {
-            _entries.Add(new PlaylistEntry(fileName, duration));
-            _totalDuration += duration;
-
-            if (duration > _targetDuration)
-                _targetDuration = duration;
-
-            LastSegmentFileName = fileName;
-        }
-        finally { _lock.Release(); }
-    }
-
-    public void AddDiscontinuity()
-    {
-        _lock.Wait();
-        try
-        {
-            if (_entries.Count == 0 || _entries[^1].IsDiscontinuity)
-                return;
-
-            _entries.Add(PlaylistEntry.Discontinuity);
-        }
-        finally { _lock.Release(); }
-    }
-
-    public async Task FinalizeAsync(CancellationToken cancellationToken = default)
-    {
-        _isFinalized = true;
-        await FlushAsync(cancellationToken);
-    }
-
-    private void RestoreFrom(string[] lines)
-    {
-        for (int i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-
-            if (line.StartsWith("#TWITCH-MEDIA-SEQUENCE"))
-            {
-                UpdateMediaSequence(long.Parse(HlsTagReader.ReadTagValue(line, "#TWITCH-MEDIA-SEQUENCE")));
-                continue;
-            }
-
-            if (line.StartsWith("#EXT-X-MAP:URI"))
-            {
-                _initSegmentFileName = HlsTagReader.ReadTagValue(line, "#EXT-X-MAP:URI").Trim('"');
-                continue;
-            }
-
-            if (line == "#EXT-X-DISCONTINUITY")
-            {
-                _entries.Add(PlaylistEntry.Discontinuity);
-                continue;
-            }
-
-            if (line.StartsWith("#EXTINF"))
-            {
-                var durationStr = HlsTagReader.ReadTagValue(line, "#EXTINF", ',');
-                if (!float.TryParse(durationStr, out var duration) || i + 1 >= lines.Length)
-                    continue;
-
-                var fileName = lines[++i];
-                AddSegment(fileName, duration);
-            }
-        }
-
-        AddDiscontinuity();
-    }
-
-    public async Task FlushAsync(CancellationToken cancellationToken = default)
+    public async Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken = default)
     {
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            string content = Build();
+            if (HasInitSegment)
+                throw new InvalidOperationException("An init segment has already been set for this playlist.");
 
-            // _fileStream.Seek(0, SeekOrigin.Begin);
-            // await _streamWriter.WriteAsync(content);
-            // _fileStream.SetLength(_fileStream.Position);
-
-
-            _fileStream.Position = 0;
-            _fileStream.SetLength(0);
-
-            await _streamWriter.WriteAsync(content);
-            await _streamWriter.FlushAsync(cancellationToken); // important
+            await WriteHeaderAsync(cancellationToken);
+            await WriteLineAsync(HlsTags.Map(fileName), cancellationToken);
+            await _fileStream.FlushAsync(cancellationToken);
+            HasInitSegment = true;
         }
         finally
         {
@@ -160,67 +80,141 @@ public sealed class HlsPlaylist : IAsyncDisposable
         }
     }
 
-    private string Build()
+    public async Task AddSegmentAsync(
+        string fileName,
+        float duration,
+        CancellationToken cancellationToken = default)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:6");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"#EXT-X-TARGETDURATION:{(int)Math.Ceiling(_targetDuration)}");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"#ID3-EQUIV-TDTG:{_startTime:yyyy-MM-ddTHH:mm:ss}");
-        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:EVENT");
-        sb.AppendLine($"#EXT-X-MEDIA-SEQUENCE:1");
-        sb.AppendLine($"#TWITCH-MEDIA-SEQUENCE:{LastMediaSequence}");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"#EXT-X-TOTAL-SECS:{_totalDuration:F3}");
-
-        if (_initSegmentFileName is not null)
-            sb.AppendLine($"#EXT-X-MAP:URI=\"{_initSegmentFileName}\"");
-
-        foreach (var entry in _entries)
+        await _lock.WaitAsync(cancellationToken);
+        try
         {
-            if (entry.IsDiscontinuity)
-            {
-                sb.AppendLine("#EXT-X-DISCONTINUITY");
-                continue;
-            }
+            if (fileName is null || duration <= 0)
+                return;
 
-            sb.AppendLine(CultureInfo.InvariantCulture, $"#EXTINF:{entry.Duration:F3},");
-            sb.AppendLine(entry.FileName);
+            _totalDuration += duration;
+            if (duration > _targetDuration)
+                _targetDuration = duration;
+
+            await WriteHeaderAsync(cancellationToken);
+            await WriteLineAsync(HlsTags.ExtInf(duration), cancellationToken);
+            await WriteLineAsync(fileName, cancellationToken);
+            await _fileStream.FlushAsync(cancellationToken);
+
+            _flushedEntryCount++;
+            LastSegmentFileName = fileName;
+            _lastEntryWasDiscontinuity = false;
         }
-
-        if (_isFinalized)
-            sb.AppendLine("#EXT-X-ENDLIST");
-
-        return sb.ToString();
+        finally
+        {
+            _lock.Release();
+        }
     }
 
-    private static DateTime ParseStartTime(string[] lines, IDateTimeProvider dateTimeProvider)
+    public async Task AddDiscontinuityAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var line in lines)
+        await _lock.WaitAsync(cancellationToken);
+        try
         {
-            if (line.StartsWith("#ID3-EQUIV-TDTG:") &&
-                DateTime.TryParse(line[16..], CultureInfo.InvariantCulture, out var time))
-                return time;
-        }
+            if (_flushedEntryCount < 1 || _lastEntryWasDiscontinuity)
+                return;
 
-        return dateTimeProvider.DateTimeNow;
+            await WriteHeaderAsync(cancellationToken);
+            await WriteLineAsync(HlsTags.Discontinuity, cancellationToken);
+            await _fileStream.FlushAsync(cancellationToken);
+            _lastEntryWasDiscontinuity = true;
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
+
+    public async Task FinalizeAsync(CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_isFinalized)
+                return;
+
+            await WriteLineAsync(HlsTags.EndList, cancellationToken);
+            await _fileStream.FlushAsync(cancellationToken);
+            _isFinalized = true;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public void UpdateTwitchMediaSequence(long mediaSequence) => LastTwitchMediaSequence = mediaSequence;
 
     public async ValueTask DisposeAsync()
     {
-        if (_isDisposed)
-            return;
-
-        _isDisposed = true;
-        _flushTimer.Dispose();
-
-        await FlushAsync();
+        // await FlushAsync();
+        await _fileStream.FlushAsync();
         await _fileStream.DisposeAsync();
         _lock.Dispose();
     }
 
-    private record struct PlaylistEntry(string FileName, float Duration, bool IsDiscontinuity = false)
+    // private async Task WriteHeaderAsync(CancellationToken cancellationToken)
+    // {
+    //     await _writer.FlushAsync(cancellationToken);
+
+    //     var lastPosition = _fileStream.Position;
+    //     _fileStream.Position = 0;
+
+    //     await _writer.WriteLineAsync(HlsTags.ExtM3U);
+    //     await _writer.WriteLineAsync(HlsTags.Version(6));
+    //     await _writer.WriteLineAsync(HlsTags.TargetDuration((int)Math.Ceiling(_targetDuration)));
+    //     await _writer.WriteLineAsync(HlsTags.StartTime(_startTime));
+    //     await _writer.WriteLineAsync(HlsTags.PlaylistTypeEvent);
+    //     await _writer.WriteLineAsync(HlsTags.MediaSequence(1));
+    //     await _writer.WriteLineAsync(HlsTags.TwitchMediaSequence(LastTwitchMediaSequence));
+    //     await _writer.WriteLineAsync(HlsTags.TotalSeconds(_totalDuration));
+
+    //     await _writer.FlushAsync(cancellationToken);
+
+    //     _fileStream.Position = lastPosition;
+    // }
+
+    private async Task WriteHeaderAsync(CancellationToken cancellationToken = default)
     {
-        public float Duration { get; set; } = Duration;
-        public static readonly PlaylistEntry Discontinuity = new("#EXT-X-DISCONTINUITY", 0f);
+        var targetDurationValue = ((int)Math.Ceiling(_targetDuration))
+            .ToString()
+            .PadLeft(TargetDurationDigits, '0');
+
+        var mediaSequenceValue = LastTwitchMediaSequence
+            .ToString()
+            .PadLeft(MediaSequenceDigits, '0');
+
+        var totalSecondsValue = _totalDuration.ToString(TotalSecondsFormat);
+
+        var header = new StringBuilder()
+            .Append(HlsTags.ExtM3U).AppendLine()
+            .Append(HlsTags.Version(6)).AppendLine()
+            // .Append(HlsTags.TargetDuration((int)Math.Ceiling(_targetDuration))).AppendLine()
+            .Append($"{HlsTags.TargetDurationPrefix}:{targetDurationValue}").AppendLine()
+            .Append(HlsTags.StartTime(_startTime)).AppendLine()
+            .Append(HlsTags.PlaylistTypeEvent).AppendLine()
+            .Append(HlsTags.MediaSequence(1)).AppendLine()
+            .Append($"{HlsTags.TwitchMediaSequencePrefix}:{mediaSequenceValue}").AppendLine()
+            .Append($"{HlsTags.TotalSecondsPrefix}:{totalSecondsValue}").AppendLine()
+            .ToString();
+
+        var endPosition = _fileStream.Length;
+
+        _fileStream.Position = 0;
+
+        await WriteAsync(header, cancellationToken);
+        await _fileStream.FlushAsync(cancellationToken);
+
+        _fileStream.Position = endPosition;
     }
+
+    private ValueTask WriteAsync(string text, CancellationToken ct = default)
+        => _fileStream.WriteAsync(Encoding.UTF8.GetBytes(text), ct);
+
+    private ValueTask WriteLineAsync(string text, CancellationToken ct = default)
+        => WriteAsync(text + '\n', ct);
 }
