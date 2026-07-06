@@ -1,5 +1,6 @@
 using FluentAssertions;
 using TwitchVault.Api.Recording.HLS;
+
 namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
 public class PlaylistStateRestorerTests

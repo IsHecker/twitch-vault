@@ -4,11 +4,18 @@ using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Recording.HLS;
 
+public interface IManifestPoller
+{
+    Task<(string? Manifest, bool HasQualityChanged)> GetNextManifestAsync(
+        string channelName,
+        CancellationToken cancellationToken);
+}
+
 public sealed class ManifestPoller(
     ITwitchGqlClient twitchClient,
     IChannelRepository channelRepository,
     IDateTimeProvider dateTimeProvider,
-    ILogger<ManifestPoller> logger)
+    ILogger<ManifestPoller> logger) : IManifestPoller
 {
     private const int MinPollsThreshold = 5;
     private const int MaxUnchangedPollsThreshold = 10;

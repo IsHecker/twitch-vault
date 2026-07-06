@@ -4,15 +4,26 @@ using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording.HLS;
 
+public interface ISegmentDownloader
+{
+    IAsyncEnumerable<(string FileName, float Duration)> DownloadSegmentsAsync(
+        string streamFolderPath,
+        ManifestExtractionResult manifestResult,
+        IHlsPlaylist hlsPlaylist,
+        CancellationToken cancellationToken = default);
+
+    (string FileName, float Duration) CloseSegment();
+}
+
 public class SegmentDownloader(
     ITwitchGqlClient twitchGqlClient,
     SegmentStateTracker segmentStateTracker,
-    IFileSystem fileSystem)
+    IFileSystem fileSystem) : ISegmentDownloader
 {
     public async IAsyncEnumerable<(string FileName, float Duration)> DownloadSegmentsAsync(
         string streamFolderPath,
         ManifestExtractionResult manifestResult,
-        HlsPlaylist hlsPlaylist,
+        IHlsPlaylist hlsPlaylist,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         Stream? fileStream = null;

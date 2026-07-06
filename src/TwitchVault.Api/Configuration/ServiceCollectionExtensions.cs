@@ -36,9 +36,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStreamService, StreamService>();
 
         services.AddTransient<SegmentStateTracker>();
-        services.AddTransient<SegmentDownloader>();
-        services.AddTransient<ManifestPoller>();
-        services.AddTransient<ThumbnailManager>();
+        services.AddTransient<IStreamFinalizer, StreamFinalizer>();
+        services.AddTransient<ISegmentDownloader, SegmentDownloader>();
+        services.AddTransient<IManifestPoller, ManifestPoller>();
+        services.AddTransient<IThumbnailManager, ThumbnailManager>();
 
         services.AddSingleton<RecordingOrchestrator>();
         services.AddSingleton<TwitchWebSocketClient>();

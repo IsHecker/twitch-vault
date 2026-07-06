@@ -2,10 +2,8 @@ using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Events;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
-using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Recording.HLS;
-using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording;
 
@@ -16,56 +14,42 @@ public interface IStreamRecorder : IAsyncDisposable
     Task ToggleStreamDeletionAsync(bool markForDeletion);
 }
 
-public sealed class StreamRecorder : IStreamRecorder, IAsyncDisposable
+public sealed class StreamRecorder : IStreamRecorder
 {
-    private abstract record SessionEndReason;
-    private record StreamEnded : SessionEndReason;
-    private record StreamStopped : SessionEndReason;
-    private record StreamError(Exception Ex) : SessionEndReason;
-
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
-    private readonly SegmentDownloader _segmentDownloader;
-    private readonly ThumbnailManager _thumbnailManager;
-    private readonly HlsPlaylist _hlsPlaylist;
+    private readonly IThumbnailManager _thumbnailManager;
+    private readonly IManifestPoller _manifestPoller;
+    private readonly ISegmentDownloader _segmentDownloader;
+    private readonly IHlsPlaylist _hlsPlaylist;
     private readonly IStreamRepository _streamRepository;
-    private readonly IStreamService _streamService;
-    private readonly IChannelRepository _channelRepository;
-    private readonly ITwitchGqlClient _twitchClient;
+    private readonly IStreamFinalizer _finalizer;
     private readonly AppSettings _settings;
-    private readonly PathsOptions _pathsOptions;
     private readonly EventBus _eventBus;
     private readonly ILogger<StreamRecorder> _logger;
     private readonly CancellationTokenSource _cts;
-    private readonly ManifestPoller _playlistVariantTracker;
     private readonly IDateTimeProvider _dateTimeProvider;
     private SessionEndReason? _finalizeReason;
 
     public StreamRecorder(
-        SegmentDownloader segmentDownloader,
-        ManifestPoller playlistVariantTracker,
-        ThumbnailManager thumbnailManager,
-        HlsPlaylist hlsPlaylist,
+        IThumbnailManager thumbnailManager,
+        IManifestPoller manifestPoller,
+        ISegmentDownloader segmentDownloader,
+        IHlsPlaylist hlsPlaylist,
         IStreamRepository streamRepository,
-        IStreamService streamService,
-        IChannelRepository channelRepository,
-        ITwitchGqlClient twitchGqlClient,
+        IStreamFinalizer finalizer,
         SettingsService settingsService,
-        IOptions<PathsOptions> pathsOptions,
         EventBus eventBus,
         IDateTimeProvider dateTimeProvider,
         ILogger<StreamRecorder> logger,
         CancellationToken parentCancellationToken)
     {
         _segmentDownloader = segmentDownloader;
-        _playlistVariantTracker = playlistVariantTracker;
+        _manifestPoller = manifestPoller;
         _thumbnailManager = thumbnailManager;
         _streamRepository = streamRepository;
-        _streamService = streamService;
-        _channelRepository = channelRepository;
-        _twitchClient = twitchGqlClient;
+        _finalizer = finalizer;
         _settings = settingsService.Settings;
-        _pathsOptions = pathsOptions.Value;
         _hlsPlaylist = hlsPlaylist;
         _eventBus = eventBus;
         _dateTimeProvider = dateTimeProvider;
@@ -105,18 +89,25 @@ public sealed class StreamRecorder : IStreamRecorder, IAsyncDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            SetEndReason(new StreamError(ex));
+            SetEndReason(new SessionEndReason.StreamError(ex));
             _logger.LogError(ex, "Unhandled error in recording session.");
         }
         finally
         {
-            await FinalizeRecorderAsync();
+            await _finalizer.FinalizeAsync(
+                _stream,
+                _channel,
+                _segmentDownloader,
+                _hlsPlaylist,
+                _finalizeReason ?? new SessionEndReason.StreamEnded());
+
+            await DisposeAsync();
         }
     }
 
     public async Task StopAsync()
     {
-        SetEndReason(new StreamStopped());
+        SetEndReason(new SessionEndReason.StreamStopped());
         await _cts.CancelAsync();
     }
 
@@ -137,10 +128,10 @@ public sealed class StreamRecorder : IStreamRecorder, IAsyncDisposable
             {
                 await _thumbnailManager.TryCaptureSnapshotAsync(_stream);
 
-                var (manifest, hasQualityChanged) = await _playlistVariantTracker
+                var (manifest, hasQualityChanged) = await _manifestPoller
                     .GetNextManifestAsync(_channel.Name, cancellationToken);
 
-                if (manifest is null)
+                if (string.IsNullOrWhiteSpace(manifest))
                 {
                     _logger.LogWarning("No manifest available. Retrying... ({Remaining} attempts left)",
                     emptyPollsRemaining--);
@@ -176,7 +167,7 @@ public sealed class StreamRecorder : IStreamRecorder, IAsyncDisposable
 
                 if (manifestResult.IsStreamEnded)
                 {
-                    SetEndReason(new StreamEnded());
+                    SetEndReason(new SessionEndReason.StreamEnded());
                     return;
                 }
 
@@ -195,72 +186,6 @@ public sealed class StreamRecorder : IStreamRecorder, IAsyncDisposable
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
         }
-    }
-
-    private async Task FinalizeRecorderAsync()
-    {
-        try
-        {
-            await FinalizePlaylistAsync();
-            _stream.SetThumbnailUrl(_stream.Folder.GetThumbnailUrl(_pathsOptions.BaseUrl));
-            await _streamRepository.UpdateAsync(_stream);
-            await DisposeAsync();
-
-            if (_stream.MarkForDeletion)
-            {
-                await _streamService.DeleteStreamAsync(_stream.TwitchStreamId);
-                return;
-            }
-
-            switch (_finalizeReason)
-            {
-                case StreamStopped:
-                    _stream.MarkAsStopped(_dateTimeProvider.DateTimeNow);
-                    await _streamRepository.UpdateAsync(_stream);
-                    _logger.LogDebug("Recording manually stopped.");
-                    return;
-
-                case StreamError(var ex):
-                    _logger.LogError(ex, "Session ended due to an error.");
-                    if (!await IsChannelLiveAsync())
-                        return;
-
-                    _stream.MarkAsInterrupted();
-                    await _streamRepository.UpdateAsync(_stream);
-                    _logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
-                    return;
-
-                case StreamEnded:
-                case null:
-                    await HandleStreamEndedAsync();
-                    return;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during session finalization.");
-        }
-    }
-
-    private async Task HandleStreamEndedAsync()
-    {
-        _stream.MarkAsFinished(_dateTimeProvider.DateTimeNow);
-        await _streamRepository.UpdateAsync(_stream);
-        await _channelRepository.SetLiveAsync(_channel.Id, false);
-        var duration = (_stream.FinishedAt - _stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
-        _logger.LogInformation("Stream finished. Total duration: {Duration}.", duration);
-    }
-
-    private async Task FinalizePlaylistAsync()
-    {
-        _segmentDownloader.CloseSegment();
-        await _hlsPlaylist.FinalizeAsync();
-    }
-
-    private async Task<bool> IsChannelLiveAsync()
-    {
-        var metadata = await _twitchClient.GetStreamMetadataAsync(_channel.Name, CancellationToken.None);
-        return metadata?.TwitchStreamId == _stream.TwitchStreamId;
     }
 
     private void SetEndReason(SessionEndReason reason) =>

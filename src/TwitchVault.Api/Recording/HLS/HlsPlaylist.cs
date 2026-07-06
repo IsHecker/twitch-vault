@@ -3,7 +3,20 @@ using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public sealed class HlsPlaylist : IAsyncDisposable
+public interface IHlsPlaylist : IAsyncDisposable
+{
+    long LastTwitchMediaSequence { get; }
+    string? LastSegmentFileName { get; }
+    bool HasInitSegment { get; }
+
+    Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken = default);
+    Task AddSegmentAsync(string fileName, float duration, CancellationToken cancellationToken = default);
+    Task AddDiscontinuityAsync(CancellationToken cancellationToken = default);
+    Task FinalizeAsync(CancellationToken cancellationToken = default);
+    void UpdateTwitchMediaSequence(long mediaSequence);
+}
+
+public sealed class HlsPlaylist : IHlsPlaylist
 {
     private const string PlaylistFileName = "playlist.m3u8";
     private const int TargetDurationDigits = 3;

@@ -3,10 +3,15 @@ using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording;
 
+public interface IThumbnailManager
+{
+    Task TryCaptureSnapshotAsync(Domain.Stream stream);
+}
+
 public sealed class ThumbnailManager(
     ITwitchGqlClient twitchGqlClient,
     IDateTimeProvider dateTimeProvider,
-    ILogger<ThumbnailManager> logger)
+    ILogger<ThumbnailManager> logger) : IThumbnailManager
 {
     private static readonly TimeSpan LiveSnapshotCooldown = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan LiveSnapshotWindow = TimeSpan.FromMinutes(30);
