@@ -16,8 +16,7 @@ public sealed class Stream
     public string? TwitchVodId { get; set; }
     public string ChannelId { get; set; } = null!;
 
-    // [JsonIgnore]
-    public StreamFolder Folder { get; set; } = StreamFolder.Empty;
+    public StreamFolder Folder { get; set; } = null!;
     public string ThumbnailUrl { get; private set; } = null!;
     public StreamStatus Status { get; private set; } = StreamStatus.Recording;
     public bool MarkForDeletion { get; set; }
@@ -27,6 +26,7 @@ public sealed class Stream
     public List<Chapter> Chapters { get; init; } = [];
 
     [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Chapter CurrentChapter => Chapters.LastOrDefault()!;
 
     public void MarkAsFinished(DateTime finishedAt)

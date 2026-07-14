@@ -59,25 +59,6 @@ public sealed class StreamRecorder : IStreamRecorder
         eventBus.Subscribe<ChannelUpdateEvent>(OnMetadataChangedAsync);
     }
 
-    private async Task OnMetadataChangedAsync(ChannelUpdateEvent e)
-    {
-        if (_channel.Id != e.ChannelId)
-            return;
-
-        using var _chnlScope = _logger.BeginScope("{Channel}", _channel.Name);
-        using var _metaScope = _logger.BeginScope("'{Title}' ({Category})", e.Title, e.CategoryName);
-
-        if (_stream.CurrentChapter.Title == e.Title && _stream.CurrentChapter.Category == e.CategoryName)
-        {
-            _logger.LogInformation("Metadata change ignored: title and category unchanged.");
-            return;
-        }
-
-        _logger.LogInformation("Metadata split triggered.");
-        _stream.AddChapter(e.Title, e.CategoryName, _dateTimeProvider.DateTimeNow);
-        await _streamRepository.UpdateAsync(_stream);
-    }
-
     public async Task StartAsync(Domain.Stream stream, Channel channel)
     {
         _logger.LogInformation("Recording started for '{Channel}'", channel.Name);
@@ -98,7 +79,6 @@ public sealed class StreamRecorder : IStreamRecorder
                 _stream,
                 _channel,
                 _segmentDownloader,
-                _hlsPlaylist,
                 _finalizeReason ?? new SessionEndReason.StreamEnded());
 
             await DisposeAsync();
@@ -114,6 +94,25 @@ public sealed class StreamRecorder : IStreamRecorder
     public async Task ToggleStreamDeletionAsync(bool markForDeletion)
     {
         _stream.MarkForDeletion = markForDeletion;
+        await _streamRepository.UpdateAsync(_stream);
+    }
+
+    private async Task OnMetadataChangedAsync(ChannelUpdateEvent e)
+    {
+        if (_channel.Id != e.ChannelId)
+            return;
+
+        using var _chnlScope = _logger.BeginScope("{Channel}", _channel.Name);
+        using var _metaScope = _logger.BeginScope("'{Title}' ({Category})", e.Title, e.CategoryName);
+
+        if (_stream.CurrentChapter.Title == e.Title && _stream.CurrentChapter.Category == e.CategoryName)
+        {
+            _logger.LogInformation("Metadata change ignored: title and category unchanged.");
+            return;
+        }
+
+        _logger.LogInformation("Metadata split triggered.");
+        _stream.AddChapter(e.Title, e.CategoryName, _dateTimeProvider.DateTimeNow);
         await _streamRepository.UpdateAsync(_stream);
     }
 

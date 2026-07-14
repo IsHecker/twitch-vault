@@ -6,7 +6,8 @@ namespace TwitchVault.Api.Twitch.EventSub;
 public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger) : IAsyncDisposable
 {
     private const string TwitchWssUrl = "wss://eventsub.wss.twitch.tv/ws";
-    private const int HeartbeatGraceSeconds = 5;
+    private const int DefaultKeepaliveTimeoutSeconds = 10;
+    private const int HeartbeatGraceSeconds = 15;
     private readonly byte[] _buffer = new byte[8192];
     private ClientWebSocket _webSocket = null!;
     private ClientWebSocket? _oldSocket;
@@ -22,13 +23,6 @@ public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger)
         _oldSocket = _webSocket;
         await ConnectInternalAsync(reconnectUrl, cancellationToken);
         ResetHeartbeat();
-    }
-
-    private async Task ConnectInternalAsync(string url, CancellationToken cancellationToken)
-    {
-        _webSocket = new ClientWebSocket();
-        _webSocket.Options.KeepAliveInterval = Timeout.InfiniteTimeSpan;
-        await _webSocket.ConnectAsync(new Uri(url), cancellationToken);
     }
 
     public async Task CloseOldConnectionAsync()
@@ -52,9 +46,9 @@ public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger)
         return Encoding.UTF8.GetString(_buffer, 0, result.Count);
     }
 
-    public void SetHeartbeat(int timeoutSeconds)
+    public void SetHeartbeat(int? timeoutSeconds)
     {
-        _keepaliveTimeoutSeconds = timeoutSeconds;
+        _keepaliveTimeoutSeconds = timeoutSeconds ?? DefaultKeepaliveTimeoutSeconds;
         ResetHeartbeat();
     }
 
@@ -67,6 +61,9 @@ public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
+            if (_keepaliveTimeoutSeconds == 0)
+                continue;
+
             var totalTimeout = TimeSpan.FromSeconds(_keepaliveTimeoutSeconds + HeartbeatGraceSeconds);
             await DelayAsync(totalTimeout, cancellationToken);
             var elapsed = TimeSpan.FromMilliseconds(Environment.TickCount64 - Interlocked.Read(ref _lastMessageTicks));
@@ -78,6 +75,13 @@ public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger)
                 break;
             }
         }
+    }
+
+    private async Task ConnectInternalAsync(string url, CancellationToken cancellationToken)
+    {
+        _webSocket = new ClientWebSocket();
+        _webSocket.Options.KeepAliveInterval = Timeout.InfiniteTimeSpan;
+        await _webSocket.ConnectAsync(new Uri(url), cancellationToken);
     }
 
     private static async Task DelayAsync(TimeSpan totalTimeout, CancellationToken cancellationToken)

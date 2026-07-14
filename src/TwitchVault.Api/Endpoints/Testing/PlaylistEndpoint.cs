@@ -145,7 +145,7 @@ public class FinalizeTestPlaylist : IEndpoint
             var id = HlsPlaylistTestHarness.Normalize(streamId);
             var playlist = await harness.GetOrCreateAsync(id, ct);
 
-            await playlist.FinalizeAsync(ct);
+            // await playlist.FinalizeAsync(ct);
 
             return Results.Ok(new { streamId = id, finalized = true });
         })

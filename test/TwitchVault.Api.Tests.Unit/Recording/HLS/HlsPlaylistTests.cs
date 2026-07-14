@@ -83,12 +83,11 @@ public class HlsPlaylistTests
     }
 
     [Fact]
-    public async Task FinalizeAsync_ShouldAppendEndListTag_WhenPlaylistIsNotFinalized()
+    public async Task FinalizeAsync_ShouldAppendEndListTag_WhenPlaylistIsDisposed()
     {
         // Act
         await using (var playlist = await HlsPlaylist.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem))
         {
-            await playlist.FinalizeAsync();
         }
 
         // Assert

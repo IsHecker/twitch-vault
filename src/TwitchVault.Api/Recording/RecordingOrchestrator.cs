@@ -90,22 +90,22 @@ public sealed class RecordingOrchestrator
         }
     }
 
-    public async Task StopRecordingAsync(string streamId)
+    public async Task StopRecordingAsync(string channelId)
     {
-        if (!_streamRecorderRegistry.TryGet(streamId, out var recorder))
+        if (!_streamRecorderRegistry.TryGet(channelId, out var recorder))
         {
-            _logger.LogWarning("StopRecording: no active session for stream {StreamId}.", streamId);
+            _logger.LogWarning("StopRecording: no active session for stream {StreamId}.", channelId);
             return;
         }
 
         await recorder.StopAsync();
     }
 
-    public async Task ToggleStreamDeletionAsync(string streamId, bool markForDeletion)
+    public async Task ToggleStreamDeletionAsync(string channelId, bool markForDeletion)
     {
-        if (!_streamRecorderRegistry.TryGet(streamId, out var recorder))
+        if (!_streamRecorderRegistry.TryGet(channelId, out var recorder))
         {
-            _logger.LogWarning("ToggleDeletion: no active session for stream {StreamId}.", streamId);
+            _logger.LogWarning("ToggleDeletion: no active session for stream {StreamId}.", channelId);
             return;
         }
 

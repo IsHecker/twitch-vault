@@ -53,6 +53,9 @@ public class SegmentDownloader(
                 fileStream?.Dispose();
                 fileStream = null;
             }
+
+            if (manifestResult.IsStreamEnded && segmentStateTracker.HasOpenSegment)
+                yield return CloseSegment();
         }
         finally
         {

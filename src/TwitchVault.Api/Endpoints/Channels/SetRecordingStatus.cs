@@ -21,7 +21,7 @@ public class SetRecordingStatus : IEndpoint
             channel.ShouldRecord = request.ShouldRecord;
             await repo.UpdateAsync(channel);
             if (request.ShouldRecord)
-                _ = twitchSubscription.SubscribeChannelAsync(channel, default);
+                _ = twitchSubscription.SubscribeChannelsAsync([channel], default);
             else
                 _ = twitchSubscription.UnsubscribeChannelAsync(channel, default);
             return Results.NoContent();

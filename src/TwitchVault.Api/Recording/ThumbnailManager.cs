@@ -11,6 +11,7 @@ public interface IThumbnailManager
 public sealed class ThumbnailManager(
     ITwitchGqlClient twitchGqlClient,
     IDateTimeProvider dateTimeProvider,
+    IFileSystem fileSystem,
     ILogger<ThumbnailManager> logger) : IThumbnailManager
 {
     private static readonly TimeSpan LiveSnapshotCooldown = TimeSpan.FromMinutes(5);
@@ -49,7 +50,8 @@ public sealed class ThumbnailManager(
     {
         using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, CancellationToken.None);
 
-        await using var fileStream = File.Create(savePath);
+        // await using var fileStream = File.Create(savePath);
+        await using var fileStream = fileSystem.OpenWrite(savePath, FileMode.Create);
         await imageStream.CopyToAsync(fileStream, CancellationToken.None);
     }
 }

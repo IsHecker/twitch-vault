@@ -50,11 +50,11 @@ public class StreamRecorderTests
         _hlsPlaylist.LastTwitchMediaSequence.Returns(0L);
         _hlsPlaylist.HasInitSegment.Returns(true);
 
-        _finalizer
-            .FinalizeAsync(
-                Arg.Any<Domain.Stream>(), Arg.Any<Channel>(), Arg.Any<ISegmentDownloader>(),
-                Arg.Any<IHlsPlaylist>(), Arg.Any<SessionEndReason>())
-            .Returns(Task.CompletedTask);
+        _finalizer.FinalizeAsync(
+            Arg.Any<Domain.Stream>(),
+            Arg.Any<Channel>(),
+            Arg.Any<ISegmentDownloader>(),
+            Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
     }
 
     private StreamRecorder CreateSut(CancellationToken parentToken = default) =>
@@ -123,7 +123,7 @@ public class StreamRecorderTests
 
         // Assert
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, _hlsPlaylist, Arg.Is(new SessionEndReason.StreamEnded()));
+            _stream, _channel, _segmentDownloader, Arg.Is(new SessionEndReason.StreamEnded()));
     }
 
 
@@ -144,7 +144,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, _hlsPlaylist, Arg.Is(new SessionEndReason.StreamStopped()));
+            _stream, _channel, _segmentDownloader, Arg.Is(new SessionEndReason.StreamStopped()));
     }
 
     [Fact]
@@ -162,9 +162,12 @@ public class StreamRecorderTests
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
-        await _finalizer.DidNotReceive().FinalizeAsync(
-            Arg.Any<Domain.Stream>(), Arg.Any<Channel>(), Arg.Any<ISegmentDownloader>(),
-            Arg.Any<IHlsPlaylist>(), Arg.Any<SessionEndReason.StreamEnded>());
+        await _finalizer.DidNotReceive()
+            .FinalizeAsync(
+                Arg.Any<Domain.Stream>(),
+                Arg.Any<Channel>(),
+                Arg.Any<ISegmentDownloader>(),
+                Arg.Any<SessionEndReason.StreamEnded>());
     }
 
 
@@ -182,7 +185,7 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(3).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, _hlsPlaylist, Arg.Any<SessionEndReason.StreamEnded>());
+            _stream, _channel, _segmentDownloader, Arg.Any<SessionEndReason.StreamEnded>());
     }
 
     [Fact]
@@ -324,7 +327,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().NotThrowAsync();
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, _hlsPlaylist, Arg.Any<SessionEndReason.StreamError>());
+            _stream, _channel, _segmentDownloader, Arg.Any<SessionEndReason.StreamError>());
     }
 
 

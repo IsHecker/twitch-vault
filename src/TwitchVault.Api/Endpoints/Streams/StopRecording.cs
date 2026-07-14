@@ -15,7 +15,7 @@ public class StopRecording : IEndpoint
             if (stream.Status != StreamStatus.Recording)
                 return Results.BadRequest("Stream is not currently recording.");
 
-            await controller.StopRecordingAsync(id);
+            await controller.StopRecordingAsync(stream.ChannelId);
             return Results.NoContent();
         })
         .WithName(nameof(StopRecording))

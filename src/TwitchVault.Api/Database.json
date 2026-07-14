@@ -5,78 +5,32 @@
       "Name": "pisty",
       "QualityRank": 2,
       "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-06-10T01:07:34.1575324+03:00"
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-07-08T19:16:26.7153692+03:00"
     },
     {
       "Id": "1131131080",
       "Name": "keewidraws",
       "QualityRank": 1,
       "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-06-10T04:34:24.6183268+03:00"
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-07-06T04:42:01.4063758+03:00"
     },
     {
       "Id": "153423171",
       "Name": "vnnh_",
       "QualityRank": 1,
       "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-05-10T05:34:27.9586013+03:00"
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-06-23T04:36:54.9825889+03:00"
     },
     {
       "Id": "151283108",
       "Name": "gothamchess",
       "QualityRank": 2,
       "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-05-26T00:35:25.0285224+03:00"
-    },
-    {
-      "Id": "177029122",
-      "Name": "nyyxxii",
-      "QualityRank": 1,
-      "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "1171769612",
-      "Name": "247jynxzi",
-      "QualityRank": 1,
-      "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-07-05T14:42:39.1610833+03:00"
-    }
-  ],
-  "Streams": [
-    {
-      "TwitchStreamId": "319367046752",
-      "TwitchVodId": null,
-      "ChannelId": "1171769612",
-      "Folder": {
-        "RelativePath": "Streams\\247jynxzi\\2026-07-05 14-42-39",
-        "ThumbnailPath": "Streams/247jynxzi/2026-07-05 14-42-39/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_247jynxzi-1280x720.jpg",
-      "Status": "Recording",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-05T14:42:39.1610833+03:00",
-      "FinishedAt": null,
-      "Chapters": [
-        {
-          "Title": "🚨 24/7 JYNXZI STREAMS! GET IN HERE!! !charm 🚨",
-          "Category": "Always On",
-          "StartedAt": "2026-07-05T14:42:39.1610833+03:00",
-          "FinishedAt": "2026-07-05T14:49:51.751342+03:00"
-        },
-        {
-          "Title": "test",
-          "Category": "new category",
-          "StartedAt": "2026-07-05T14:49:51.751342+03:00",
-          "FinishedAt": null
-        }
-      ]
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-06-16T17:18:07.2833315+03:00"
     }
   ]
 }

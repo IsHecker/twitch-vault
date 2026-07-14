@@ -16,56 +16,41 @@ public sealed class TwitchSubscriptionService(
     private readonly ConcurrentDictionary<string, List<string>> _subscriptionIds = [];
     public string SessionId { get; set; } = null!;
 
-    public async Task SubscribeAllAsync(CancellationToken cancellationToken)
+    public async Task SubscribeChannelsAsync(CancellationToken cancellationToken)
     {
         var channels = (await channelRepository.GetAllAsync())
-            .Where(c => c.ShouldRecord);
+            .Where(c => c.ShouldRecord)
+            .ToList();
 
-        foreach (var channel in channels)
-        {
-            await SubscribeChannelAsync(channel, cancellationToken);
-            await Task.Delay(200, cancellationToken);
-        }
+        await SubscribeChannelsAsync(channels, cancellationToken);
     }
 
     public async Task ClearSubscriptionsAsync(CancellationToken cancellationToken)
     {
-        var statuses = new[] { "enabled", "websocket_connection_closed" };
+        var cleanedCount = 0;
+        var failedCount = 0;
 
-        foreach (var status in statuses)
+        var subscriptions = await twitchHelixClient.GetEventSubSubscriptionsAsync(cancellationToken);
+        if (subscriptions is null || subscriptions.Value.Data is null)
+            return;
+
+        foreach (var sub in subscriptions.Value.Data)
         {
-            var response = await twitchHelixClient.GetEventSubSubscriptionsAsync(status, cancellationToken);
-            if (response is null || response.Value.Data is null)
+            if (string.IsNullOrEmpty(SessionId) || sub.Transport.SessionId == SessionId)
                 continue;
 
-            foreach (var sub in response.Value.Data)
-            {
-                if (string.IsNullOrEmpty(SessionId) || sub.Transport.SessionId == SessionId)
-                    continue;
+            using var response = await twitchHelixClient.DeleteEventSubSubscriptionAsync(sub.Id, cancellationToken);
+            _subscriptionIds.TryRemove(sub.Id, out _);
 
-                await twitchHelixClient.DeleteEventSubSubscriptionAsync(sub.Id, cancellationToken);
-                _subscriptionIds.TryRemove(sub.Id, out _);
+            if (response.IsSuccessStatusCode)
+                cleanedCount++;
+            else
+                failedCount++;
 
-                logger.LogInformation("Cleaned up hanging subscription for channel {ChannelId} (Status: {Status})",
-                   sub.Condition.BroadcasterUserId, status);
-            }
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
         }
-    }
 
-    public async Task SubscribeChannelAsync(Channel channel, CancellationToken cancellationToken)
-    {
-        if (_subscriptionIds.Count >= MaxChannels)
-            return;
-
-        if (SessionId is null)
-            return;
-
-        if (_subscriptionIds.ContainsKey(channel.Id))
-            return;
-
-        await SubscribeAsync(channel, "stream.online", version: "1", cancellationToken);
-        await Task.Delay(500, cancellationToken);
-        await SubscribeAsync(channel, ChannelUpdateEvent.EventName, version: "2", cancellationToken);
+        logger.LogInformation("Cleaned up {Count} subscriptions, {Failed} failed", cleanedCount, failedCount);
     }
 
     public async Task UnsubscribeChannelAsync(Channel channel, CancellationToken cancellationToken)
@@ -78,7 +63,7 @@ public sealed class TwitchSubscriptionService(
             using var response = await twitchHelixClient.DeleteEventSubSubscriptionAsync(id, cancellationToken);
 
             if (response.IsSuccessStatusCode)
-                logger.LogInformation("Unsubscribed {SubId} for channel '{Channel}'", id, channel.Name);
+                logger.LogDebug("Unsubscribed {SubId} for channel '{Channel}'", id, channel.Name);
             else
                 logger.LogError("Failed to unsubscribe {SubId} for channel '{Channel}': {Status}",
                     id, channel.Name, response.StatusCode);
@@ -87,7 +72,53 @@ public sealed class TwitchSubscriptionService(
         _subscriptionIds.Remove(channel.Id, out _);
     }
 
-    private async Task SubscribeAsync(
+    public async Task SubscribeChannelsAsync(ICollection<Channel> channels, CancellationToken cancellationToken)
+    {
+        var succeeded = new List<string>();
+        var failed = new List<string>();
+
+        foreach (var channel in channels)
+        {
+            var result = await TrySubscribeChannelAsync(channel, cancellationToken);
+
+            if (result is true)
+                succeeded.Add(channel.Name);
+            else if (result is false)
+                failed.Add(channel.Name);
+
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        }
+
+        LogBatchSubscriptionResult(succeeded, failed);
+    }
+
+    private async Task<bool?> TrySubscribeChannelAsync(Channel channel, CancellationToken cancellationToken)
+    {
+        if (_subscriptionIds.Count >= MaxChannels)
+            return null;
+
+        if (SessionId is null)
+            return null;
+
+        if (_subscriptionIds.ContainsKey(channel.Id))
+            return null;
+
+        var onlineId = await SubscribeAsync(channel, "stream.online", version: "1", cancellationToken);
+        var updateId = await SubscribeAsync(channel, ChannelUpdateEvent.EventName, version: "2", cancellationToken);
+
+        if (!_subscriptionIds.TryGetValue(channel.Id, out var ids))
+            _subscriptionIds[channel.Id] = ids = [];
+
+        if (onlineId is not null)
+            ids.Add(onlineId);
+
+        if (updateId is not null)
+            ids.Add(updateId);
+
+        return onlineId is not null && updateId is not null;
+    }
+
+    private async Task<string?> SubscribeAsync(
         Channel channel,
         string type,
         string version,
@@ -104,27 +135,23 @@ public sealed class TwitchSubscriptionService(
 
             if (!response.IsSuccessStatusCode)
             {
-                var shit = await response.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogError(
-                    "Subscription attempt {Attempt}/{MaxRetries} failed for {Channel} ({Type}): {Status}",
-                    attempt, MaxRetries, channel.Name, type, response.StatusCode);
-
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
                 continue;
             }
 
             var message = await response.Content.ReadFromJsonAsync<EventSubSubscriptionResponse>(cancellationToken);
-            if (!_subscriptionIds.TryGetValue(channel.Id, out var ids))
-                _subscriptionIds[channel.Id] = ids = [];
-
-            if (message.Data.Length > 0)
-            {
-                ids.Add(message.Data[0].Id);
-                logger.LogInformation("Subscribed to {Type} for {Channel}", type, channel.Name);
-            }
-            return;
+            return message.Data.Length > 0 ? message.Data[0].Id : null;
         }
 
-        logger.LogError("All subscription attempts failed for {Channel} ({Type}). Giving up.", channel.Name, type);
+        return null;
+    }
+
+    private void LogBatchSubscriptionResult(ICollection<string> succeeded, ICollection<string> failed)
+    {
+        if (succeeded.Count > 0)
+            logger.LogInformation("Subscribed to {Channels}", string.Join(", ", succeeded));
+
+        if (failed.Count > 0)
+            logger.LogError("Subscription Failed for {Channels}", string.Join(", ", failed));
     }
 }

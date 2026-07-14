@@ -16,9 +16,11 @@ public class ToggleStreamDeletion : IEndpoint
             var stream = await repo.GetStreamByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
+
             if (stream.Status == StreamStatus.Finished)
                 return Results.BadRequest("Cannot mark a finished stream for deletion — delete it directly.");
-            await controller.ToggleStreamDeletionAsync(id, request.State);
+
+            await controller.ToggleStreamDeletionAsync(stream.ChannelId, request.State);
             return Results.NoContent();
         })
         .WithName(nameof(ToggleStreamDeletion))

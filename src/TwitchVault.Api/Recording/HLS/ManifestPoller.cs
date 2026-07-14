@@ -74,7 +74,7 @@ public sealed class ManifestPoller(
         if (!IsStable)
             return;
 
-        logger.LogInformation(
+        logger.LogDebug(
             "Master playlist stabilized with {Count} quality variants. (Source: {Bandwidth} bps)",
             _variants.Length, _variants[^1].Bandwidth);
     }

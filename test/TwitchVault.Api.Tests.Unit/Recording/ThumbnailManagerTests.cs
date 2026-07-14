@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 
@@ -11,6 +12,7 @@ public class ThumbnailManagerTests
     private readonly Domain.Stream _stream;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
+    private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
     private readonly ILogger<ThumbnailManager> _logger = Substitute.For<ILogger<ThumbnailManager>>();
 
     public ThumbnailManagerTests()
@@ -18,11 +20,21 @@ public class ThumbnailManagerTests
         _stream = new Domain.Stream
         {
             ChannelId = "channel-1",
-            TwitchStreamId = "test-stream"
+            TwitchStreamId = "test-stream",
+            Folder = StreamFolder.Create("streams_root", "Test Channel")
         };
-
         _stream.SetThumbnailUrl("https://twitch.tv/thumb.jpg");
+
+
+        _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_ => new MemoryStream("dummy-image-bytes"u8.ToArray()));
+
+        _fileSystem.OpenWrite(Arg.Any<string>(), Arg.Any<FileMode>())
+            .Returns(_ => new MemoryStream());
     }
+
+    private ThumbnailManager CreateSut() =>
+        new(_twitchGqlClient, _dateTimeProvider, _fileSystem, _logger);
 
     [Fact]
     public async Task TryCaptureSnapshotAsync_ShouldCapture_WhenCooldownHasPassed()
@@ -31,11 +43,7 @@ public class ThumbnailManagerTests
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
 
-        var sut = new ThumbnailManager(_twitchGqlClient, _dateTimeProvider, _logger);
-
-        var dummyStream = new MemoryStream("dummy-data"u8.ToArray());
-        _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(dummyStream);
+        var sut = CreateSut();
 
         // Act
         await sut.TryCaptureSnapshotAsync(_stream);
@@ -53,11 +61,7 @@ public class ThumbnailManagerTests
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
 
-        var sut = new ThumbnailManager(_twitchGqlClient, _dateTimeProvider, _logger);
-
-        var dummyStream = new MemoryStream("dummy-data"u8.ToArray());
-        _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(dummyStream);
+        var sut = CreateSut();
 
         // Act
         await sut.TryCaptureSnapshotAsync(_stream);
@@ -77,11 +81,7 @@ public class ThumbnailManagerTests
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
 
-        var sut = new ThumbnailManager(_twitchGqlClient, _dateTimeProvider, _logger);
-
-        var dummyStream = new MemoryStream("dummy-data"u8.ToArray());
-        _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(dummyStream);
+        var sut = CreateSut();
 
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(30));
 

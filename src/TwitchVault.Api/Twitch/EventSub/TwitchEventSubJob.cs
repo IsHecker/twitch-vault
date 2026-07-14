@@ -75,18 +75,6 @@ public class TwitchEventSubJob(
         }
     }
 
-    private async Task HandleWelcomeAsync(
-        string sessionId,
-        int? keepaliveTimeoutSeconds,
-        CancellationToken cancellationToken)
-    {
-        wsClient.SetHeartbeat(keepaliveTimeoutSeconds ?? 10);
-
-        subscriptionService.SessionId = sessionId;
-        await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
-        await subscriptionService.SubscribeAllAsync(cancellationToken);
-    }
-
     private async Task HandleMessageAsync(EventSubMessage message, CancellationToken cancellationToken)
     {
         switch (message.Metadata.MessageType)
@@ -102,6 +90,7 @@ public class TwitchEventSubJob(
                         cancellationToken);
 
                 await wsClient.CloseOldConnectionAsync();
+
                 var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
                 logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
                 return;
@@ -120,6 +109,18 @@ public class TwitchEventSubJob(
                     logger.LogWarning("Unhandled event type: {Type}", message.Payload.Subscription.Type);
                 return;
         }
+    }
+
+    private async Task HandleWelcomeAsync(
+        string sessionId,
+        int? keepaliveTimeoutSeconds,
+        CancellationToken cancellationToken)
+    {
+        subscriptionService.SessionId = sessionId;
+        await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
+        await subscriptionService.SubscribeChannelsAsync(cancellationToken);
+
+        wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
     }
 
     private async Task PublishStreamOnlineAsync(JsonElement e, CancellationToken cancellationToken)

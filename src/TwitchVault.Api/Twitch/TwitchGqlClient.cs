@@ -1,11 +1,14 @@
+using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using TwitchVault.Api.Configuration;
 
 namespace TwitchVault.Api.Twitch;
 
 public sealed class TwitchGqlClient(
     HttpClient httpClient,
-    SettingsService settingsService) : ITwitchGqlClient
+    SettingsService settingsService,
+    ILogger<TwitchGqlClient> logger) : ITwitchGqlClient
 {
     private const string TwitchGqlUrl = "https://gql.twitch.tv/gql";
     private TwitchOptions Options => settingsService.Settings.Twitch;
@@ -14,6 +17,9 @@ public sealed class TwitchGqlClient(
     {
         var payload = TwitchGqlPayloads.StreamMetadata(channel);
         using var response = await SendGqlRequestAsync(payload, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return null;
+
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
 
         return ParseStreamMetadata(document!.RootElement);
@@ -122,7 +128,7 @@ public sealed class TwitchGqlClient(
         return user.ValueKind == JsonValueKind.Null ? null : user.GetProperty("id").GetString();
     }
 
-    private Task<HttpResponseMessage> SendGqlRequestAsync(object payload, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> SendGqlRequestAsync(object payload, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, TwitchGqlUrl)
         {
@@ -147,7 +153,18 @@ public sealed class TwitchGqlClient(
         request.Headers.TryAddWithoutValidation("sec-fetch-dest", "empty");
         request.Headers.TryAddWithoutValidation("sec-gpc", "1");
 
-        return httpClient.SendAsync(request, cancellationToken);
+        var response = await httpClient.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            logger.LogWarning("Twitch GQL client is rate-limited (HTTP 429 Too Many Requests).");
+        }
+        else if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning("Twitch GQL request failed with status code {StatusCode}.", response.StatusCode);
+        }
+
+        return response;
     }
 
     private static string BuildMasterPlaylistUrl(string channel, PlaybackToken token) =>

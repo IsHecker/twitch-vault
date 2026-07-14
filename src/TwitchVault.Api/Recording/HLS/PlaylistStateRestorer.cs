@@ -11,7 +11,7 @@ public static class PlaylistStateRestorer
         float totalDuration = 0;
         bool hasInitSegment = false;
         string? lastSegmentFileName = null;
-        long segmentCount = 0;
+        long twitchSegmentCount = 0;
         bool isFinalized = false;
 
         for (var i = 0; i < lines.Count; i++)
@@ -20,8 +20,7 @@ public static class PlaylistStateRestorer
 
             if (line.StartsWith(HlsTags.TwitchMediaSequencePrefix))
             {
-                var shit = HlsTagReader.ReadTagValue(line, HlsTags.TwitchMediaSequencePrefix);
-                segmentCount = long.Parse(shit);
+                twitchSegmentCount = long.Parse(HlsTagReader.ReadTagValue(line, HlsTags.TwitchMediaSequencePrefix));
                 continue;
             }
             else if (line.StartsWith(HlsTags.TargetDurationPrefix))
@@ -60,7 +59,8 @@ public static class PlaylistStateRestorer
             totalDuration,
             hasInitSegment,
             lastSegmentFileName,
-            segmentCount,
+            twitchSegmentCount,
+            lines[^1].Equals(HlsTags.Discontinuity),
             isFinalized);
     }
 }

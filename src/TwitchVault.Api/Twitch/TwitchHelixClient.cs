@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Twitch.EventSub;
@@ -11,6 +12,10 @@ public sealed class TwitchHelixClient(
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
     private TwitchOptions Options => settingsService.Settings.Twitch;
 
+    private int _rateLimitLimit;
+    private int? _rateLimitRemaining;
+    private long _rateLimitReset;
+
     public async Task<int?> GetEventSubsCountAsync(CancellationToken cancellationToken)
     {
         const string url = $"{HelixSubscriptionUrl}?status=enabled";
@@ -23,9 +28,9 @@ public sealed class TwitchHelixClient(
         return subs?.RootElement.GetProperty("total_cost").GetInt32();
     }
 
-    public async Task<EventSubSubscriptionResponse?> GetEventSubSubscriptionsAsync(string status, CancellationToken cancellationToken)
+    public async Task<EventSubSubscriptionResponse?> GetEventSubSubscriptionsAsync(CancellationToken cancellationToken)
     {
-        string url = $"{HelixSubscriptionUrl}?status={status}";
+        string url = $"{HelixSubscriptionUrl}?status=enabled";
         using var response = await SendHelixRequestAsync(HttpMethod.Get, url, null, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -58,35 +63,75 @@ public sealed class TwitchHelixClient(
         return SendHelixRequestAsync(HttpMethod.Delete, url, null, cancellationToken);
     }
 
-    private Task<HttpResponseMessage> SendHelixRequestAsync(
+    private void UpdateRateLimits(HttpResponseMessage message)
+    {
+        if (message.Headers.TryGetValues("Ratelimit-Limit", out var limitValues) &&
+            int.TryParse(limitValues.FirstOrDefault(), out var limit))
+        {
+            _rateLimitLimit = limit;
+        }
+
+        if (message.Headers.TryGetValues("Ratelimit-Remaining", out var remainingValues) &&
+            int.TryParse(remainingValues.FirstOrDefault(), out var remaining))
+        {
+            _rateLimitRemaining = remaining;
+        }
+
+        if (message.Headers.TryGetValues("Ratelimit-Reset", out var resetValues) &&
+            long.TryParse(resetValues.FirstOrDefault(), out var reset))
+        {
+            _rateLimitReset = reset;
+        }
+    }
+
+    private async Task WaitForRateLimitAsync(CancellationToken cancellationToken)
+    {
+        if (!_rateLimitRemaining.HasValue ||
+            _rateLimitRemaining.Value > 0)
+            return;
+
+        var resetUnixTime = _rateLimitReset;
+        var currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var delaySeconds = resetUnixTime - currentUnixTime;
+
+        if (delaySeconds <= 0)
+            return;
+
+        await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> SendHelixRequestAsync(
         HttpMethod method,
         string url,
         object? body = null,
         CancellationToken cancellationToken = default)
     {
-        var request = new HttpRequestMessage(method, url);
-        request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
+        const int maxRetryAttempts = 3;
+        HttpResponseMessage response = null!;
 
+        using var request = new HttpRequestMessage(method, url);
+        request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
         request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {Options.Authorization}");
 
-        if (body is not null)
-            request.Content = JsonContent.Create(body);
+        for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+        {
+            await WaitForRateLimitAsync(cancellationToken);
 
-        return httpClient.SendAsync(request, cancellationToken);
+            if (body is not null)
+                request.Content = JsonContent.Create(body);
+
+            response = await httpClient.SendAsync(request, cancellationToken);
+            UpdateRateLimits(response);
+
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                response.Dispose();
+                continue;
+            }
+
+            return response;
+        }
+
+        return response;
     }
-
-    // private HttpRequestMessage CreateRequest(HttpMethod method, string url, object? body = null)
-    // {
-    //     var twitch = settingsService.Settings.Twitch;
-
-    //     var request = new HttpRequestMessage(method, url);
-    //     request.Headers.Add("Client-Id", twitch.ClientId);
-    //     request.Headers.Authorization = new AuthenticationHeaderValue(
-    //         "Bearer", twitch.Authorization.Replace("OAuth ", ""));
-
-    //     if (body is not null)
-    //         request.Content = JsonContent.Create(body);
-
-    //     return request;
-    // }
 }

@@ -10,6 +10,7 @@ public class ListStreamsByChannel : IEndpoint
             var channel = await channelRepo.GetByIdAsync(channelId);
             if (channel is null)
                 return Results.NotFound();
+
             var streams = await repo.GetStreamsByChannelIdAsync(channelId);
             return Results.Ok(streams);
         })

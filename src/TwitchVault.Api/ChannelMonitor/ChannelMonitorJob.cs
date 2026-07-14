@@ -49,6 +49,7 @@ public sealed class ChannelMonitorJob(
 
             try
             {
+                logger.LogInformation("Monitor detected channel {Channel} is live", channel.Name);
                 await streamController.HandleStreamOnlineAsync(channel.Id, channel.Name, metadata.Value);
             }
             catch (Exception ex)

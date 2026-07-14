@@ -7,6 +7,7 @@ public sealed record PlaylistState(
     bool HasInitSegment,
     string? LastSegmentFileName,
     long SegmentCount,
+    bool LastEntryWasDiscontinuity,
     bool IsFinalized)
 {
     public static PlaylistState Empty(DateTime startTime) => new(
@@ -16,5 +17,6 @@ public sealed record PlaylistState(
         HasInitSegment: false,
         LastSegmentFileName: null,
         SegmentCount: 0,
+        LastEntryWasDiscontinuity: false,
         IsFinalized: false);
 }

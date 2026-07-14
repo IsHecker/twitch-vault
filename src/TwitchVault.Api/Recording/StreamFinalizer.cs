@@ -14,7 +14,6 @@ public interface IStreamFinalizer
         Domain.Stream stream,
         Channel channel,
         ISegmentDownloader segmentDownloader,
-        IHlsPlaylist hlsPlaylist,
         SessionEndReason reason);
 }
 
@@ -38,13 +37,11 @@ public sealed class StreamFinalizer(
         Domain.Stream stream,
         Channel channel,
         ISegmentDownloader segmentDownloader,
-        IHlsPlaylist hlsPlaylist,
         SessionEndReason reason)
     {
         try
         {
             segmentDownloader.CloseSegment();
-            await hlsPlaylist.FinalizeAsync();
 
             stream.SetThumbnailUrl(stream.Folder.GetThumbnailUrl(pathsOptions.Value.BaseUrl));
             await streamRepository.UpdateAsync(stream);
