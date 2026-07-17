@@ -84,15 +84,12 @@ public class TwitchEventSubJob(
 
             case "session_welcome":
                 if (subscriptionService.SessionId != message.Payload.Session.Id)
-                    await HandleWelcomeAsync(
+                    HandleWelcome(
                         message.Payload.Session.Id,
                         message.Payload.Session.KeepaliveTimeoutSeconds,
                         cancellationToken);
 
                 await wsClient.CloseOldConnectionAsync();
-
-                var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
-                logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
                 return;
 
             case "session_reconnect":
@@ -111,16 +108,31 @@ public class TwitchEventSubJob(
         }
     }
 
-    private async Task HandleWelcomeAsync(
+    private void HandleWelcome(
         string sessionId,
         int? keepaliveTimeoutSeconds,
         CancellationToken cancellationToken)
     {
         subscriptionService.SessionId = sessionId;
-        await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
-        await subscriptionService.SubscribeChannelsAsync(cancellationToken);
-
         wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
+
+        _ = SetupSubscriptionsAsync(cancellationToken);
+    }
+
+    private async Task SetupSubscriptionsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
+            await subscriptionService.SubscribeChannelsAsync(cancellationToken);
+
+            var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
+            logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to setup EventSub subscriptions");
+        }
     }
 
     private async Task PublishStreamOnlineAsync(JsonElement e, CancellationToken cancellationToken)

@@ -62,7 +62,10 @@ public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger)
         while (!cancellationToken.IsCancellationRequested)
         {
             if (_keepaliveTimeoutSeconds == 0)
+            {
+                await Task.Delay(500, cancellationToken);
                 continue;
+            }
 
             var totalTimeout = TimeSpan.FromSeconds(_keepaliveTimeoutSeconds + HeartbeatGraceSeconds);
             await DelayAsync(totalTimeout, cancellationToken);
@@ -82,6 +85,7 @@ public sealed class TwitchWebSocketClient(ILogger<TwitchWebSocketClient> logger)
         _webSocket = new ClientWebSocket();
         _webSocket.Options.KeepAliveInterval = Timeout.InfiniteTimeSpan;
         await _webSocket.ConnectAsync(new Uri(url), cancellationToken);
+        ResetHeartbeat();
     }
 
     private static async Task DelayAsync(TimeSpan totalTimeout, CancellationToken cancellationToken)
