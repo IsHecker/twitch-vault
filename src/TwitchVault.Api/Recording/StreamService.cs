@@ -47,6 +47,7 @@ public class StreamService(
         await IOUtils.DeleteDirectoryWithRetriesAsync(stream.Folder.RelativePath);
         await streamRepository.DeleteStreamAsync(twitchStreamId);
 
+        using var ctx = logger.BeginScope("'{Title}' ({Category})", stream.Chapters[0].Title, stream.Chapters[0].Category);
         logger.LogInformation("Storage: Removed stream {StreamId}.", twitchStreamId);
     }
 

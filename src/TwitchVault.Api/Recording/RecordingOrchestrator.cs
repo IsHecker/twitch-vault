@@ -168,6 +168,10 @@ public sealed class RecordingOrchestrator
             {
                 await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(30));
             }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Session shutdown completed via cancellation (expected).");
+            }
             catch (TimeoutException)
             {
                 _logger.LogWarning("Timed out waiting for recording sessions to finish.");

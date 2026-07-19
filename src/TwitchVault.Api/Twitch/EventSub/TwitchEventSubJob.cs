@@ -114,18 +114,18 @@ public class TwitchEventSubJob(
         CancellationToken cancellationToken)
     {
         subscriptionService.SessionId = sessionId;
-        wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
 
-        _ = SetupSubscriptionsAsync(cancellationToken);
+        _ = SetupSubscriptionsAsync(keepaliveTimeoutSeconds, cancellationToken);
     }
 
-    private async Task SetupSubscriptionsAsync(CancellationToken cancellationToken)
+    private async Task SetupSubscriptionsAsync(int? keepaliveTimeoutSeconds, CancellationToken cancellationToken)
     {
         try
         {
             await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
             await subscriptionService.SubscribeChannelsAsync(cancellationToken);
 
+            wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
             var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
             logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
         }
