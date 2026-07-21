@@ -13,7 +13,6 @@ public enum StreamStatus
 public sealed class Stream
 {
     public string TwitchStreamId { get; set; } = null!;
-    public string? TwitchVodId { get; set; }
     public string ChannelId { get; set; } = null!;
 
     public StreamFolder Folder { get; set; } = null!;

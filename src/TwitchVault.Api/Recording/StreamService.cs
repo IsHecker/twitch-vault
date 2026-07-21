@@ -15,6 +15,7 @@ public interface IStreamService
 }
 
 public class StreamService(
+    IChannelRepository channelRepository,
     IStreamRepository streamRepository,
     IDateTimeProvider dateTimeProvider,
     IOptions<PathsOptions> pathsOptions,
@@ -31,7 +32,7 @@ public class StreamService(
             StartedAt = dateTimeProvider.DateTimeNow
         };
 
-        stream.SetThumbnailUrl(metadata.PreviewImageUrl);
+        stream.SetThumbnailUrl(stream.Folder.GetThumbnailUrl(pathsOptions.Value.BaseUrl));
         stream.AddChapter(metadata.Title, metadata.CategoryName, stream.StartedAt);
         await streamRepository.AddAsync(stream);
 
@@ -47,8 +48,9 @@ public class StreamService(
         await IOUtils.DeleteDirectoryWithRetriesAsync(stream.Folder.RelativePath);
         await streamRepository.DeleteStreamAsync(twitchStreamId);
 
-        using var ctx = logger.BeginScope("'{Title}' ({Category})", stream.Chapters[0].Title, stream.Chapters[0].Category);
-        logger.LogInformation("Storage: Removed stream {StreamId}.", twitchStreamId);
+        var channel = await channelRepository.GetByIdAsync(stream.ChannelId);
+        using var ctx = logger.BeginScope("{Channel}", channel!.Name);
+        logger.LogInformation("Storage: Removed stream {Title}.", stream.Chapters[0].Title);
     }
 
     public async Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null)

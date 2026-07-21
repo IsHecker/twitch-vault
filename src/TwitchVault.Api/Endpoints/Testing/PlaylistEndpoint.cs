@@ -134,26 +134,6 @@ public class AddTestDiscontinuity : IEndpoint
         .WithSummary("Add a discontinuity marker to the test playlist")
         .Produces(StatusCodes.Status200OK);
 }
-public class FinalizeTestPlaylist : IEndpoint
-{
-    public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPost("/api/test/playlist/finalize", async (
-            string? streamId,
-            HlsPlaylistTestHarness harness,
-            CancellationToken ct) =>
-        {
-            var id = HlsPlaylistTestHarness.Normalize(streamId);
-            var playlist = await harness.GetOrCreateAsync(id, ct);
-
-            // await playlist.FinalizeAsync(ct);
-
-            return Results.Ok(new { streamId = id, finalized = true });
-        })
-        .WithName(nameof(FinalizeTestPlaylist))
-        .WithTags("Testing")
-        .WithSummary("Write EXT-X-ENDLIST and finalize the test playlist")
-        .Produces(StatusCodes.Status200OK);
-}
 public class GetTestPlaylistRaw : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>

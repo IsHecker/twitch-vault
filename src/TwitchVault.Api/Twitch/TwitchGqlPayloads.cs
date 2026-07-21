@@ -8,16 +8,9 @@ internal static class TwitchGqlPayloads
         Query = """
                 query GetChannelMetadata($login: String!) {
                     user(login: $login) {
-                        lastBroadcast {
-                            title
-                            game {
-                                name
-                            }
-                        }
                         stream {
                             id
                             title
-                            previewImageURL(width: 1920, height: 1080)
                             game {
                                 name
                             }

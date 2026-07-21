@@ -47,12 +47,4 @@ public static class HlsTagReader
 
         return string.Empty;
     }
-
-    private static Range IndexRangeOf(this string source, string target)
-    {
-        var sourceSpan = source.AsSpan();
-        var start = sourceSpan.IndexOf(target);
-        var end = sourceSpan[(start - 1)..].LastIndexOf(target);
-        return new Range(start, end);
-    }
 }

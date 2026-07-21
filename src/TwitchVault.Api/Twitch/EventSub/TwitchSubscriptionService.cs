@@ -36,11 +36,7 @@ public sealed class TwitchSubscriptionService(
 
         foreach (var sub in subscriptions.Value.Data)
         {
-            if (string.IsNullOrEmpty(SessionId) || sub.Transport.SessionId == SessionId)
-                continue;
-
             using var response = await twitchHelixClient.DeleteEventSubSubscriptionAsync(sub.Id, cancellationToken);
-            _subscriptionIds.TryRemove(sub.Id, out _);
 
             if (response.IsSuccessStatusCode)
                 cleanedCount++;

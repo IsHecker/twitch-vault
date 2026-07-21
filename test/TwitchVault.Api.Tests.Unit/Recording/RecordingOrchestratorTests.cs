@@ -46,7 +46,7 @@ public class RecordingOrchestratorTests
         new() { Id = id, Name = name, QualityRank = 1 };
 
     private static StreamMetadata CreateMetadata(string twitchStreamId = "ts_1") =>
-        new(twitchStreamId, "http://preview.jpg", "Some Title", "Some Category");
+        new(twitchStreamId, "Some Title", "Some Category");
 
     private static Domain.Stream CreateStream(string twitchStreamId, string channelId) =>
         new() { TwitchStreamId = twitchStreamId, ChannelId = channelId };

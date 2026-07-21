@@ -19,8 +19,10 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         SQLitePCL.Batteries.Init();
-        builder.Host.UseSerilog((context, loggerConfig) =>
-            loggerConfig.ReadFrom.Configuration(context.Configuration));
+        builder.Host.UseSerilog((context, services, loggerConfig) =>
+            loggerConfig
+                .ReadFrom.Services(services)
+                .ReadFrom.Configuration(context.Configuration));
 
         var dbPath = Path.Combine(AppContext.BaseDirectory, "logs.db");
         builder.Services.AddSerilogUi(options => options

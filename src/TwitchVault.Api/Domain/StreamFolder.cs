@@ -37,13 +37,6 @@ public sealed class StreamFolder
     public string GetThumbnailUrl(string baseUrl) =>
         new Uri($"{baseUrl.TrimEnd('/')}/{ThumbnailPath}").AbsoluteUri;
 
-    public string GetPlaylistUrl(string baseUrl, string streamId) =>
-        $"{baseUrl.TrimEnd('/')}/hls/{streamId}/{PlaylistFile}";
-
-    public string GetSegmentUrl(string baseUrl, string streamId, string segmentFileName) =>
-        $"{baseUrl.TrimEnd('/')}/hls/{streamId}/segments/{segmentFileName}";
-
-
     public void EnsureDirectoryExists(string contentRootPath) =>
         Directory.CreateDirectory(GetAbsolutePath(contentRootPath));
 

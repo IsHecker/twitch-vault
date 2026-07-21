@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
         services.AddHttpClient<TwitchHelixClient>();
 
-        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<IDateTimeProvider, EgyptTimeProvider>();
         services.AddSingleton<IFileSystem, PhysicalFileSystem>();
         services.AddSingleton<EventBus>();
         services.AddSingleton<SettingsService>();
@@ -41,9 +41,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IManifestPoller, ManifestPoller>();
         services.AddTransient<IThumbnailManager, ThumbnailManager>();
 
-        services.AddSingleton<RecordingOrchestrator>();
         services.AddTransient<TwitchWebSocketClient>();
-        services.AddSingleton<TwitchSubscriptionService>();
+        services.AddTransient<TwitchSubscriptionService>();
+        services.AddSingleton<RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 

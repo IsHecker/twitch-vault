@@ -68,8 +68,6 @@ public sealed class RecordingOrchestrator
         await _sessionsLock.WaitAsync();
         try
         {
-            // await _streamService.ResetStaleStreamsAsync(channel.ChannelId, metadata.TwitchStreamId);
-
             var existing = (await _streamRepository.GetStreamsByChannelIdAsync(channel.Id))
                 .FirstOrDefault(s => s.TwitchStreamId == metadata.TwitchStreamId);
 
@@ -127,7 +125,7 @@ public sealed class RecordingOrchestrator
 
     private async Task StartRecordingAsync(Domain.Stream stream, Channel channel)
     {
-        stream.SetThumbnailUrl(BuildLiveThumbnailUrl(channel.Name));
+        // stream.SetThumbnailUrl(BuildLiveThumbnailUrl(channel.Name));
         await _streamRepository.UpdateAsync(stream);
 
         var session = await _streamRecorderFactory.CreateAsync(stream, channel, _appLifetime.ApplicationStopping);
@@ -192,7 +190,4 @@ public sealed class RecordingOrchestrator
             await _channelRepository.SetLiveAsync(channel.Id, false);
         }
     }
-
-    private static string BuildLiveThumbnailUrl(string channelName) =>
-        $"https://static-cdn.jtvnw.net/previews-ttv/live_user_{channelName}-1280x720.jpg";
 }

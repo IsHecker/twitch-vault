@@ -12,7 +12,6 @@ public sealed class TwitchHelixClient(
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
     private TwitchOptions Options => settingsService.Settings.Twitch;
 
-    private int _rateLimitLimit;
     private int? _rateLimitRemaining;
     private long _rateLimitReset;
 
@@ -65,12 +64,6 @@ public sealed class TwitchHelixClient(
 
     private void UpdateRateLimits(HttpResponseMessage message)
     {
-        if (message.Headers.TryGetValues("Ratelimit-Limit", out var limitValues) &&
-            int.TryParse(limitValues.FirstOrDefault(), out var limit))
-        {
-            _rateLimitLimit = limit;
-        }
-
         if (message.Headers.TryGetValues("Ratelimit-Remaining", out var remainingValues) &&
             int.TryParse(remainingValues.FirstOrDefault(), out var remaining))
         {

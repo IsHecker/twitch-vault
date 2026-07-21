@@ -191,9 +191,6 @@ public sealed class TwitchGqlClient(
             return null;
 
         var streamId = hasStream ? stream.GetProperty("id").GetString() : string.Empty;
-        var previewImageUrl = hasStream && stream.TryGetProperty("previewImageURL", out var previewUrl)
-            ? previewUrl.GetString()
-            : string.Empty;
 
         var streamTitle = stream.GetProperty("title").GetString() ?? string.Empty;
         var game = stream.GetProperty("game");
@@ -203,7 +200,6 @@ public sealed class TwitchGqlClient(
 
         return new StreamMetadata(
             streamId ?? string.Empty,
-            previewImageUrl ?? string.Empty,
             streamTitle,
             categoryName);
     }

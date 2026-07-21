@@ -13,7 +13,7 @@
       "Name": "keewidraws",
       "QualityRank": 1,
       "IsLive": false,
-      "ShouldRecord": true,
+      "ShouldRecord": false,
       "LastStreamedAt": "2026-07-06T04:42:01.4063758+03:00"
     },
     {
@@ -21,7 +21,7 @@
       "Name": "vnnh_",
       "QualityRank": 1,
       "IsLive": false,
-      "ShouldRecord": true,
+      "ShouldRecord": false,
       "LastStreamedAt": "2026-06-23T04:36:54.9825889+03:00"
     },
     {
@@ -29,7 +29,7 @@
       "Name": "gothamchess",
       "QualityRank": 2,
       "IsLive": false,
-      "ShouldRecord": true,
+      "ShouldRecord": false,
       "LastStreamedAt": "2026-06-16T17:18:07.2833315+03:00"
     }
   ]

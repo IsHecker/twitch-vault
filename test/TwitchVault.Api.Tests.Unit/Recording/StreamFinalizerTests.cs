@@ -24,7 +24,6 @@ public class StreamFinalizerTests
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
 
     private readonly ISegmentDownloader _segmentDownloader = Substitute.For<ISegmentDownloader>();
-    private readonly IHlsPlaylist _hlsPlaylist = Substitute.For<IHlsPlaylist>();
 
     private readonly Channel _channel = new() { Id = "chan_1", Name = "testchannel" };
 
@@ -119,7 +118,7 @@ public class StreamFinalizerTests
         // Arrange
         var stream = CreateStream("ts_current");
         _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_current", "url", "title", "cat"));
+            .Returns(new StreamMetadata("ts_current", "title", "cat"));
         var sut = CreateSut();
 
         // Act
@@ -151,7 +150,7 @@ public class StreamFinalizerTests
     {
         // Arrange
         _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_new", "url", "title", "cat"));
+            .Returns(new StreamMetadata("ts_new", "title", "cat"));
 
         var stream = CreateStream("ts_old");
         var sut = CreateSut();
