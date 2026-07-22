@@ -54,16 +54,21 @@ public sealed class TwitchSubscriptionService(
         if (!_subscriptionIds.TryGetValue(channel.Id, out var ids))
             return;
 
+        var deletedCount = 0;
+
         foreach (var id in ids)
         {
             using var response = await twitchHelixClient.DeleteEventSubSubscriptionAsync(id, cancellationToken);
 
             if (response.IsSuccessStatusCode)
-                logger.LogDebug("Unsubscribed {SubId} for channel '{Channel}'", id, channel.Name);
+                deletedCount++;
             else
                 logger.LogError("Failed to unsubscribe {SubId} for channel '{Channel}': {Status}",
                     id, channel.Name, response.StatusCode);
         }
+
+        if (deletedCount == ids.Count)
+            logger.LogInformation("Unsubscribed for '{Channel}'", channel.Name);
 
         _subscriptionIds.Remove(channel.Id, out _);
     }
@@ -82,10 +87,16 @@ public sealed class TwitchSubscriptionService(
             else if (result is false)
                 failed.Add(channel.Name);
 
-            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
         }
 
         LogBatchSubscriptionResult(succeeded, failed);
+    }
+
+    public void Reset()
+    {
+        SessionId = null!;
+        _subscriptionIds.Clear();
     }
 
     private async Task<bool?> TrySubscribeChannelAsync(Channel channel, CancellationToken cancellationToken)

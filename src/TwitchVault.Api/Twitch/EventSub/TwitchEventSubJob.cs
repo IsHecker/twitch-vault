@@ -45,6 +45,7 @@ public class TwitchEventSubJob(
         }
         finally
         {
+            subscriptionService.Reset();
             await wsClient.DisposeAsync();
         }
     }
@@ -122,7 +123,7 @@ public class TwitchEventSubJob(
     {
         try
         {
-            await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
+            // await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
             await subscriptionService.SubscribeChannelsAsync(cancellationToken);
 
             wsClient.SetHeartbeat(keepaliveTimeoutSeconds);

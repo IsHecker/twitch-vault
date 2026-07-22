@@ -9,8 +9,7 @@
   },
   "Vault": {
     "MaxSegmentDurationInSec": 10,
-    "MaxConsecutiveEmptyPolls": 3,
-    "PlaylistFlushIntervalInSec": 2
+    "MaxConsecutiveEmptyPolls": 3
   },
   "ChannelMonitor": {
     "Enabled": false,

@@ -42,7 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IThumbnailManager, ThumbnailManager>();
 
         services.AddTransient<TwitchWebSocketClient>();
-        services.AddTransient<TwitchSubscriptionService>();
+        services.AddSingleton<TwitchSubscriptionService>();
         services.AddSingleton<RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();

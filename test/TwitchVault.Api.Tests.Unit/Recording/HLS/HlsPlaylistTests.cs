@@ -35,7 +35,7 @@ public class HlsPlaylistTests
         rawContent.Should().Contain("#EXT-X-VERSION:6");
         rawContent.Should().Contain($"#ID3-EQUIV-TDTG:{_testStartTime:yyyy-MM-ddTHH:mm:ss}");
         rawContent.Should().Contain("#EXT-X-MEDIA-SEQUENCE:1");
-        rawContent.Should().Contain("#TWITCH-MEDIA-SEQUENCE:000000000000");
+        rawContent.Should().Contain($"#TWITCH-MEDIA-SEQUENCE:{long.MinValue}");
     }
 
     [Fact]
