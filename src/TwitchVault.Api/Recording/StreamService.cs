@@ -29,11 +29,11 @@ public class StreamService(
             TwitchStreamId = metadata.TwitchStreamId,
             Folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name),
             MarkForDeletion = false,
-            StartedAt = dateTimeProvider.DateTimeNow
+            StartedAt = metadata.StartedAt
         };
 
         stream.SetThumbnailUrl(stream.Folder.GetThumbnailUrl(pathsOptions.Value.BaseUrl));
-        stream.AddChapter(metadata.Title, metadata.CategoryName, stream.StartedAt);
+        stream.AddChapter(metadata.Title, metadata.CategoryId, stream.StartedAt);
         await streamRepository.AddAsync(stream);
 
         return stream;

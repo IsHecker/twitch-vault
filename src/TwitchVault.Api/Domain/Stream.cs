@@ -60,12 +60,12 @@ public sealed class Stream
         Status = StreamStatus.Interrupted;
     }
 
-    public void AddChapter(string title, string category, DateTime startedAt)
+    public void AddChapter(string title, string categoryId, DateTime startedAt)
     {
         if (CurrentChapter is not null)
             CurrentChapter.FinishedAt = startedAt;
 
-        Chapters.Add(new Chapter { Title = title, Category = category, StartedAt = startedAt });
+        Chapters.Add(new Chapter { Title = title, CategoryId = categoryId, StartedAt = startedAt });
     }
 
     public void SetThumbnailUrl(string thumbnailUrl) => ThumbnailUrl = thumbnailUrl;

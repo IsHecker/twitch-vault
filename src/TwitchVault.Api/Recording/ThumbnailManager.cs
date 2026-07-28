@@ -5,7 +5,7 @@ namespace TwitchVault.Api.Recording;
 
 public interface IThumbnailManager
 {
-    Task TryCaptureSnapshotAsync(Domain.Stream stream);
+    Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream);
 }
 
 public sealed class ThumbnailManager(
@@ -19,14 +19,14 @@ public sealed class ThumbnailManager(
     private readonly DateTime _sessionStartTime = dateTimeProvider.DateTimeNow;
     private DateTime _lastSnapshotTime = DateTime.MinValue;
 
-    public async Task TryCaptureSnapshotAsync(Domain.Stream stream)
+    public async Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream)
     {
         if (!CanCaptureSnapshot())
             return;
 
         try
         {
-            await SaveThumbnailAsync(stream.ThumbnailUrl, stream.Folder.ThumbnailPath);
+            await SaveThumbnailAsync(BuildLiveThumbnailUrl(channelName), stream.Folder.ThumbnailPath);
             _lastSnapshotTime = dateTimeProvider.DateTimeNow;
             logger.LogDebug("Captured live thumbnail snapshot");
         }
@@ -54,4 +54,7 @@ public sealed class ThumbnailManager(
         await using var fileStream = fileSystem.OpenWrite(savePath, FileMode.Create);
         await imageStream.CopyToAsync(fileStream, CancellationToken.None);
     }
+
+    private static string BuildLiveThumbnailUrl(string channelName) =>
+        $"https://static-cdn.jtvnw.net/previews-ttv/live_user_{channelName}-1280x720.jpg";
 }

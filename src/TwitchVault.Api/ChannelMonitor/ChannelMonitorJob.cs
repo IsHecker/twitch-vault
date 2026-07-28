@@ -40,17 +40,17 @@ public sealed class ChannelMonitorJob(
         if (channels.Count == 0)
             return;
 
-        var results = await twitchGqlClient.GetStreamMetadataAsync(channels, cancellationToken);
+        var results = await twitchGqlClient.IsChannelLiveAsync(channels, cancellationToken);
 
-        foreach (var (channel, metadata) in results)
+        foreach (var (channel, isLive) in results)
         {
-            if (metadata is null)
+            if (!isLive)
                 continue;
 
             try
             {
                 logger.LogInformation("Monitor detected channel {Channel} is live", channel.Name);
-                await streamController.HandleStreamOnlineAsync(channel.Id, channel.Name, metadata.Value);
+                await streamController.HandleStreamOnlineAsync(channel.Id, channel.Name);
             }
             catch (Exception ex)
             {

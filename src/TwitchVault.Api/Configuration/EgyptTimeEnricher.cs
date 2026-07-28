@@ -12,7 +12,7 @@ public class EgyptTimeEnricher(IDateTimeProvider dateTimeProvider) : ILogEventEn
     {
         var egyptNow = dateTimeProvider.DateTimeNow;
         logEvent.AddOrUpdateProperty(
-            propertyFactory.CreateProperty("EgyptTime", egyptNow.ToString("yyyy-MM-dd HH:mm:ss.fff")));
+            propertyFactory.CreateProperty("EgyptTime", egyptNow.ToString("yyyy-MM-dd hh:mm:ss.fff tt")));
     }
 }
 

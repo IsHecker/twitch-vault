@@ -1,6 +1,6 @@
 using TwitchVault.Api.Events;
 using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
+using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
@@ -12,19 +12,16 @@ public class MockTwitchEvents : IEndpoint
         group.MapPost("/online", async (
             string channelId,
             string channelName,
-            RecordingOrchestrator controller,
-            ITwitchGqlClient twitchGqlClient) =>
+            RecordingOrchestrator controller) =>
         {
-            var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, default);
-
-            await controller.HandleStreamOnlineAsync(channelId, channelName, metadata.Value);
+            await controller.HandleStreamOnlineAsync(channelId, channelName);
             return Results.Ok($"Sent StreamOnlineEvent for {channelName}");
         });
 
-        group.MapPost("/update", async (string channelId, string title, string category, EventBus bus) =>
+        group.MapPost("/update", async (string channelId, string title, string categoryId, EventBus bus) =>
         {
-            await bus.PublishAsync(new ChannelUpdateEvent(channelId, title, category));
-            return Results.Ok($"Sent ChannelUpdateEvent: {title} | {category}");
+            await bus.PublishAsync(new ChannelUpdateEvent(channelId, title, categoryId));
+            return Results.Ok($"Sent ChannelUpdateEvent: {title} | {categoryId}");
         });
     }
 }

@@ -13,6 +13,7 @@ public sealed class RecordingOrchestrator
     private readonly IChannelRepository _channelRepository;
     private readonly IStreamRepository _streamRepository;
     private readonly IStreamService _streamService;
+    private readonly ITwitchGqlClient _twitchGqlClient;
     private readonly ILogger<RecordingOrchestrator> _logger;
     private readonly IHostApplicationLifetime _appLifetime;
 
@@ -22,6 +23,7 @@ public sealed class RecordingOrchestrator
         IChannelRepository channelRepository,
         IStreamRepository streamRepository,
         IStreamService streamService,
+        ITwitchGqlClient twitchGqlClient,
         ILogger<RecordingOrchestrator> logger,
         IHostApplicationLifetime appLifetime)
     {
@@ -30,6 +32,7 @@ public sealed class RecordingOrchestrator
         _channelRepository = channelRepository;
         _streamRepository = streamRepository;
         _streamService = streamService;
+        _twitchGqlClient = twitchGqlClient;
         _appLifetime = appLifetime;
         _logger = logger;
 
@@ -37,7 +40,7 @@ public sealed class RecordingOrchestrator
         appLifetime.ApplicationStopping.Register(OnApplicationStopping);
     }
 
-    public async Task HandleStreamOnlineAsync(string channelId, string channelName, StreamMetadata metadata)
+    public async Task HandleStreamOnlineAsync(string channelId, string channelName)
     {
         if (!_streamRecorderRegistry.TryRegister(channelId))
         {
@@ -52,13 +55,25 @@ public sealed class RecordingOrchestrator
             if (channel is null)
             {
                 _logger.LogWarning("Channel {Channel} not found in database.", channelName);
+                _streamRecorderRegistry.Remove(channelId);
                 return;
             }
 
-            await StartAsync(channel, metadata);
+            var metadata = await _twitchGqlClient.GetStreamMetadataAsync(channelName, default);
+            if (!metadata.HasValue)
+            {
+                _logger.LogWarning("Failed to fetch stream metadata for {Channel}.", channelName);
+                _streamRecorderRegistry.Remove(channelId);
+                return;
+            }
+
+            _logger.LogInformation("GetBroadcastSettings createdAt: {CreatedAt}", metadata.Value.StartedAt);
+
+            await StartAsync(channel, metadata.Value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            _streamRecorderRegistry.Remove(channelId);
             _logger.LogError(ex, "Failed to initialize recording for {Channel}.", channelName);
         }
     }

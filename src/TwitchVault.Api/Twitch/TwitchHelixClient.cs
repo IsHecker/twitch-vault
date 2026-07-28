@@ -6,12 +6,16 @@ using TwitchVault.Api.Twitch.EventSub;
 namespace TwitchVault.Api.Twitch;
 
 public sealed class TwitchHelixClient(
-    HttpClient httpClient,
-    SettingsService settingsService)
+    IHttpClientFactory httpClientFactory,
+    SettingsService settingsService,
+    ILogger<TwitchHelixClient> logger)
 {
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
     private TwitchOptions Options => settingsService.Settings.Twitch;
 
+    private readonly object _rateLimitLock = new();
+
+    private int _rateLimitLimit;
     private int? _rateLimitRemaining;
     private long _rateLimitReset;
 
@@ -64,23 +68,32 @@ public sealed class TwitchHelixClient(
 
     private void UpdateRateLimits(HttpResponseMessage message)
     {
-        if (message.Headers.TryGetValues("Ratelimit-Remaining", out var remainingValues) &&
-            int.TryParse(remainingValues.FirstOrDefault(), out var remaining))
+        lock (_rateLimitLock)
         {
-            _rateLimitRemaining = remaining;
-        }
+            if (message.Headers.TryGetValues("Ratelimit-Limit", out var limitValues) &&
+            int.TryParse(limitValues.FirstOrDefault(), out var limit))
+            {
+                _rateLimitLimit = limit;
+            }
 
-        if (message.Headers.TryGetValues("Ratelimit-Reset", out var resetValues) &&
-            long.TryParse(resetValues.FirstOrDefault(), out var reset))
-        {
-            _rateLimitReset = reset;
+            if (message.Headers.TryGetValues("Ratelimit-Remaining", out var remainingValues) &&
+                int.TryParse(remainingValues.FirstOrDefault(), out var remaining))
+            {
+                _rateLimitRemaining = remaining;
+            }
+
+            if (message.Headers.TryGetValues("Ratelimit-Reset", out var resetValues) &&
+                long.TryParse(resetValues.FirstOrDefault(), out var reset))
+            {
+                _rateLimitReset = reset;
+            }
         }
     }
 
     private async Task WaitForRateLimitAsync(CancellationToken cancellationToken)
     {
         if (!_rateLimitRemaining.HasValue ||
-            _rateLimitRemaining.Value > 0)
+            _rateLimitRemaining-- > 0)
             return;
 
         var resetUnixTime = _rateLimitReset;
@@ -90,7 +103,10 @@ public sealed class TwitchHelixClient(
         if (delaySeconds <= 0)
             return;
 
+        logger.LogWarning("Twitch Helix API rate limit active. Waiting {Seconds}s for reset window...", delaySeconds);
         await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
+
+        _rateLimitRemaining = _rateLimitLimit;
     }
 
     private async Task<HttpResponseMessage> SendHelixRequestAsync(
@@ -102,22 +118,25 @@ public sealed class TwitchHelixClient(
         const int maxRetryAttempts = 3;
         HttpResponseMessage response = null!;
 
-        using var request = new HttpRequestMessage(method, url);
-        request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
-        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {Options.Authorization}");
+        var client = httpClientFactory.CreateClient("TwitchHelixClient");
 
         for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
         {
             await WaitForRateLimitAsync(cancellationToken);
 
+            using var request = new HttpRequestMessage(method, url);
+            request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {Options.Authorization}");
+
             if (body is not null)
                 request.Content = JsonContent.Create(body);
 
-            response = await httpClient.SendAsync(request, cancellationToken);
+            response = await client.SendAsync(request, cancellationToken);
             UpdateRateLimits(response);
 
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
+                logger.LogWarning("Twitch Helix API rate limit (429) hit for request to {Url}. Retrying after reset window...", url);
                 response.Dispose();
                 continue;
             }

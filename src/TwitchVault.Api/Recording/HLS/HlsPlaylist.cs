@@ -31,7 +31,6 @@ public sealed class HlsPlaylist : IHlsPlaylist
     private float _targetDuration;
     private bool _lastEntryWasDiscontinuity;
 
-
     private readonly DateTime _startTime;
     private float _totalDuration;
 
@@ -129,6 +128,8 @@ public sealed class HlsPlaylist : IHlsPlaylist
             if (string.IsNullOrWhiteSpace(LastSegmentFileName) || _lastEntryWasDiscontinuity)
                 return;
 
+            _fileStream.Position = _fileStream.Length;
+
             await WriteLineAsync(HlsTags.Discontinuity, cancellationToken);
             await _fileStream.FlushAsync(cancellationToken);
             _lastEntryWasDiscontinuity = true;
@@ -149,7 +150,6 @@ public sealed class HlsPlaylist : IHlsPlaylist
 
     public async ValueTask DisposeAsync()
     {
-        // await FlushAsync();
         await FinalizeAsync();
         await _fileStream.DisposeAsync();
         _lock.Dispose();

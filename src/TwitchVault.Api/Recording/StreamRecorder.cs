@@ -4,6 +4,7 @@ using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Recording;
 
@@ -103,16 +104,16 @@ public sealed class StreamRecorder : IStreamRecorder
             return;
 
         using var _chnlScope = _logger.BeginScope("{Channel}", _channel.Name);
-        using var _metaScope = _logger.BeginScope("'{Title}' ({Category})", e.Title, e.CategoryName);
+        using var _metaScope = _logger.BeginScope("'{Title}' ({CategoryId})", e.Title, e.CategoryId);
 
-        if (_stream.CurrentChapter.Title == e.Title && _stream.CurrentChapter.Category == e.CategoryName)
+        if (_stream.CurrentChapter.Title == e.Title && _stream.CurrentChapter.CategoryId == e.CategoryId)
         {
-            _logger.LogInformation("Metadata change ignored: title and category unchanged.");
+            _logger.LogInformation("Metadata change ignored: title and game unchanged.");
             return;
         }
 
         _logger.LogInformation("Metadata split triggered.");
-        _stream.AddChapter(e.Title, e.CategoryName, _dateTimeProvider.DateTimeNow);
+        _stream.AddChapter(e.Title, e.CategoryId, _dateTimeProvider.DateTimeNow);
         await _streamRepository.UpdateAsync(_stream);
     }
 
@@ -125,7 +126,7 @@ public sealed class StreamRecorder : IStreamRecorder
         {
             try
             {
-                await _thumbnailManager.TryCaptureSnapshotAsync(_stream);
+                await _thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream);
 
                 var (manifest, hasQualityChanged) = await _manifestPoller
                     .GetNextManifestAsync(_channel.Name, cancellationToken);

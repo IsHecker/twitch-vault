@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using TwitchVault.Api.Configuration;
 
 namespace TwitchVault.Api.Twitch;
@@ -12,6 +11,32 @@ public sealed class TwitchGqlClient(
 {
     private const string TwitchGqlUrl = "https://gql.twitch.tv/gql";
     private TwitchOptions Options => settingsService.Settings.Twitch;
+
+    public async Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(List<Domain.Channel> channels, CancellationToken cancellationToken)
+    {
+        if (channels.Count == 0)
+            return [];
+
+        var payload = channels.Select(c => TwitchGqlPayloads.GetLiveStatus(c.Name));
+        using var response = await SendGqlRequestAsync(payload, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return [];
+
+        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+        var results = new Dictionary<Domain.Channel, bool>();
+
+        var responseArray = document!.RootElement.EnumerateArray().ToList();
+
+        for (var i = 0; i < responseArray.Count; i++)
+        {
+            var item = responseArray[i];
+            var data = item.GetProperty("data");
+            var user = data.GetProperty("user");
+            results[channels[i]] = user.TryGetProperty("stream", out var stream) && stream.ValueKind != JsonValueKind.Null;
+        }
+
+        return results;
+    }
 
     public async Task<StreamMetadata?> GetStreamMetadataAsync(string channel, CancellationToken cancellationToken)
     {
@@ -155,13 +180,12 @@ public sealed class TwitchGqlClient(
 
         var response = await httpClient.SendAsync(request, cancellationToken);
 
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        if (!response.IsSuccessStatusCode)
         {
-            logger.LogWarning("Twitch GQL client is rate-limited (HTTP 429 Too Many Requests).");
-        }
-        else if (!response.IsSuccessStatusCode)
-        {
-            logger.LogWarning("Twitch GQL request failed with status code {StatusCode}.", response.StatusCode);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                logger.LogWarning("Twitch GQL rate limit (429) hit during API request.");
+            else
+                logger.LogWarning("Twitch GQL request failed with status code {StatusCode}.", response.StatusCode);
         }
 
         return response;
@@ -185,22 +209,18 @@ public sealed class TwitchGqlClient(
         if (!data.TryGetProperty("user", out var user) || user.ValueKind == JsonValueKind.Null)
             return null;
 
-        var hasStream = user.TryGetProperty("stream", out var stream) && stream.ValueKind != JsonValueKind.Null;
+        var stream = user.GetProperty("stream");
+        var broadcastSettings = user.GetProperty("broadcastSettings");
 
-        if (!hasStream)
-            return null;
+        var streamId = stream.GetProperty("id").GetString()!;
+        var startedAt = stream.GetProperty("createdAt").GetDateTime();
 
-        var streamId = hasStream ? stream.GetProperty("id").GetString() : string.Empty;
+        var title = broadcastSettings.GetProperty("title").GetString() ?? string.Empty;
+        var game = broadcastSettings.GetProperty("game");
+        var gameId = game.ValueKind != JsonValueKind.Null
+            ? game.GetProperty("id").GetString() ?? "Unknown"
+            : "No Game!";
 
-        var streamTitle = stream.GetProperty("title").GetString() ?? string.Empty;
-        var game = stream.GetProperty("game");
-        var categoryName = game.ValueKind != JsonValueKind.Null
-            ? game.GetProperty("name").GetString() ?? "Unknown"
-            : "Unknown";
-
-        return new StreamMetadata(
-            streamId ?? string.Empty,
-            streamTitle,
-            categoryName);
+        return new StreamMetadata(streamId, title, gameId, startedAt);
     }
 }

@@ -16,7 +16,7 @@ public sealed record PlaylistState(
         TotalDuration: 0,
         HasInitSegment: false,
         LastSegmentFileName: null,
-        SegmentCount: long.MinValue,
+        SegmentCount: -10, // Any number that's just below zero
         LastEntryWasDiscontinuity: false,
         IsFinalized: false);
 }

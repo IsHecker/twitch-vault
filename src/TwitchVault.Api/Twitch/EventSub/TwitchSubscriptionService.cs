@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
-using TwitchVault.Api.Events;
 
 namespace TwitchVault.Api.Twitch.EventSub;
 
@@ -43,7 +42,7 @@ public sealed class TwitchSubscriptionService(
             else
                 failedCount++;
 
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
         }
 
         logger.LogInformation("Cleaned up {Count} subscriptions, {Failed} failed", cleanedCount, failedCount);
@@ -87,7 +86,7 @@ public sealed class TwitchSubscriptionService(
             else if (result is false)
                 failed.Add(channel.Name);
 
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
         }
 
         LogBatchSubscriptionResult(succeeded, failed);
@@ -142,7 +141,7 @@ public sealed class TwitchSubscriptionService(
 
             if (!response.IsSuccessStatusCode)
             {
-                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 continue;
             }
 

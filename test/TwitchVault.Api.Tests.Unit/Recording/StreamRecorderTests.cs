@@ -10,6 +10,7 @@ using TwitchVault.Api.Events;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
@@ -290,7 +291,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(_stream);
+        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(ChannelName, _stream);
     }
 
 
@@ -316,7 +317,7 @@ public class StreamRecorderTests
     public async Task StartAsync_ShouldDelegateStreamError_AndStillFinalize()
     {
         // Arrange
-        _thumbnailManager.TryCaptureSnapshotAsync(Arg.Any<Domain.Stream>())
+        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, Arg.Any<Domain.Stream>())
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
         await using var sut = CreateSut();
@@ -384,7 +385,7 @@ public class StreamRecorderTests
         await _eventBus.PublishAsync(new ChannelUpdateEvent(
             ChannelId,
             _stream.CurrentChapter.Title,
-            _stream.CurrentChapter.Category));
+            _stream.CurrentChapter.CategoryId));
 
         await sut.StopAsync();
         var act = async () => await startTask;
@@ -423,7 +424,7 @@ public class StreamRecorderTests
         var startTask = sut.StartAsync(_stream, _channel);
 
         var chapterCountBefore = _stream.Chapters.Count;
-        var currentCategory = _stream.CurrentChapter.Category;
+        var currentCategory = _stream.CurrentChapter.CategoryId;
 
         // Act
         await _eventBus.PublishAsync(new ChannelUpdateEvent(ChannelId, "Different Title", currentCategory));

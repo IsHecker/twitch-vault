@@ -2,8 +2,8 @@ namespace TwitchVault.Api.Twitch;
 
 public interface ITwitchGqlClient
 {
+    Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(List<Domain.Channel> channels, CancellationToken cancellationToken);
     Task<StreamMetadata?> GetStreamMetadataAsync(string channel, CancellationToken cancellationToken);
-    Task<Dictionary<Domain.Channel, StreamMetadata?>> GetStreamMetadataAsync(List<Domain.Channel> channels, CancellationToken cancellationToken);
     Task<string> GetMasterPlaylistAsync(string channel, CancellationToken cancellationToken);
     Task<string> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken);
     Task<Stream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken);

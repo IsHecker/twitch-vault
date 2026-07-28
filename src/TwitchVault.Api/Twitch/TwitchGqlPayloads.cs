@@ -2,16 +2,39 @@ namespace TwitchVault.Api.Twitch;
 
 internal static class TwitchGqlPayloads
 {
-    public static object StreamMetadata(string channel) => new
+    public static object GetLiveStatus(string channel) => new
     {
-        OperationName = "GetChannelMetadata",
+        OperationName = "GetLiveStatus",
         Query = """
-                query GetChannelMetadata($login: String!) {
+                query GetLiveStatus($login: String!) {
                     user(login: $login) {
                         stream {
                             id
+                            createdAt
+                        }
+                    }
+                }
+                """,
+        Variables = new
+        {
+            login = channel
+        }
+    };
+
+    public static object StreamMetadata(string channel) => new
+    {
+        OperationName = "GetBroadcastSettings",
+        Query = """
+                query GetBroadcastSettings($login: String!) {
+                    user(login: $login) {
+                        stream {
+                            id
+                            createdAt
+                        }
+                        broadcastSettings {
                             title
                             game {
+                                id
                                 name
                             }
                         }

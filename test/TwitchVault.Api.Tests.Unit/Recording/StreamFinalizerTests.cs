@@ -118,7 +118,7 @@ public class StreamFinalizerTests
         // Arrange
         var stream = CreateStream("ts_current");
         _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_current", "title", "cat"));
+            .Returns(new StreamMetadata("ts_current", "title", "cat", DateTime.Now));
         var sut = CreateSut();
 
         // Act
@@ -150,7 +150,7 @@ public class StreamFinalizerTests
     {
         // Arrange
         _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_new", "title", "cat"));
+            .Returns(new StreamMetadata("ts_new", "title", "cat", DateTime.Now));
 
         var stream = CreateStream("ts_old");
         var sut = CreateSut();

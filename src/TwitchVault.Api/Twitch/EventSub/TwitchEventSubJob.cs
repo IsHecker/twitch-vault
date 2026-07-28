@@ -11,7 +11,6 @@ namespace TwitchVault.Api.Twitch.EventSub;
 [DisallowConcurrentExecution]
 public class TwitchEventSubJob(
     TwitchWebSocketClient wsClient,
-    ITwitchGqlClient twitchGqlClient,
     TwitchHelixClient twitchHelixClient,
     TwitchSubscriptionService subscriptionService,
     IChannelRepository channelRepository,
@@ -33,7 +32,7 @@ public class TwitchEventSubJob(
         if (channels.Count == 0 || !channels.Any(c => c.ShouldRecord))
             return;
 
-        logger.LogInformation("Twitch EventSub job is starting/restarting...");
+        logger.LogInformation("Twitch EventSub job is starting");
         try
         {
             await wsClient.ConnectAsync(cancellationToken);
@@ -41,7 +40,10 @@ public class TwitchEventSubJob(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error in Twitch EventSub job. Restarting...");
+            // if (ex is WebSocketException)
+            //     return;
+
+            logger.LogError(ex, "Error in Twitch EventSub job");
         }
         finally
         {
@@ -59,6 +61,8 @@ public class TwitchEventSubJob(
         var completedTask = await Task.WhenAny(receiveTask, heartbeatTask);
 
         await heartbeatCts.CancelAsync();
+        heartbeatCts.Dispose();
+
         await completedTask;
     }
 
@@ -86,9 +90,9 @@ public class TwitchEventSubJob(
             case "session_welcome":
                 if (subscriptionService.SessionId != message.Payload.Session.Id)
                     HandleWelcome(
-                        message.Payload.Session.Id,
-                        message.Payload.Session.KeepaliveTimeoutSeconds,
-                        cancellationToken);
+                       message.Payload.Session.Id,
+                       message.Payload.Session.KeepaliveTimeoutSeconds,
+                       cancellationToken);
 
                 await wsClient.CloseOldConnectionAsync();
                 return;
@@ -100,7 +104,7 @@ public class TwitchEventSubJob(
 
             case "notification":
                 if (message.Payload.Subscription.Type == "stream.online")
-                    await PublishStreamOnlineAsync(message.Payload.Event.RootElement, cancellationToken);
+                    await PublishStreamOnlineAsync(message.Payload.Event.RootElement);
                 else if (message.Payload.Subscription.Type == ChannelUpdateEvent.EventName)
                     await PublishChannelUpdateAsync(message.Payload.Event.RootElement);
                 else
@@ -116,19 +120,33 @@ public class TwitchEventSubJob(
     {
         subscriptionService.SessionId = sessionId;
 
-        _ = SetupSubscriptionsAsync(keepaliveTimeoutSeconds, cancellationToken);
+        _ = Task.Run(() => SetupSubscriptionsAsync(keepaliveTimeoutSeconds, cancellationToken), cancellationToken);
     }
+
+    // private async Task HandleWelcomeAsync(
+    //     string sessionId,
+    //     int? keepaliveTimeoutSeconds,
+    //     CancellationToken cancellationToken)
+    // {
+    //     subscriptionService.SessionId = sessionId;
+
+    //     await SetupSubscriptionsAsync(keepaliveTimeoutSeconds, cancellationToken);
+    //     // _ = Task.Run(() => SetupSubscriptionsAsync(keepaliveTimeoutSeconds, cancellationToken), cancellationToken);
+    // }
 
     private async Task SetupSubscriptionsAsync(int? keepaliveTimeoutSeconds, CancellationToken cancellationToken)
     {
         try
         {
-            // await subscriptionService.ClearSubscriptionsAsync(cancellationToken);
             await subscriptionService.SubscribeChannelsAsync(cancellationToken);
-
             wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
+
             var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
             logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("EventSub subscription setup was cancelled.");
         }
         catch (Exception ex)
         {
@@ -136,18 +154,53 @@ public class TwitchEventSubJob(
         }
     }
 
-    private async Task PublishStreamOnlineAsync(JsonElement e, CancellationToken cancellationToken)
+    // private void HandleWelcome(
+    //     string sessionId,
+    //     int? keepaliveTimeoutSeconds,
+    //     CancellationToken cancellationToken)
+    // {
+    //     subscriptionService.SessionId = sessionId;
+
+    //     _setupCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    //     Task.Run(() => SetupSubscriptionsAsync(keepaliveTimeoutSeconds, _setupCts.Token), cancellationToken);
+    // }
+
+    // private async Task SetupSubscriptionsAsync(int? keepaliveTimeoutSeconds, CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         await subscriptionService.SubscribeChannelsAsync(cancellationToken);
+
+    //         wsClient.SetHeartbeat(keepaliveTimeoutSeconds);
+    //         var subsCount = await twitchHelixClient.GetEventSubsCountAsync(cancellationToken);
+    //         logger.LogInformation("Active EventSub Subscriptions: {count}", subsCount);
+    //     }
+    //     catch (OperationCanceledException)
+    //     {
+    //         logger.LogInformation("EventSub subscription setup was cancelled.");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         logger.LogError(ex, "Failed to setup EventSub subscriptions");
+    //     }
+    // }
+
+    private async Task PublishStreamOnlineAsync(JsonElement e)
     {
         var channelName = e.GetProperty("broadcaster_user_login").GetString()!;
+        var channelId = e.GetProperty("broadcaster_user_id").GetString()!;
 
-        var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, cancellationToken);
-        await streamController.HandleStreamOnlineAsync(
-            e.GetProperty("broadcaster_user_id").GetString()!, channelName, metadata.Value);
+        if (e.TryGetProperty("started_at", out var startedAtEl))
+        {
+            logger.LogInformation("Stream.online startedAt: {StartedAt}", (DateTime?)startedAtEl.GetDateTime());
+        }
+
+        await streamController.HandleStreamOnlineAsync(channelId, channelName);
     }
 
     private async Task PublishChannelUpdateAsync(JsonElement e) =>
         await eventBus.PublishAsync(new ChannelUpdateEvent(
             ChannelId: e.GetProperty("broadcaster_user_id").GetString()!,
             Title: e.GetProperty("title").GetString()!,
-            CategoryName: e.GetProperty("category_name").GetString()!));
+            CategoryId: e.GetProperty("category_id").GetString()!));
 }

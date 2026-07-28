@@ -4,7 +4,9 @@
     "Streams": "Streams"
   },
   "Twitch": {
-    "ClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+    "OldClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+    "ClientId": "76sw4fq3pucrr1ryym2diyld5ij8ij",
+    "Secret": "8jg3iw8fcb6n6qmewynoul7ijytw69",
     "Authorization": "534yikldpe9nce90js4k5id373chs4"
   },
   "Vault": {
@@ -12,7 +14,7 @@
     "MaxConsecutiveEmptyPolls": 3
   },
   "ChannelMonitor": {
-    "Enabled": false,
+    "Enabled": true,
     "RunIntervalInMinutes": 1
   }
 }

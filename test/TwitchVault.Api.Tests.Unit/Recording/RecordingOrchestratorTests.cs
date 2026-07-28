@@ -19,6 +19,7 @@ public class RecordingOrchestratorTests
     private readonly IChannelRepository _channelRepository = Substitute.For<IChannelRepository>();
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly IStreamService _streamService = Substitute.For<IStreamService>();
+    private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly ILogger<RecordingOrchestrator> _logger = Substitute.For<ILogger<RecordingOrchestrator>>();
 
     private readonly CancellationTokenSource _appStoppingCts = new();
@@ -39,6 +40,7 @@ public class RecordingOrchestratorTests
             _channelRepository,
             _streamRepository,
             _streamService,
+            _twitchGqlClient,
             _logger,
             _appLifetime);
 
@@ -46,7 +48,7 @@ public class RecordingOrchestratorTests
         new() { Id = id, Name = name, QualityRank = 1 };
 
     private static StreamMetadata CreateMetadata(string twitchStreamId = "ts_1") =>
-        new(twitchStreamId, "Some Title", "Some Category");
+        new(twitchStreamId, "Some Title", "Some Game", DateTime.Now);
 
     private static Domain.Stream CreateStream(string twitchStreamId, string channelId) =>
         new() { TwitchStreamId = twitchStreamId, ChannelId = channelId };
@@ -92,7 +94,7 @@ public class RecordingOrchestratorTests
         var sut = CreateSut();
 
         // Act
-        await sut.HandleStreamOnlineAsync(ChannelId, ChannelName, CreateMetadata());
+        await sut.HandleStreamOnlineAsync(ChannelId, ChannelName);
 
         // Assert
         await _channelRepository.DidNotReceive().GetByIdAsync(Arg.Any<string>());
@@ -109,12 +111,13 @@ public class RecordingOrchestratorTests
 
         _streamRecorderRegistry.TryRegister(ChannelId).Returns(true);
         _channelRepository.GetByIdAsync(ChannelId).Returns(channel);
+        _twitchGqlClient.GetStreamMetadataAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(metadata);
         _streamRepository.GetStreamsByChannelIdAsync(channel.Id).Returns([]);
         _streamService.CreateAsync(channel, metadata).Returns(createdStream);
         var sut = CreateSut();
 
         // Act
-        await sut.HandleStreamOnlineAsync(ChannelId, ChannelName, metadata);
+        await sut.HandleStreamOnlineAsync(ChannelId, ChannelName);
 
         // Assert
         await _streamService.Received(1).CreateAsync(channel, metadata);
@@ -133,7 +136,7 @@ public class RecordingOrchestratorTests
         var sut = CreateSut();
 
         // Act
-        var act = async () => await sut.HandleStreamOnlineAsync(ChannelId, ChannelName, CreateMetadata());
+        var act = async () => await sut.HandleStreamOnlineAsync(ChannelId, ChannelName);
 
         // Assert
         await act.Should().NotThrowAsync();
@@ -148,7 +151,7 @@ public class RecordingOrchestratorTests
         var sut = CreateSut();
 
         // Act
-        var act = async () => await sut.HandleStreamOnlineAsync(ChannelId, ChannelName, CreateMetadata());
+        var act = async () => await sut.HandleStreamOnlineAsync(ChannelId, ChannelName);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();

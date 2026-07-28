@@ -22,7 +22,8 @@ public static class ServiceCollectionExtensions
         services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.SectionName));
 
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
-        services.AddHttpClient<TwitchHelixClient>();
+        services.AddHttpClient("TwitchHelixClient");
+        services.AddSingleton<TwitchHelixClient>();
 
         services.AddSingleton<IDateTimeProvider, EgyptTimeProvider>();
         services.AddSingleton<IFileSystem, PhysicalFileSystem>();

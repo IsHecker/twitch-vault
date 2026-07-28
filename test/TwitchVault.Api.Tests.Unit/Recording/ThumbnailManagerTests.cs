@@ -9,6 +9,7 @@ namespace TwitchVault.Api.Tests.Unit.Recording;
 
 public class ThumbnailManagerTests
 {
+    private const string ChannelName = "testchannel";
     private readonly Domain.Stream _stream;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
@@ -46,12 +47,12 @@ public class ThumbnailManagerTests
         var sut = CreateSut();
 
         // Act
-        await sut.TryCaptureSnapshotAsync(_stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(5));
-        await sut.TryCaptureSnapshotAsync(_stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
 
         // Assert
-        await _twitchGqlClient.Received(2).DownloadAsStreamAsync(_stream.ThumbnailUrl, Arg.Any<CancellationToken>());
+        await _twitchGqlClient.Received(2).DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -64,14 +65,14 @@ public class ThumbnailManagerTests
         var sut = CreateSut();
 
         // Act
-        await sut.TryCaptureSnapshotAsync(_stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
         _twitchGqlClient.ClearReceivedCalls();
 
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(2));
-        await sut.TryCaptureSnapshotAsync(_stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
 
         // Assert
-        await _twitchGqlClient.DidNotReceive().DownloadAsStreamAsync(_stream.ThumbnailUrl, Arg.Any<CancellationToken>());
+        await _twitchGqlClient.DidNotReceive().DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -86,9 +87,9 @@ public class ThumbnailManagerTests
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(30));
 
         // Act
-        await sut.TryCaptureSnapshotAsync(_stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
 
         // Assert
-        await _twitchGqlClient.DidNotReceive().DownloadAsStreamAsync(_stream.ThumbnailUrl, Arg.Any<CancellationToken>());
+        await _twitchGqlClient.DidNotReceive().DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }
