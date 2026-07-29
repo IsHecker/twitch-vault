@@ -1,13 +1,10 @@
 {
-  "Paths": {
-    "Database": "Database.json",
-    "Streams": "Streams"
-  },
   "Twitch": {
-    "OldClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+    "PublicClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
     "ClientId": "76sw4fq3pucrr1ryym2diyld5ij8ij",
     "Secret": "8jg3iw8fcb6n6qmewynoul7ijytw69",
-    "Authorization": "534yikldpe9nce90js4k5id373chs4"
+    "Authorization": "k2rrtqd3t0gbhfd7b9vf8ez6w7g4mz",
+    "WebhookPath": "/webhooks/twitch"
   },
   "Vault": {
     "MaxSegmentDurationInSec": 10,

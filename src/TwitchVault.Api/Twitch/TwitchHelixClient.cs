@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Twitch.EventSub;
 
@@ -8,13 +9,23 @@ namespace TwitchVault.Api.Twitch;
 public sealed class TwitchHelixClient(
     IHttpClientFactory httpClientFactory,
     SettingsService settingsService,
+    IOptions<PathsOptions> pathsOptions,
     ILogger<TwitchHelixClient> logger)
 {
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
+    private const string TokenUrl = "https://id.twitch.tv/oauth2/token";
+
     private TwitchOptions Options => settingsService.Settings.Twitch;
 
-    private readonly object _rateLimitLock = new();
+    private string WebhookSecret => Options.Secret;
+    private string WebhookUrl
+        => $"{pathsOptions.Value.BaseUrl.TrimEnd('/')}{Options.WebhookPath}";
 
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
+    private string? _appAccessToken;
+    private DateTime _tokenExpiresAt = DateTime.UtcNow.AddSeconds(-60);
+
+    private readonly object _rateLimitLock = new();
     private int _rateLimitLimit;
     private int? _rateLimitRemaining;
     private long _rateLimitReset;
@@ -44,7 +55,6 @@ public sealed class TwitchHelixClient(
 
     public Task<HttpResponseMessage> CreateEventSubSubscriptionAsync(
         string channelId,
-        string sessionId,
         string type,
         string version,
         CancellationToken cancellationToken)
@@ -54,7 +64,7 @@ public sealed class TwitchHelixClient(
             type,
             version,
             condition = new { broadcaster_user_id = channelId },
-            transport = new { method = "websocket", session_id = sessionId }
+            transport = new { method = "webhook", callback = WebhookUrl, secret = WebhookSecret }
         };
 
         return SendHelixRequestAsync(HttpMethod.Post, HelixSubscriptionUrl, payload, cancellationToken);
@@ -64,6 +74,43 @@ public sealed class TwitchHelixClient(
     {
         string url = $"{HelixSubscriptionUrl}?id={id}";
         return SendHelixRequestAsync(HttpMethod.Delete, url, null, cancellationToken);
+    }
+
+    private async Task<string> GetAppAccessTokenAsync(CancellationToken cancellationToken)
+    {
+        await _tokenLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Refresh if missing or within 60 seconds of expiry
+            if (_appAccessToken is not null && DateTime.UtcNow < _tokenExpiresAt.AddSeconds(-60))
+                return _appAccessToken;
+
+            logger.LogInformation("Fetching new Twitch app access token");
+            var client = httpClientFactory.CreateClient("TwitchHelixClient");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, TokenUrl);
+            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["client_id"] = Options.ClientId,
+                ["client_secret"] = Options.Secret,
+                ["grant_type"] = "client_credentials"
+            });
+
+            using var response = await client.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken)
+                ?? throw new InvalidOperationException("Empty token response from Twitch.");
+
+            _appAccessToken = json.RootElement.GetProperty("access_token").GetString()!;
+            var expiresIn = json.RootElement.GetProperty("expires_in").GetInt32();
+            _tokenExpiresAt = DateTime.UtcNow.AddSeconds(expiresIn);
+            return _appAccessToken;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
     }
 
     private void UpdateRateLimits(HttpResponseMessage message)
@@ -92,21 +139,31 @@ public sealed class TwitchHelixClient(
 
     private async Task WaitForRateLimitAsync(CancellationToken cancellationToken)
     {
-        if (!_rateLimitRemaining.HasValue ||
-            _rateLimitRemaining-- > 0)
-            return;
+        long resetUnixTime;
 
-        var resetUnixTime = _rateLimitReset;
-        var currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var delaySeconds = resetUnixTime - currentUnixTime;
+        lock (_rateLimitLock)
+        {
+            if (!_rateLimitRemaining.HasValue || _rateLimitRemaining > 0)
+            {
+                if (_rateLimitRemaining.HasValue)
+                    _rateLimitRemaining--;
+                return;
+            }
 
-        if (delaySeconds <= 0)
-            return;
+            resetUnixTime = _rateLimitReset;
+        }
 
-        logger.LogWarning("Twitch Helix API rate limit active. Waiting {Seconds}s for reset window...", delaySeconds);
-        await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
+        var delaySeconds = resetUnixTime - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (delaySeconds > 0)
+        {
+            logger.LogWarning("Twitch Helix API rate limit active. Waiting {Seconds}s...", delaySeconds);
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
+        }
 
-        _rateLimitRemaining = _rateLimitLimit;
+        lock (_rateLimitLock)
+        {
+            _rateLimitRemaining = _rateLimitLimit;
+        }
     }
 
     private async Task<HttpResponseMessage> SendHelixRequestAsync(
@@ -124,9 +181,11 @@ public sealed class TwitchHelixClient(
         {
             await WaitForRateLimitAsync(cancellationToken);
 
+            var token = await GetAppAccessTokenAsync(cancellationToken);
+
             using var request = new HttpRequestMessage(method, url);
             request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {Options.Authorization}");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
 
             if (body is not null)
                 request.Content = JsonContent.Create(body);
@@ -134,9 +193,18 @@ public sealed class TwitchHelixClient(
             response = await client.SendAsync(request, cancellationToken);
             UpdateRateLimits(response);
 
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxRetryAttempts)
             {
                 logger.LogWarning("Twitch Helix API rate limit (429) hit for request to {Url}. Retrying after reset window...", url);
+                response.Dispose();
+                continue;
+            }
+
+            // On 401 Unauthorized, the token may have been invalidated - clear and retry
+            if (response.StatusCode == HttpStatusCode.Unauthorized && attempt < maxRetryAttempts)
+            {
+                logger.LogWarning("Received 401 from Twitch Helix API — clearing cached token and retrying.");
+                await InvalidateTokenAsync(cancellationToken);
                 response.Dispose();
                 continue;
             }
@@ -145,5 +213,18 @@ public sealed class TwitchHelixClient(
         }
 
         return response;
+    }
+
+    private async Task InvalidateTokenAsync(CancellationToken cancellationToken)
+    {
+        await _tokenLock.WaitAsync(cancellationToken);
+        try
+        {
+            _appAccessToken = null;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
     }
 }

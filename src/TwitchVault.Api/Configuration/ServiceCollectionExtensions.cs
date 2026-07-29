@@ -10,6 +10,8 @@ using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.ChannelMonitor;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Endpoints.Testing;
+using TwitchLib.EventSub.Webhooks.Extensions;
+using TwitchLib.EventSub.Webhooks.Core.Models;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -42,20 +44,28 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IManifestPoller, ManifestPoller>();
         services.AddTransient<IThumbnailManager, ThumbnailManager>();
 
-        services.AddTransient<TwitchWebSocketClient>();
-        services.AddSingleton<TwitchSubscriptionService>();
         services.AddSingleton<RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 
+        // EventSub webhook via TwitchLib
+        services.AddOptions<TwitchLibEventSubOptions>()
+            .Configure<SettingsService>((options, settingsService) =>
+            {
+                options.Secret = settingsService.Settings.Twitch.Secret;
+                options.CallbackPath = settingsService.Settings.Twitch.WebhookPath;
+            });
+
+        services.AddTwitchLibEventSubWebhooks(options => { });
+        services.AddSingleton<TwitchSubscriptionService>();
+        services.AddHostedService<TwitchWebhookStartupService>();
+
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
-        services.ConfigureOptions<TwitchEventSubJobConfiguration>();
 
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         services.AddEndpoints(Assembly.GetExecutingAssembly());
-
 
         services.AddSingleton<HlsPlaylistTestHarness>();
         return services;

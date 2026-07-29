@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Ui.Core.Extensions;
 using Serilog.Ui.SqliteDataProvider.Extensions;
 using Serilog.Ui.Web.Extensions;
+using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Endpoints;
 using TwitchVault.Api.Infrastructure.Middleware;
@@ -53,7 +54,11 @@ public class Program
         });
 
         app.UseCors();
+        app.UseHttpsRedirection();
         app.UseMiddleware<GlobalExceptionMiddleware>();
+
+        app.UseTwitchLibEventSubWebhooks();
+
         app.UseSwagger();
         app.UseSwaggerUI();
 
@@ -65,7 +70,6 @@ public class Program
             RequestPath = $"/{paths.Streams}"
         });
 
-        app.UseHttpsRedirection();
         app.MapEndpoints();
         app.Run();
     }

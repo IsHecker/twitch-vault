@@ -28,7 +28,7 @@ public class AddChannel : IEndpoint
             };
 
             if (request.ShouldRecord)
-                _ = twitchSubscription.SubscribeChannelsAsync([channel], default);
+                _ = twitchSubscription.AddChannelsAsync([channel], default);
 
             await repo.AddAsync(channel);
             return Results.Created($"/api/channels/{channel.Id}", channel);

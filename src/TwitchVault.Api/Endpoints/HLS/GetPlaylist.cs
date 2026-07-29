@@ -18,8 +18,10 @@ public class GetPlaylist : IEndpoint
                 var channel = await channelRepo.GetByNameAsync(streamId);
                 if (channel is null || !channel.IsLive)
                     return Results.NotFound();
+
                 var streams = await streamRepo.GetStreamsByChannelIdAsync(channel.Id);
                 stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
+
                 if (stream is null || stream.Status != StreamStatus.Recording)
                     return Results.NotFound();
             }
