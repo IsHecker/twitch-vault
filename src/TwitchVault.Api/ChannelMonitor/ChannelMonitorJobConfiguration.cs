@@ -9,6 +9,9 @@ public sealed class ChannelMonitorJobConfiguration(SettingsService settingsServi
 {
     public void Configure(QuartzOptions options)
     {
+        if (!settingsService.Settings.ChannelMonitor.Enabled)
+            return;
+
         string jobName = typeof(ChannelMonitorJob).FullName!;
         options
             .AddJob<ChannelMonitorJob>(configure => configure.WithIdentity(jobName))

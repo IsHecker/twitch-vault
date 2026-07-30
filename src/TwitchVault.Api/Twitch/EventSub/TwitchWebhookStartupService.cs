@@ -17,7 +17,6 @@ public sealed class TwitchWebhookStartupService(
         {
             var channelId = e.Payload.Event.BroadcasterUserId;
             var channelName = e.Payload.Event.BroadcasterUserLogin;
-            logger.LogInformation("Stream.online startedAt: {StartedAt}", e.Payload.Event.StartedAt);
             await orchestrator.HandleStreamOnlineAsync(channelId, channelName);
         };
 

@@ -1,6 +1,4 @@
-using Microsoft.Extensions.Options;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording.HLS;
@@ -30,7 +28,6 @@ public sealed class StreamFinalizer(
     IStreamService streamService,
     ITwitchGqlClient twitchClient,
     IDateTimeProvider dateTimeProvider,
-    IOptions<PathsOptions> pathsOptions,
     ILogger<StreamFinalizer> logger) : IStreamFinalizer
 {
     public async Task FinalizeAsync(
@@ -42,9 +39,6 @@ public sealed class StreamFinalizer(
         try
         {
             segmentDownloader.CloseSegment();
-
-            stream.SetThumbnailUrl(stream.Folder.GetThumbnailUrl(pathsOptions.Value.BaseUrl));
-            await streamRepository.UpdateAsync(stream);
 
             if (stream.MarkForDeletion)
             {

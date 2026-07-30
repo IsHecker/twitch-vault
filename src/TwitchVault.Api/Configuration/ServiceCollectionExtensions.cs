@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<TwitchWebhookStartupService>();
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
+        services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
 
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);

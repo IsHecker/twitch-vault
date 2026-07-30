@@ -67,8 +67,6 @@ public sealed class RecordingOrchestrator
                 return;
             }
 
-            _logger.LogInformation("GetBroadcastSettings createdAt: {CreatedAt}", metadata.Value.StartedAt);
-
             await StartAsync(channel, metadata.Value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -125,6 +123,12 @@ public sealed class RecordingOrchestrator
         await recorder.ToggleStreamDeletionAsync(markForDeletion);
     }
 
+    public async Task ResumeStreamAsync(Domain.Stream stream, Channel channel)
+    {
+        stream.MarkAsRecording();
+        await StartRecordingAsync(stream, channel);
+    }
+
     private async Task StartNewStreamAsync(Channel channel, StreamMetadata metadata)
     {
         var stream = await _streamService.CreateAsync(channel, metadata);
@@ -132,15 +136,8 @@ public sealed class RecordingOrchestrator
         await StartRecordingAsync(stream, channel);
     }
 
-    public async Task ResumeStreamAsync(Domain.Stream stream, Channel channel)
-    {
-        stream.MarkAsRecording();
-        await StartRecordingAsync(stream, channel);
-    }
-
     private async Task StartRecordingAsync(Domain.Stream stream, Channel channel)
     {
-        // stream.SetThumbnailUrl(BuildLiveThumbnailUrl(channel.Name));
         await _streamRepository.UpdateAsync(stream);
 
         var session = await _streamRecorderFactory.CreateAsync(stream, channel, _appLifetime.ApplicationStopping);

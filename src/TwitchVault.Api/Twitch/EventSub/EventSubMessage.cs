@@ -6,7 +6,8 @@ public record struct EventSubSubscriptionResponse(
     [property: JsonPropertyName("data")] Subscription[] Data,
     [property: JsonPropertyName("total")] int Total,
     [property: JsonPropertyName("total_cost")] int TotalCost,
-    [property: JsonPropertyName("max_total_cost")] int MaxTotalCost);
+    [property: JsonPropertyName("max_total_cost")] int MaxTotalCost,
+    [property: JsonPropertyName("pagination")] PaginationInfo? Pagination);
 
 public record struct Subscription(
     [property: JsonPropertyName("id")] string Id,
@@ -26,3 +27,5 @@ public record struct Transport(
     [property: JsonPropertyName("method")] string Method,
     [property: JsonPropertyName("session_id")] string? SessionId,
     [property: JsonPropertyName("callback")] string? Callback);
+
+public record struct PaginationInfo([property: JsonPropertyName("cursor")] string? Cursor);

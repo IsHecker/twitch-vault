@@ -11,7 +11,11 @@
     "MaxConsecutiveEmptyPolls": 3
   },
   "ChannelMonitor": {
-    "Enabled": true,
+    "Enabled": false,
+    "RunIntervalInMinutes": 1
+  },
+  "TwitchWebhookHealthCheck": {
+    "Enabled": false,
     "RunIntervalInMinutes": 1
   }
 }

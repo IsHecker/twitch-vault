@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
@@ -23,34 +24,43 @@ public sealed class TwitchHelixClient(
 
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
     private string? _appAccessToken;
-    private DateTime _tokenExpiresAt = DateTime.UtcNow.AddSeconds(-60);
+    private DateTime _tokenExpiresAt = DateTime.UtcNow.AddMinutes(-60);
 
     private readonly object _rateLimitLock = new();
     private int _rateLimitLimit;
     private int? _rateLimitRemaining;
     private long _rateLimitReset;
 
-    public async Task<int?> GetEventSubsCountAsync(CancellationToken cancellationToken)
+
+    public async IAsyncEnumerable<Subscription> GetEventSubSubscriptionsAsync(
+        string status = "enabled",
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        const string url = $"{HelixSubscriptionUrl}?status=enabled";
-        using var response = await SendHelixRequestAsync(HttpMethod.Get, url, null, cancellationToken);
+        string? cursor = null;
 
-        if (!response.IsSuccessStatusCode)
-            return null;
+        do
+        {
+            var url = $"{HelixSubscriptionUrl}?status={Uri.EscapeDataString(status)}" +
+                (!string.IsNullOrEmpty(cursor) ? $"&after={Uri.EscapeDataString(cursor)}" : string.Empty);
 
-        var subs = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-        return subs?.RootElement.GetProperty("total_cost").GetInt32();
-    }
+            using var response = await SendHelixRequestAsync(HttpMethod.Get, url, null, cancellationToken);
 
-    public async Task<EventSubSubscriptionResponse?> GetEventSubSubscriptionsAsync(CancellationToken cancellationToken)
-    {
-        string url = $"{HelixSubscriptionUrl}?status=enabled";
-        using var response = await SendHelixRequestAsync(HttpMethod.Get, url, null, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                yield break;
 
-        if (!response.IsSuccessStatusCode)
-            return null;
+            var result = await response.Content.ReadFromJsonAsync<EventSubSubscriptionResponse>(cancellationToken);
 
-        return await response.Content.ReadFromJsonAsync<EventSubSubscriptionResponse>(cancellationToken);
+            if (result.Data == null || result.Data.Length == 0)
+                yield break;
+
+            foreach (var sub in result.Data)
+            {
+                yield return sub;
+            }
+
+            cursor = result.Pagination?.Cursor;
+
+        } while (!string.IsNullOrEmpty(cursor) && !cancellationToken.IsCancellationRequested);
     }
 
     public Task<HttpResponseMessage> CreateEventSubSubscriptionAsync(

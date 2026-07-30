@@ -76,13 +76,12 @@ public sealed class StreamRecorder : IStreamRecorder
         }
         finally
         {
+            await DisposeAsync();
             await _finalizer.FinalizeAsync(
                 _stream,
                 _channel,
                 _segmentDownloader,
                 _finalizeReason ?? new SessionEndReason.StreamEnded());
-
-            await DisposeAsync();
         }
     }
 
