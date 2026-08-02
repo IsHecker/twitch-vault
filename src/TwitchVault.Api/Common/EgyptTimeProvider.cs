@@ -4,11 +4,16 @@ namespace TwitchVault.Api.Common;
 
 public class EgyptTimeProvider : IDateTimeProvider
 {
-    private readonly TimeZoneInfo EgyptZone =
+    private static readonly TimeZoneInfo EgyptZone =
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")
             : TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
 
     public DateTime DateTimeNow
-        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, EgyptZone);
+        => ToEgyptDateTime(DateTime.UtcNow);
+
+    public static DateTime ToEgyptDateTime(DateTimeOffset dateTime)
+    {
+        return TimeZoneInfo.ConvertTime(dateTime, EgyptZone).DateTime;
+    }
 }

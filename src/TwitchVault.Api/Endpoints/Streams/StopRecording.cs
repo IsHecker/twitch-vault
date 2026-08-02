@@ -8,7 +8,7 @@ public class StopRecording : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapPatch("/api/streams/{id}/stop", async (string id, IStreamRepository repo, RecordingOrchestrator controller) =>
         {
-            var stream = await repo.GetStreamByIdAsync(id);
+            var stream = await repo.GetByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
@@ -18,6 +18,7 @@ public class StopRecording : IEndpoint
             await controller.StopRecordingAsync(stream.ChannelId);
             return Results.NoContent();
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(StopRecording))
         .WithTags("Streams")
         .WithSummary("Immediately stop an active recording")

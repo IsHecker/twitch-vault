@@ -17,7 +17,8 @@ public class ResumeRecording : IEndpoint
             ITwitchGqlClient twitchGqlClient,
             IDateTimeProvider dateTimeProvider) =>
         {
-            var stream = await streamRepository.GetStreamByIdAsync(streamId);
+            // TODO: move the business logic to the orchestrator.
+            var stream = await streamRepository.GetByIdAsync(streamId);
             if (stream is null)
                 return Results.NotFound();
 
@@ -42,6 +43,7 @@ public class ResumeRecording : IEndpoint
             await RecordingController.ResumeStreamAsync(stream, channel);
             return Results.NoContent();
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(ResumeRecording))
         .WithTags("Streams")
         .WithSummary("Resume a paused or interrupted recording")

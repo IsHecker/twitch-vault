@@ -3,7 +3,6 @@ using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
-
 public class SetRecordingStatus : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
@@ -27,10 +26,13 @@ public class SetRecordingStatus : IEndpoint
                 _ = twitchSubscription.AddChannelsAsync([channel], default);
             else
                 _ = twitchSubscription.RemoveChannelAsync(channel, default);
+
             return Results.NoContent();
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(SetRecordingStatus))
         .WithTags("Channels")
-        .WithSummary("Enable or disable recording for a channel");
+        .WithSummary("[Admin] Enable or disable recording for a channel");
+
     internal record struct Request(bool ShouldRecord);
 }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
 
 namespace TwitchVault.Api.Twitch;
@@ -213,7 +214,7 @@ public sealed class TwitchGqlClient(
         var broadcastSettings = user.GetProperty("broadcastSettings");
 
         var streamId = stream.GetProperty("id").GetString()!;
-        var startedAt = stream.GetProperty("createdAt").GetDateTime();
+        var startedAt = EgyptTimeProvider.ToEgyptDateTime(stream.GetProperty("createdAt").GetDateTimeOffset());
 
         var title = broadcastSettings.GetProperty("title").GetString() ?? string.Empty;
         var game = broadcastSettings.GetProperty("game");

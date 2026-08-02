@@ -31,7 +31,61 @@
       "IsLive": false,
       "ShouldRecord": false,
       "LastStreamedAt": "2026-06-16T17:18:07.2833315+03:00"
+    },
+    {
+      "Id": "411377640",
+      "Name": "jynxzi",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": false,
+      "LastStreamedAt": null
+    },
+    {
+      "Id": "71092938",
+      "Name": "xqc",
+      "QualityRank": 2,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": null
     }
   ],
-  "Streams": []
+  "Streams": [],
+  "Users": [
+    {
+      "Id": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+      "Username": "Hecker",
+      "Password": "password",
+      "IsAdmin": true,
+      "CreatedAt": "2026-06-16T17:18:07.2833315+03:00"
+    },
+    {
+      "Id": "a434a4e5-b2f6-465e-8a37-6467821d2e60",
+      "Username": "yasser",
+      "Password": "password",
+      "IsAdmin": false,
+      "CreatedAt": "2026-08-02T16:41:11.4814346"
+    }
+  ],
+  "UserChannels": [
+    {
+      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+      "ChannelId": "54507525",
+      "AddedAt": "2026-06-16T17:18:07.2833315+03:00"
+    },
+    {
+      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+      "ChannelId": "411377640",
+      "AddedAt": "2026-08-02T13:38:29.2522062Z"
+    },
+    {
+      "UserId": "a434a4e5-b2f6-465e-8a37-6467821d2e60",
+      "ChannelId": "71092938",
+      "AddedAt": "2026-08-02T13:41:54.3821707Z"
+    },
+    {
+      "UserId": "a434a4e5-b2f6-465e-8a37-6467821d2e60",
+      "ChannelId": "54507525",
+      "AddedAt": "2026-08-02T13:42:14.9328355Z"
+    }
+  ]
 }

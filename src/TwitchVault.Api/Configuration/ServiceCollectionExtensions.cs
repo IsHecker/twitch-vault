@@ -1,5 +1,9 @@
 using System.Reflection;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Quartz;
+using TwitchVault.Api.Auth;
 using TwitchVault.Api.Endpoints;
 using TwitchVault.Api.Events;
 using TwitchVault.Api.Persistence;
@@ -22,6 +26,9 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.SectionName));
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+
+        services.AddAuthenticationInternal(configuration);
 
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
         services.AddHttpClient("TwitchHelixClient");
@@ -31,12 +38,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFileSystem, PhysicalFileSystem>();
         services.AddSingleton<EventBus>();
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<IStreamService, StreamService>();
 
         services.AddSingleton<JsonDatabase>();
 
         services.AddSingleton<IChannelRepository, ChannelRepository>();
         services.AddSingleton<IStreamRepository, StreamRepository>();
-        services.AddSingleton<IStreamService, StreamService>();
+        services.AddSingleton<IUserRepository, UserRepository>();
+        services.AddSingleton<IUserChannelRepository, UserChannelRepository>();
 
         services.AddTransient<SegmentStateTracker>();
         services.AddTransient<IStreamFinalizer, StreamFinalizer>();
@@ -58,7 +67,7 @@ public static class ServiceCollectionExtensions
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        services.AddHostedService<TwitchWebhookStartupService>();
+        // services.AddHostedService<TwitchWebhookStartupService>();
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
@@ -69,6 +78,42 @@ public static class ServiceCollectionExtensions
         services.AddEndpoints(Assembly.GetExecutingAssembly());
 
         services.AddSingleton<HlsPlaylistTestHarness>();
+        return services;
+    }
+
+    private static IServiceCollection AddAuthenticationInternal(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtOptions.Issuer,
+                ValidAudience = jwtOptions.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+
+        services.AddSingleton<TokenGeneratorService>();
+
         return services;
     }
 }

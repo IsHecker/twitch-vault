@@ -13,7 +13,7 @@ public class ToggleStreamDeletion : IEndpoint
             IStreamRepository repo,
             RecordingOrchestrator controller) =>
         {
-            var stream = await repo.GetStreamByIdAsync(id);
+            var stream = await repo.GetByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
@@ -23,6 +23,7 @@ public class ToggleStreamDeletion : IEndpoint
             await controller.ToggleStreamDeletionAsync(stream.ChannelId, request.State);
             return Results.NoContent();
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(ToggleStreamDeletion))
         .WithTags("Streams")
         .WithSummary("Mark an active recording for deletion once it finishes")

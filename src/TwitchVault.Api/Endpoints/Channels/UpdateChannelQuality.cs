@@ -1,6 +1,6 @@
 using TwitchVault.Api.Persistence;
-namespace TwitchVault.Api.Endpoints.Channels;
 
+namespace TwitchVault.Api.Endpoints.Channels;
 
 public class UpdateChannelQuality : IEndpoint
 {
@@ -12,10 +12,13 @@ public class UpdateChannelQuality : IEndpoint
                 return Results.NotFound();
             channel.QualityRank = request.QualityRank;
             await repo.UpdateAsync(channel);
-            return Results.Ok(channel);
+            return Results.Ok(ChannelResponse.FromDomain(channel));
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(UpdateChannelQuality))
         .WithTags("Channels")
-        .WithSummary("Update the quality rank of a channel");
+        .WithSummary("[Admin] Update the quality rank of a channel")
+        .Produces<ChannelResponse>();
+
     internal record struct Request(int QualityRank);
 }

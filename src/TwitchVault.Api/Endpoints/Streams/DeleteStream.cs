@@ -12,7 +12,7 @@ public class DeleteStream : IEndpoint
             IStreamService streamService,
             RecordingOrchestrator controller) =>
         {
-            var stream = await repo.GetStreamByIdAsync(id);
+            var stream = await repo.GetByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 
@@ -22,6 +22,7 @@ public class DeleteStream : IEndpoint
             await streamService.DeleteStreamAsync(id);
             return Results.NoContent();
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(DeleteStream))
         .WithTags("Streams")
         .WithSummary("Delete a finished VOD and its files")

@@ -58,7 +58,7 @@ public sealed class StreamFinalizer(
 
                 case SessionEndReason.StreamEnded:
                 default:
-                    await HandleStreamEndedAsync(stream, channel);
+                    await HandleStreamEndedAsync(stream);
                     break;
             }
         }
@@ -87,11 +87,11 @@ public sealed class StreamFinalizer(
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
     }
 
-    private async Task HandleStreamEndedAsync(Domain.Stream stream, Channel channel)
+    private async Task HandleStreamEndedAsync(Domain.Stream stream)
     {
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
         await streamRepository.UpdateAsync(stream);
-        await channelRepository.SetLiveAsync(channel.Id, false);
+        await channelRepository.SetLiveAsync(stream.ChannelId, false);
 
         var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
         logger.LogInformation("Stream finished. Total duration: {Duration}.", duration);

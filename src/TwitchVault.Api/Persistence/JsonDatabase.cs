@@ -16,9 +16,6 @@ public class JsonDatabase
 
     private static readonly JsonSerializerSettings JsonSettings = new()
     {
-        // WriteIndented = true,
-        // PropertyNameCaseInsensitive = true,
-        // Converters = { new JsonStringEnumConverter() },
         Formatting = Formatting.Indented,
         ContractResolver = new PrivateSetterContractResolver(),
         Converters = { new StringEnumConverter() }
@@ -49,7 +46,7 @@ public class JsonDatabase
         try
         {
             mutation(_cache);
-            Flush();
+            await FlushAsync();
         }
         finally
         {
@@ -66,10 +63,15 @@ public class JsonDatabase
         return JsonConvert.DeserializeObject<AppDatabase>(json, JsonSettings) ?? new AppDatabase();
     }
 
-    private void Flush()
+    private async Task FlushAsync()
     {
+        var tempFilePath = $"{_filePath}.tmp";
         var json = JsonConvert.SerializeObject(_cache, JsonSettings);
-        File.WriteAllText(_filePath, json);
+
+        await File.WriteAllTextAsync(tempFilePath, json);
+
+        // Atomic swap/overwrite to prevent file corruption during crashes or high I/O
+        File.Move(tempFilePath, _filePath, overwrite: true);
     }
 }
 

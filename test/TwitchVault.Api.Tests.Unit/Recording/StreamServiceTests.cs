@@ -31,13 +31,13 @@ public class StreamServiceTests
     public async Task DeleteStreamAsync_ShouldNotDelete_WhenStreamDoesNotExist()
     {
         // Arrange
-        _streamRepository.GetStreamByIdAsync(Arg.Any<string>()).ReturnsNull();
+        _streamRepository.GetByIdAsync(Arg.Any<string>()).ReturnsNull();
 
         // Act
         await _sut.DeleteStreamAsync("non-existent");
 
         // Assert
-        await _streamRepository.DidNotReceive().DeleteStreamAsync(Arg.Any<string>());
+        await _streamRepository.DidNotReceive().DeleteAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class StreamServiceTests
             ChannelId = channelId
         };
 
-        _streamRepository.GetStreamsByChannelIdAsync(channelId)
+        _streamRepository.ListByChannelIdAsync(channelId)
             .Returns([staleStream, activeStream]);
 
         // Act

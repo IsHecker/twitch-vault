@@ -81,7 +81,7 @@ public sealed class RecordingOrchestrator
         await _sessionsLock.WaitAsync();
         try
         {
-            var existing = (await _streamRepository.GetStreamsByChannelIdAsync(channel.Id))
+            var existing = (await _streamRepository.ListByChannelIdAsync(channel.Id))
                 .FirstOrDefault(s => s.TwitchStreamId == metadata.TwitchStreamId);
 
             await _channelRepository.SetLiveAsync(channel.Id, true);

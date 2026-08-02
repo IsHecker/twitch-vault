@@ -41,12 +41,12 @@ public class StreamService(
 
     public async Task DeleteStreamAsync(string twitchStreamId)
     {
-        var stream = await streamRepository.GetStreamByIdAsync(twitchStreamId);
+        var stream = await streamRepository.GetByIdAsync(twitchStreamId);
         if (stream == null)
             return;
 
         await IOUtils.DeleteDirectoryWithRetriesAsync(stream.Folder.RelativePath);
-        await streamRepository.DeleteStreamAsync(twitchStreamId);
+        await streamRepository.DeleteAsync(twitchStreamId);
 
         var channel = await channelRepository.GetByIdAsync(stream.ChannelId);
         using var ctx = logger.BeginScope("{Channel}", channel!.Name);
@@ -55,7 +55,7 @@ public class StreamService(
 
     public async Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null)
     {
-        var stale = (await streamRepository.GetStreamsByChannelIdAsync(channelId))
+        var stale = (await streamRepository.ListByChannelIdAsync(channelId))
             .Where(stream =>
                 stream.FinishedAt is null &&
                 (currentTwitchStreamId == null || stream.TwitchStreamId != currentTwitchStreamId));

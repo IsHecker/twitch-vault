@@ -2,13 +2,13 @@ namespace TwitchVault.Api.Persistence;
 
 public class StreamRepository(JsonDatabase db) : IStreamRepository
 {
-    public async Task<List<Domain.Stream>> GetStreamsByChannelIdAsync(string channelId)
+    public async Task<List<Domain.Stream>> ListByChannelIdAsync(string channelId)
     {
         var data = await db.ReadAsync();
         return data.Streams.Where(s => s.ChannelId == channelId).ToList();
     }
 
-    public async Task<Domain.Stream?> GetStreamByIdAsync(string twitchStreamId)
+    public async Task<Domain.Stream?> GetByIdAsync(string twitchStreamId)
     {
         var data = await db.ReadAsync();
         return data.Streams.FirstOrDefault(s => s.TwitchStreamId == twitchStreamId);
@@ -28,7 +28,7 @@ public class StreamRepository(JsonDatabase db) : IStreamRepository
             if (index >= 0)
                 data.Streams[index] = stream;
         });
-    public Task DeleteStreamAsync(string twitchStreamId) =>
+    public Task DeleteAsync(string twitchStreamId) =>
         db.WriteAsync(data =>
         {
             data.Streams.RemoveAll(s => s.TwitchStreamId == twitchStreamId);

@@ -112,7 +112,7 @@ public class RecordingOrchestratorTests
         _streamRecorderRegistry.TryRegister(ChannelId).Returns(true);
         _channelRepository.GetByIdAsync(ChannelId).Returns(channel);
         _twitchGqlClient.GetStreamMetadataAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(metadata);
-        _streamRepository.GetStreamsByChannelIdAsync(channel.Id).Returns([]);
+        _streamRepository.ListByChannelIdAsync(channel.Id).Returns([]);
         _streamService.CreateAsync(channel, metadata).Returns(createdStream);
         var sut = CreateSut();
 
@@ -165,7 +165,7 @@ public class RecordingOrchestratorTests
         var metadata = CreateMetadata("ts_new");
         var createdStream = CreateStream("ts_new", channel.Id);
 
-        _streamRepository.GetStreamsByChannelIdAsync(channel.Id).Returns(
+        _streamRepository.ListByChannelIdAsync(channel.Id).Returns(
         [
             CreateStream("ts_other", channel.Id)
         ]);
@@ -194,7 +194,7 @@ public class RecordingOrchestratorTests
         if (status == StreamStatus.Interrupted)
             existingStream.MarkAsInterrupted();
 
-        _streamRepository.GetStreamsByChannelIdAsync(channel.Id).Returns([existingStream]);
+        _streamRepository.ListByChannelIdAsync(channel.Id).Returns([existingStream]);
         _ = StubFactoryReturnsRecorder();
         var sut = CreateSut();
 
@@ -222,7 +222,7 @@ public class RecordingOrchestratorTests
         else
             existingStream.MarkAsStopped(DateTime.UtcNow);
 
-        _streamRepository.GetStreamsByChannelIdAsync(channel.Id).Returns([existingStream]);
+        _streamRepository.ListByChannelIdAsync(channel.Id).Returns([existingStream]);
         var sut = CreateSut();
 
         // Act
@@ -240,7 +240,7 @@ public class RecordingOrchestratorTests
         // Arrange
         var channel = CreateChannel();
         var metadata = CreateMetadata("ts_new");
-        _streamRepository.GetStreamsByChannelIdAsync(channel.Id).Returns([]);
+        _streamRepository.ListByChannelIdAsync(channel.Id).Returns([]);
         _streamService.CreateAsync(channel, metadata).Returns(CreateStream("ts_new", channel.Id));
         StubFactoryReturnsRecorder();
         var sut = CreateSut();

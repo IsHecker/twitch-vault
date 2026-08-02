@@ -10,7 +10,6 @@ public sealed class TwitchWebhookHealthCheckJob(
     SettingsService settingsService,
     ILogger<TwitchWebhookHealthCheckJob> logger) : IJob
 {
-    private static readonly TimeSpan VerificationGracePeriod = TimeSpan.FromMinutes(2);
     private static readonly string TerminalFailureStatuses =
         "webhook_callback_verification_failed" +
         "&notification_failures_exceeded" +
@@ -35,7 +34,6 @@ public sealed class TwitchWebhookHealthCheckJob(
         {
             var brokenSubscriptions = await twitchHelixClient
                 .GetEventSubSubscriptionsAsync(TerminalFailureStatuses, cancellationToken)
-                .Where(sub => DateTime.UtcNow - sub.CreatedAt > VerificationGracePeriod)
                 .ToListAsync(cancellationToken);
 
             if (brokenSubscriptions.Count == 0)

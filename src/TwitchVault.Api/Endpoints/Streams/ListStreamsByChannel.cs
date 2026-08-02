@@ -11,12 +11,13 @@ public class ListStreamsByChannel : IEndpoint
             if (channel is null)
                 return Results.NotFound();
 
-            var streams = await repo.GetStreamsByChannelIdAsync(channelId);
-            return Results.Ok(streams);
+            var streams = await repo.ListByChannelIdAsync(channelId);
+            return Results.Ok(streams.Select(StreamResponse.FromDomain).ToList());
         })
+        .RequireAuthorization()
         .WithName(nameof(ListStreamsByChannel))
         .WithTags("Channels")
         .WithSummary("Get all stream instances for a specific channel")
-        .Produces<List<Domain.Stream>>()
+        .Produces<List<StreamResponse>>()
         .Produces(StatusCodes.Status404NotFound);
 }

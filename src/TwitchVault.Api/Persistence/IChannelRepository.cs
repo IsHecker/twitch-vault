@@ -5,6 +5,7 @@ namespace TwitchVault.Api.Persistence;
 public interface IChannelRepository
 {
     Task<List<Channel>> GetAllAsync();
+    Task<List<Channel>> GetByIdsAsync(IEnumerable<string> ids);
     Task<Channel?> GetByIdAsync(string channelId);
     Task<Channel?> GetByNameAsync(string name);
     Task AddAsync(Channel channel);

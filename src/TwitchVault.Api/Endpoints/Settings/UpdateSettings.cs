@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Configuration;
-namespace TwitchVault.Api.Endpoints.Settings;
 
+namespace TwitchVault.Api.Endpoints.Settings;
 
 public class UpdateSettings : IEndpoint
 {
@@ -12,6 +12,7 @@ public class UpdateSettings : IEndpoint
             await settings.UpdateAsync(updated);
             return Results.NoContent();
         })
+        .RequireAuthorization("Admin")
         .WithName(nameof(UpdateSettings))
         .WithTags("Settings")
         .WithSummary("Update runtime settings")

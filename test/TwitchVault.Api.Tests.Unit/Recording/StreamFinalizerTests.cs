@@ -1,10 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
@@ -20,20 +18,14 @@ public class StreamFinalizerTests
     private readonly IStreamService _streamService = Substitute.For<IStreamService>();
     private readonly ITwitchGqlClient _twitchClient = Substitute.For<ITwitchGqlClient>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
-    private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
 
     private readonly ISegmentDownloader _segmentDownloader = Substitute.For<ISegmentDownloader>();
 
     private readonly Channel _channel = new() { Id = "chan_1", Name = "testchannel" };
 
-    public StreamFinalizerTests()
-    {
-        _pathsOptions.Value.Returns(new PathsOptions { BaseUrl = "https://cdn.example.com" });
-    }
-
     private StreamFinalizer CreateSut() =>
-        new(_streamRepository, _channelRepository, _streamService, _twitchClient, _dateTimeProvider, _pathsOptions, _logger);
+        new(_streamRepository, _channelRepository, _streamService, _twitchClient, _dateTimeProvider, _logger);
 
     private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1")
     {
@@ -58,22 +50,6 @@ public class StreamFinalizerTests
         // Assert
         _segmentDownloader.Received(1).CloseSegment();
     }
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldPersistThumbnailUrl_UsingConfiguredBaseUrl()
-    {
-        // Arrange
-        var stream = CreateStream();
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(stream, _channel, _segmentDownloader, new SessionEndReason.StreamEnded());
-
-        // Assert
-        stream.ThumbnailUrl.Should().StartWith("https://cdn.example.com");
-        await _streamRepository.Received().UpdateAsync(stream);
-    }
-
 
     [Theory]
     [MemberData(nameof(AllReasons))]
