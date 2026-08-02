@@ -50,7 +50,6 @@ public sealed class ThumbnailManager(
     {
         using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, CancellationToken.None);
 
-        // await using var fileStream = File.Create(savePath);
         await using var fileStream = fileSystem.OpenWrite(savePath, FileMode.Create);
         await imageStream.CopyToAsync(fileStream, CancellationToken.None);
     }

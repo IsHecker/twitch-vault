@@ -16,6 +16,7 @@ using TwitchVault.Api.Common;
 using TwitchVault.Api.Endpoints.Testing;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchLib.EventSub.Webhooks.Core.Models;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -67,7 +68,7 @@ public static class ServiceCollectionExtensions
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        // services.AddHostedService<TwitchWebhookStartupService>();
+        services.AddHostedService<TwitchWebhookStartupService>();
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
@@ -87,6 +88,8 @@ public static class ServiceCollectionExtensions
     {
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
 
+        services.AddSingleton<TokenGeneratorService>();
+
         services.AddAuthentication(options =>
         {
             options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -104,15 +107,12 @@ public static class ServiceCollectionExtensions
                 ValidIssuer = jwtOptions.Issuer,
                 ValidAudience = jwtOptions.Audience,
                 IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtOptions.Secret)),
-                ClockSkew = TimeSpan.Zero
+                    Encoding.UTF8.GetBytes(jwtOptions.Secret))
             };
         });
 
         services.AddAuthorizationBuilder()
             .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
-
-        services.AddSingleton<TokenGeneratorService>();
 
         return services;
     }

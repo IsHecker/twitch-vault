@@ -40,11 +40,11 @@ public sealed class TwitchSubscriptionService(
         foreach (var channel in channels)
         {
             var onlineOk = await AddChannelEventAsync(channel.Id, EventsubConstants.StreamOnline, version: "1", cancellationToken);
-            // var updateOk = await AddChannelEventAsync(channel.Id, EventsubConstants.ChannelUpdate, version: "2", cancellationToken);
+            var updateOk = await AddChannelEventAsync(channel.Id, EventsubConstants.ChannelUpdate, version: "2", cancellationToken);
 
-            if (onlineOk == true && true)
+            if (onlineOk == true && updateOk == true)
                 succeeded.Add(channel.Name);
-            else if (onlineOk == false || false)
+            else if (onlineOk == false || updateOk == false)
                 failed.Add(channel.Name);
 
             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);

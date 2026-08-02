@@ -48,7 +48,6 @@ public static class ManifestSegmentExtractor
             segments.Add(new HlsSegment(manifestContent[lineRanges[++i]].Trim('\r').ToString(), duration));
         }
 
-        // var isStreamEnded = manifestSpan[lineRanges[^1]].Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
         var isStreamEnded = manifestContent.AsSpan().Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
         return new ManifestExtractionResult(segments, initSegmentUrl, currentSequence, isStreamEnded);
     }

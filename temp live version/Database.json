@@ -329,51 +329,5 @@
         }
       ]
     }
-  ],
-  "Users": [
-    {
-      "Id": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "Username": "hecker",
-      "Password": "password",
-      "IsAdmin": true,
-      "CreatedAt": "2026-08-02T17:18:07.2833315+03:00"
-    }
-  ],
-  "UserChannels": [
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "54507525",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "1131131080",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "153423171",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "151283108",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "177029122",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "183945752",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "634207529",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    }
   ]
 }

@@ -54,7 +54,7 @@ public class DeleteChannel : IEndpoint
 
             await channelRepo.DeleteAsync(channelId);
             await IOUtils.DeleteDirectoryWithRetriesAsync(Path.Combine(pathsOptions.Value.Streams, channel.Name));
-            // await twitchSubscription.RemoveChannelAsync(channel, default);
+            await twitchSubscription.RemoveChannelAsync(channel, default);
 
             return Results.NoContent();
         })
