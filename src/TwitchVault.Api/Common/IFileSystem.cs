@@ -1,13 +1,13 @@
 namespace TwitchVault.Api.Common;
 
-public interface IFileSystem
+public interface IStorageService
 {
     bool Exists(string path);
     Task<string[]> ReadAllLinesAsync(string path, CancellationToken cancellationToken = default);
     Stream OpenWrite(string path, FileMode mode);
 }
 
-public sealed class PhysicalFileSystem : IFileSystem
+public sealed class PhysicalStorageService : IStorageService
 {
     public bool Exists(string path) => File.Exists(path);
 

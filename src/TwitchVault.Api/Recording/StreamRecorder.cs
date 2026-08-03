@@ -175,14 +175,16 @@ public sealed class StreamRecorder : IStreamRecorder
 
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 consecutiveNetworkErrors++;
                 if (consecutiveNetworkErrors > 5)
                     throw;
 
-                _logger.LogWarning("Network issue detected. Retry {Count}/5.", consecutiveNetworkErrors);
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                _logger.LogWarning(ex, "Network issue detected ({Message}). Retry {Count}/5.",
+                    ex.Message, consecutiveNetworkErrors);
+
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
         }
     }

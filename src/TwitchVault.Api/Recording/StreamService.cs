@@ -49,8 +49,9 @@ public class StreamService(
         await streamRepository.DeleteAsync(twitchStreamId);
 
         var channel = await channelRepository.GetByIdAsync(stream.ChannelId);
-        using var ctx = logger.BeginScope("{Channel}", channel!.Name);
-        logger.LogInformation("Storage: Removed stream {Title}.", stream.Chapters[0].Title);
+        using var ctx = logger.BeginScope("{Channel}", channel?.Name ?? "Unknown");
+        var title = stream.Chapters.FirstOrDefault()?.Title ?? stream.TwitchStreamId;
+        logger.LogInformation("Storage: Removed stream {Title}.", title);
     }
 
     public async Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null)

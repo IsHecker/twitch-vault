@@ -35,15 +35,30 @@ public class SettingsService
         return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
     }
 
-    public async Task UpdateAsync(AppSettings updated)
+    public async Task UpdateAsync(AppSettings request)
     {
         await _lock.WaitAsync();
         try
         {
-            _settings = updated;
+            _settings.Vault.MaxSegmentDurationInSec = request.Vault.MaxSegmentDurationInSec;
+            _settings.Vault.MaxConsecutiveEmptyPolls = request.Vault.MaxConsecutiveEmptyPolls;
+
+            _settings.Twitch.ClientId = request.Twitch.ClientId;
+            _settings.Twitch.Authorization = request.Twitch.Authorization;
+
+            _settings.ChannelMonitor.Enabled = request.ChannelMonitor.Enabled;
+            _settings.ChannelMonitor.RunIntervalInMinutes = request.ChannelMonitor.RunIntervalInMinutes;
+
+            _settings.TwitchWebhookHealthCheck.Enabled = request.TwitchWebhookHealthCheck.Enabled;
+            _settings.TwitchWebhookHealthCheck.RunIntervalInMinutes =
+                request.TwitchWebhookHealthCheck.RunIntervalInMinutes;
+
             Flush();
         }
-        finally { _lock.Release(); }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     private void Flush() =>

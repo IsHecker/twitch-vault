@@ -9,8 +9,8 @@ public sealed class ChannelMonitorJobConfiguration(SettingsService settingsServi
 {
     public void Configure(QuartzOptions options)
     {
-        if (!settingsService.Settings.ChannelMonitor.Enabled)
-            return;
+        // if (!settingsService.Settings.ChannelMonitor.Enabled)
+        //     return;
 
         string jobName = typeof(ChannelMonitorJob).FullName!;
         options

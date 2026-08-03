@@ -41,6 +41,30 @@ public class StreamServiceTests
     }
 
     [Fact]
+    public async Task DeleteStreamAsync_ShouldSucceed_WhenChaptersIsEmpty()
+    {
+        // Arrange
+        var streamId = "stream-123";
+        var stream = new DomainStream
+        {
+            TwitchStreamId = streamId,
+            ChannelId = "channel-1",
+            Folder = StreamFolder.Create("Streams", "testchannel"),
+            Chapters = []
+        };
+
+        _streamRepository.GetByIdAsync(streamId).Returns(stream);
+        _channelRepository.GetByIdAsync("channel-1").Returns(new Channel { Id = "channel-1", Name = "testchannel" });
+
+        // Act
+        var act = () => _sut.DeleteStreamAsync(streamId);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+        await _streamRepository.Received(1).DeleteAsync(streamId);
+    }
+
+    [Fact]
     public async Task ResetStaleStreamsAsync_ShouldUpdateStaleStreams_WhenStaleStreamsExist()
     {
         // Arrange

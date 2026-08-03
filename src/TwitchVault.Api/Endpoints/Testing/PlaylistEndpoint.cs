@@ -4,7 +4,7 @@ using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
-public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, IFileSystem fileSystem) : IAsyncDisposable
+public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, IStorageService fileSystem) : IAsyncDisposable
 {
     private const string DefaultStreamId = "test-stream";
 

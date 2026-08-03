@@ -16,7 +16,7 @@ public class StreamRecorderFactory(
     IDateTimeProvider dateTimeProvider,
     IWebHostEnvironment environment,
     IServiceProvider serviceProvider,
-    IFileSystem fileSystem) : IStreamRecorderFactory
+    IStorageService fileSystem) : IStreamRecorderFactory
 {
     public async Task<IStreamRecorder> CreateAsync(
         Domain.Stream stream,

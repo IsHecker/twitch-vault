@@ -9,8 +9,8 @@ public sealed class TwitchWebhookHealthCheckJobConfiguration(SettingsService set
 {
     public void Configure(QuartzOptions options)
     {
-        if (!settingsService.Settings.TwitchWebhookHealthCheck.Enabled)
-            return;
+        // if (!settingsService.Settings.TwitchWebhookHealthCheck.Enabled)
+        //     return;
 
         string jobName = typeof(TwitchWebhookHealthCheckJob).FullName!;
         options

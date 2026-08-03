@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TwitchHelixClient>();
 
         services.AddSingleton<IDateTimeProvider, EgyptTimeProvider>();
-        services.AddSingleton<IFileSystem, PhysicalFileSystem>();
+        services.AddSingleton<IStorageService, PhysicalStorageService>();
         services.AddSingleton<EventBus>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<IStreamService, StreamService>();

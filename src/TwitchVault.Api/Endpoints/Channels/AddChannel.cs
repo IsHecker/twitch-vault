@@ -36,9 +36,8 @@ public class AddChannel : IEndpoint
                 return Results.Created($"/api/channels/{existingChannel.Id}", ChannelResponse.FromDomain(existingChannel));
             }
 
-            // If non-admin passes values or omits them, enforce defaults (QualityRank = 2, ShouldRecord = true) for non-admins.
-            var qualityRank = isAdmin ? request.QualityRank!.Value : 2;
-            var shouldRecord = !isAdmin || request.ShouldRecord!.Value;
+            var qualityRank = isAdmin ? (request.QualityRank ?? 2) : 2;
+            var shouldRecord = !isAdmin || (request.ShouldRecord ?? true);
 
             var channel = new Channel
             {

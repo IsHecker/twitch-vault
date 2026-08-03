@@ -18,7 +18,7 @@ public interface ISegmentDownloader
 public class SegmentDownloader(
     ITwitchGqlClient twitchGqlClient,
     SegmentStateTracker segmentStateTracker,
-    IFileSystem fileSystem) : ISegmentDownloader
+    IStorageService fileSystem) : ISegmentDownloader
 {
     public async IAsyncEnumerable<(string FileName, float Duration)> DownloadSegmentsAsync(
         string streamFolderPath,

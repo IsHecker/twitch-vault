@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 
@@ -57,15 +58,17 @@ public sealed class TwitchSubscriptionService(
     {
         if (!_channelSubscriptions.TryGetValue(channel.Id, out var subscriptions))
             return;
+
+        var initialCount = subscriptions.Count;
         var deletedCount = 0;
-        foreach (var subscription in subscriptions)
+        foreach (var subscription in subscriptions.ReverseIterator())
         {
             var isRemoved = await RemoveChannelEventAsync(channel.Id, subscription.Type, cancellationToken);
             if (isRemoved == true)
                 deletedCount++;
         }
 
-        if (deletedCount < subscriptions.Count)
+        if (deletedCount < initialCount)
             return;
 
         logger.LogInformation("Unsubscribed for '{Channel}'", channel.Name);

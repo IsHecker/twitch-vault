@@ -11,7 +11,7 @@ public interface IThumbnailManager
 public sealed class ThumbnailManager(
     ITwitchGqlClient twitchGqlClient,
     IDateTimeProvider dateTimeProvider,
-    IFileSystem fileSystem,
+    IStorageService fileSystem,
     ILogger<ThumbnailManager> logger) : IThumbnailManager
 {
     private static readonly TimeSpan LiveSnapshotCooldown = TimeSpan.FromMinutes(5);

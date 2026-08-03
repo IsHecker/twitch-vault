@@ -6,8 +6,7 @@ public record ChapterResponse(
     string Title,
     string CategoryId,
     DateTime StartedAt,
-    DateTime? FinishedAt
-)
+    DateTime? FinishedAt)
 {
     public static ChapterResponse FromDomain(Chapter chapter) =>
         new(
@@ -18,35 +17,20 @@ public record ChapterResponse(
         );
 }
 
-public record StreamFolderResponse(
-    string RelativePath,
-    string ThumbnailPath
-)
-{
-    public static StreamFolderResponse FromDomain(StreamFolder folder) =>
-        new(
-            folder.RelativePath,
-            folder.ThumbnailPath
-        );
-}
-
 public record StreamResponse(
     string TwitchStreamId,
     string ChannelId,
-    StreamFolderResponse Folder,
     string ThumbnailUrl,
     StreamStatus Status,
     bool MarkForDeletion,
     DateTime StartedAt,
     DateTime? FinishedAt,
-    List<ChapterResponse> Chapters
-)
+    List<ChapterResponse> Chapters)
 {
     public static StreamResponse FromDomain(Domain.Stream stream) =>
         new(
             stream.TwitchStreamId,
             stream.ChannelId,
-            StreamFolderResponse.FromDomain(stream.Folder),
             stream.ThumbnailUrl,
             stream.Status,
             stream.MarkForDeletion,
