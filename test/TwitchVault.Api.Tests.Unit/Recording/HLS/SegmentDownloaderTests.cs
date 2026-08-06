@@ -12,7 +12,7 @@ namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 public class SegmentDownloaderTests
 {
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
-    private readonly IStorageService _fileSystem = Substitute.For<IStorageService>();
+    private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly SettingsService _settingsService;
     private readonly SegmentStateTracker _segmentStateTracker;

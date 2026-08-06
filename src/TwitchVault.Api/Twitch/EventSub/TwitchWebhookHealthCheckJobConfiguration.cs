@@ -9,9 +9,6 @@ public sealed class TwitchWebhookHealthCheckJobConfiguration(SettingsService set
 {
     public void Configure(QuartzOptions options)
     {
-        // if (!settingsService.Settings.TwitchWebhookHealthCheck.Enabled)
-        //     return;
-
         string jobName = typeof(TwitchWebhookHealthCheckJob).FullName!;
         options
             .AddJob<TwitchWebhookHealthCheckJob>(configure => configure.WithIdentity(jobName))
@@ -20,6 +17,6 @@ public sealed class TwitchWebhookHealthCheckJobConfiguration(SettingsService set
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(settingsService.Settings.TwitchWebhookHealthCheck.RunInterval).RepeatForever()));
+                        schedule.WithInterval(settingsService.Settings.BackgroundJobs["TwitchWebhookHealthCheck"].RunInterval).RepeatForever()));
     }
 }

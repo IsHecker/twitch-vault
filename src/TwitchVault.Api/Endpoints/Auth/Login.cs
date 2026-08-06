@@ -16,7 +16,6 @@ public class Login : IEndpoint
 
             var user = await userRepo.GetByUsernameAsync(request.Username);
 
-            // Verify password — use constant-time comparison via BCrypt
             if (user is null || request.Password != user.Password)
                 return Results.Unauthorized();
 

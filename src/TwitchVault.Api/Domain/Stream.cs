@@ -10,6 +10,14 @@ public enum StreamStatus
     Stopped
 }
 
+public enum StorageLocation
+{
+    Local,
+    Uploading,
+    Both,
+    Remote
+}
+
 public sealed class Stream
 {
     public string TwitchStreamId { get; set; } = null!;
@@ -18,6 +26,7 @@ public sealed class Stream
     public StreamFolder Folder { get; set; } = null!;
     public string ThumbnailUrl { get; private set; } = null!;
     public StreamStatus Status { get; private set; } = StreamStatus.Recording;
+    public StorageLocation Storage { get; private set; } = StorageLocation.Local;
     public bool MarkForDeletion { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; private set; }
@@ -69,4 +78,5 @@ public sealed class Stream
     }
 
     public void SetThumbnailUrl(string thumbnailUrl) => ThumbnailUrl = thumbnailUrl;
+    public void SetStorageLocation(StorageLocation storageLocation) => Storage = storageLocation;
 }

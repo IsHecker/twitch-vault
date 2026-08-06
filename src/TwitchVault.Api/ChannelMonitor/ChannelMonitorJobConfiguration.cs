@@ -9,9 +9,6 @@ public sealed class ChannelMonitorJobConfiguration(SettingsService settingsServi
 {
     public void Configure(QuartzOptions options)
     {
-        // if (!settingsService.Settings.ChannelMonitor.Enabled)
-        //     return;
-
         string jobName = typeof(ChannelMonitorJob).FullName!;
         options
             .AddJob<ChannelMonitorJob>(configure => configure.WithIdentity(jobName))
@@ -20,6 +17,6 @@ public sealed class ChannelMonitorJobConfiguration(SettingsService settingsServi
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(settingsService.Settings.ChannelMonitor.RunInterval).RepeatForever()));
+                        schedule.WithInterval(settingsService.Settings.BackgroundJobs["ChannelMonitor"].RunInterval).RepeatForever()));
     }
 }

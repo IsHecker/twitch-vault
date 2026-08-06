@@ -70,7 +70,6 @@ public class JsonDatabase
 
         await File.WriteAllTextAsync(tempFilePath, json);
 
-        // Atomic swap/overwrite to prevent file corruption during crashes or high I/O
         File.Move(tempFilePath, _filePath, overwrite: true);
     }
 }

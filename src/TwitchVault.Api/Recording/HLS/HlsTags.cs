@@ -4,13 +4,11 @@ namespace TwitchVault.Api.Recording.HLS;
 
 internal static class HlsTags
 {
-    // Fixed tags
     public const string ExtM3U = "#EXTM3U";
     public const string PlaylistTypeEvent = "#EXT-X-PLAYLIST-TYPE:EVENT";
     public const string EndList = "#EXT-X-ENDLIST";
     public const string Discontinuity = "#EXT-X-DISCONTINUITY";
 
-    // Prefixes
     public const string VersionPrefix = "#EXT-X-VERSION";
     public const string TargetDurationPrefix = "#EXT-X-TARGETDURATION";
     public const string StartTimePrefix = "#ID3-EQUIV-TDTG";

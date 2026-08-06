@@ -34,13 +34,11 @@ public class DeleteChannel : IEndpoint
 
             await userChannelRepo.RemoveAsync(userId, channelId);
 
-            // Check how many users still have this channel referenced
             var remainingUserCount = await userChannelRepo.GetUserCountForChannelAsync(channelId);
 
             if (remainingUserCount > 0)
                 return Results.NoContent();
 
-            // Last user removed it — clean up the global channel, recording, and streams
             if (channel.IsLive)
             {
                 var streams = await streamRepository.ListByChannelIdAsync(channelId);

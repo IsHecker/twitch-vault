@@ -13,7 +13,7 @@ public class ThumbnailManagerTests
     private readonly Domain.Stream _stream;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
-    private readonly IStorageService _fileSystem = Substitute.For<IStorageService>();
+    private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
     private readonly ILogger<ThumbnailManager> _logger = Substitute.For<ILogger<ThumbnailManager>>();
 
     public ThumbnailManagerTests()

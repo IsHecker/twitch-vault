@@ -50,7 +50,7 @@ public sealed class HlsPlaylist : IHlsPlaylist
     public static async Task<HlsPlaylist> LoadOrCreateAsync(
         string streamFolderPath,
         IDateTimeProvider dateTimeProvider,
-        IStorageService fileSystem,
+        IFileSystem fileSystem,
         CancellationToken cancellationToken = default)
     {
         var path = Path.Combine(streamFolderPath, PlaylistFileName);

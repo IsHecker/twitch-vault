@@ -30,6 +30,28 @@ public sealed class TwitchSubscriptionService(
         await AddChannelsAsync(channels, cancellationToken);
     }
 
+    public async Task ClearAllSubscriptionsAsync(CancellationToken cancellationToken)
+    {
+        var cleanedCount = 0;
+        var failedCount = 0;
+
+        var subscriptions = twitchHelixClient.GetEventSubSubscriptionsAsync(cancellationToken: cancellationToken);
+
+        await foreach (var sub in subscriptions)
+        {
+            using var response = await twitchHelixClient.DeleteEventSubSubscriptionAsync(sub.Id, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+                cleanedCount++;
+            else
+                failedCount++;
+
+            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+        }
+
+        logger.LogInformation("Cleaned up {Count} subscriptions, {Failed} failed", cleanedCount, failedCount);
+    }
+
     public async Task AddChannelsAsync(ICollection<Channel> channels, CancellationToken cancellationToken)
     {
         if (channels.Count == 0)

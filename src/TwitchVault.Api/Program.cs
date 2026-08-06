@@ -35,6 +35,9 @@ public class Program
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerDocumentation();
+
+        builder.Configuration.AddJsonFile($"secrets.json", true, false);
+
         builder.Services.AddTwitchVaultServices(builder.Configuration);
         builder.Services.ConfigureHttpJsonOptions(opts =>
             opts.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -57,10 +60,10 @@ public class Program
         app.UseHttpsRedirection();
         app.UseMiddleware<GlobalExceptionMiddleware>();
 
+        app.UseTwitchLibEventSubWebhooks();
+
         app.UseAuthentication();
         app.UseAuthorization();
-
-        app.UseTwitchLibEventSubWebhooks();
 
         app.UseSwagger();
         app.UseSwaggerUI();

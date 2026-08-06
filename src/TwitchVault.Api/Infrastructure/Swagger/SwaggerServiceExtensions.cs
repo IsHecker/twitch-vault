@@ -18,7 +18,7 @@ public static class SwaggerServiceExtensions
             options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
             options.SchemaFilter<EnumSchemaFilter>();
 
-            // Add JWT Bearer authentication to Swagger UI
+
             var securityScheme = new OpenApiSecurityScheme
             {
                 Name = "Authorization",

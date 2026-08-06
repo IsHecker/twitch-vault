@@ -141,11 +141,10 @@ public sealed class StreamRecorder : IStreamRecorder
                 if (hasQualityChanged)
                 {
                     var (FileName, Duration) = _segmentDownloader.CloseSegment();
-                    await _hlsPlaylist.AddSegmentAsync(FileName, Duration, cancellationToken);
+                    await _hlsPlaylist.AddSegmentAsync(FormatSegmentUrl(FileName), Duration, cancellationToken);
                     await _hlsPlaylist.AddDiscontinuityAsync(cancellationToken);
                     _logger.LogDebug("Quality switch detected.");
                 }
-
 
                 var manifestResult = ManifestSegmentExtractor.ExtractNewSegments(manifest, _hlsPlaylist.LastTwitchMediaSequence);
                 _hlsPlaylist.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
@@ -159,9 +158,9 @@ public sealed class StreamRecorder : IStreamRecorder
                 await foreach (var (FileName, Duration) in downloadedSegments)
                 {
                     if (!string.IsNullOrWhiteSpace(manifestResult.InitSegmentUrl) && !_hlsPlaylist.HasInitSegment)
-                        await _hlsPlaylist.SetInitSegmentAsync(FileName, cancellationToken);
+                        await _hlsPlaylist.SetInitSegmentAsync(FormatSegmentUrl(FileName), cancellationToken);
                     else
-                        await _hlsPlaylist.AddSegmentAsync(FileName, Duration, cancellationToken);
+                        await _hlsPlaylist.AddSegmentAsync(FormatSegmentUrl(FileName), Duration, cancellationToken);
                 }
 
                 if (manifestResult.IsStreamEnded)
@@ -188,6 +187,9 @@ public sealed class StreamRecorder : IStreamRecorder
             }
         }
     }
+
+    private string FormatSegmentUrl(string segmentName) =>
+        $"/hls/{_stream.TwitchStreamId}/segments/{segmentName}";
 
     private void SetEndReason(SessionEndReason reason) =>
         Interlocked.CompareExchange(ref _finalizeReason, reason, null);

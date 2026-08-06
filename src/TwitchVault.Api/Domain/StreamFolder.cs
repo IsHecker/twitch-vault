@@ -21,8 +21,7 @@ public sealed class StreamFolder
         return new StreamFolder { RelativePath = relative ?? string.Empty };
     }
 
-
-    private string GetAbsolutePath(string contentRootPath) =>
+    public string GetAbsolutePath(string contentRootPath) =>
         Path.Combine(contentRootPath, RelativePath);
 
     public string GetAbsolutePlaylistPath(string contentRootPath) =>
@@ -32,7 +31,6 @@ public sealed class StreamFolder
 
     public string GetAbsoluteSegmentPath(string contentRootPath, string segmentFileName) =>
         Path.Combine(GetAbsolutePath(contentRootPath), Path.GetFileName(segmentFileName));
-
 
     public string GetThumbnailUrl(string baseUrl) =>
         new Uri($"{baseUrl.TrimEnd('/')}/{ThumbnailPath}").AbsoluteUri;

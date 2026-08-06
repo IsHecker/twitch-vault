@@ -1,7 +1,13 @@
+
 namespace TwitchVault.Api.Persistence;
 
 public class StreamRepository(JsonDatabase db) : IStreamRepository
 {
+    public async Task<List<Domain.Stream>> GetAllAsync()
+    {
+        return (await db.ReadAsync()).Streams;
+    }
+
     public async Task<List<Domain.Stream>> ListByChannelIdAsync(string channelId)
     {
         var data = await db.ReadAsync();

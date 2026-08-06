@@ -4,9 +4,9 @@
       "Id": "54507525",
       "Name": "pisty",
       "QualityRank": 2,
-      "IsLive": false,
+      "IsLive": true,
       "ShouldRecord": true,
-      "LastStreamedAt": "2026-08-01T02:06:09"
+      "LastStreamedAt": "2026-08-06T19:01:07"
     },
     {
       "Id": "1131131080",
@@ -14,7 +14,7 @@
       "QualityRank": 1,
       "IsLive": false,
       "ShouldRecord": false,
-      "LastStreamedAt": "2026-07-21T04:04:44.1782519+02:00"
+      "LastStreamedAt": "2026-07-21T05:04:44.1782519+03:00"
     },
     {
       "Id": "153423171",
@@ -22,7 +22,7 @@
       "QualityRank": 1,
       "IsLive": false,
       "ShouldRecord": true,
-      "LastStreamedAt": "2026-07-21T04:22:32.5897392+02:00"
+      "LastStreamedAt": "2026-07-21T05:22:32.5897392+03:00"
     },
     {
       "Id": "151283108",
@@ -55,121 +55,25 @@
       "IsLive": false,
       "ShouldRecord": false,
       "LastStreamedAt": null
+    },
+    {
+      "Id": "451544676",
+      "Name": "dream",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": null
+    },
+    {
+      "Id": "38632829",
+      "Name": "ocmz",
+      "QualityRank": 2,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": null
     }
   ],
   "Streams": [
-    {
-      "TwitchStreamId": "319208510938",
-      "ChannelId": "153423171",
-      "Folder": {
-        "RelativePath": "Streams\\vnnh_\\2026-05-10 04-34-27",
-        "ThumbnailPath": "Streams/vnnh_/2026-05-10 04-34-27/thumbnail.jpg"
-      },
-      "ThumbnailUrl": null,
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-05-10T04:34:27.9586013+02:00",
-      "FinishedAt": null,
-      "Chapters": []
-    },
-    {
-      "TwitchStreamId": "319893756250",
-      "ChannelId": "153423171",
-      "Folder": {
-        "RelativePath": "Streams\\vnnh_\\2026-06-18 04-09-56",
-        "ThumbnailPath": "Streams/vnnh_/2026-06-18 04-09-56/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/vnnh_/2026-06-18%2004-09-56/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-06-18T04:09:56.9198093+02:00",
-      "FinishedAt": null,
-      "Chapters": []
-    },
-    {
-      "TwitchStreamId": "318390298967",
-      "ChannelId": "1131131080",
-      "Folder": {
-        "RelativePath": "Streams\\keewidraws\\2026-07-08 03-14-13",
-        "ThumbnailPath": "Streams/keewidraws/2026-07-08 03-14-13/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/keewidraws/2026-07-08%2003-14-13/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-08T03:14:13.0573697+02:00",
-      "FinishedAt": "2026-07-08T04:56:20.3233839+02:00",
-      "Chapters": [
-        {
-          "Title": "let's talk about psychology",
-          "CategoryId": null,
-          "StartedAt": "2026-07-08T03:14:13.0573697+02:00",
-          "FinishedAt": "2026-07-08T04:56:20.3233839+02:00"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "320192460633",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-07-08 22-54-01",
-        "ThumbnailPath": "Streams/pisty/2026-07-08 22-54-01/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-08%2022-54-01/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-08T22:54:01.5431797+02:00",
-      "FinishedAt": "2026-07-08T23:18:00.9095278+02:00",
-      "Chapters": [
-        {
-          "Title": "هوبلالا",
-          "CategoryId": null,
-          "StartedAt": "2026-07-08T22:54:01.5431797+02:00",
-          "FinishedAt": "2026-07-08T23:18:00.9095278+02:00"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "318510070487",
-      "ChannelId": "1131131080",
-      "Folder": {
-        "RelativePath": "Streams\\keewidraws\\2026-07-18 03-31-56",
-        "ThumbnailPath": "Streams/keewidraws/2026-07-18 03-31-56/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/keewidraws/2026-07-18%2003-31-56/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-18T03:31:56.7980489+02:00",
-      "FinishedAt": "2026-07-18T04:58:37.0035118+02:00",
-      "Chapters": [
-        {
-          "Title": "sims 4 with dev",
-          "CategoryId": null,
-          "StartedAt": "2026-07-18T03:31:56.7980489+02:00",
-          "FinishedAt": "2026-07-18T04:58:37.0035118+02:00"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "317685522520",
-      "ChannelId": "153423171",
-      "Folder": {
-        "RelativePath": "Streams\\vnnh_\\2026-07-21 04-22-32",
-        "ThumbnailPath": "Streams/vnnh_/2026-07-21 04-22-32/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/vnnh_/2026-07-21%2004-22-32/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-21T04:22:32.5897392+02:00",
-      "FinishedAt": "2026-07-21T07:17:30.4123534+02:00",
-      "Chapters": [
-        {
-          "Title": "Drunk, Drunk, Drunk, and Stuck in Canada",
-          "CategoryId": null,
-          "StartedAt": "2026-07-21T04:22:32.5897392+02:00",
-          "FinishedAt": "2026-07-21T07:17:30.4123534+02:00"
-        }
-      ]
-    },
     {
       "TwitchStreamId": "320488618073",
       "ChannelId": "54507525",
@@ -179,6 +83,7 @@
       },
       "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-24%2023-13-46/thumbnail.jpg",
       "Status": "Finished",
+      "Storage": "Both",
       "MarkForDeletion": false,
       "StartedAt": "2026-07-25T00:13:46.9407098",
       "FinishedAt": "2026-07-25T02:16:42.1186317",
@@ -192,140 +97,46 @@
       ]
     },
     {
-      "TwitchStreamId": "320600085850",
-      "ChannelId": "151283108",
+      "TwitchStreamId": "7864886183",
+      "ChannelId": "153423171",
       "Folder": {
-        "RelativePath": "Streams\\gothamchess\\2026-07-27 17-59-10",
-        "ThumbnailPath": "Streams/gothamchess/2026-07-27 17-59-10/thumbnail.jpg"
+        "RelativePath": "Streams\\vnnh_\\2026-07-21 04-22-32",
+        "ThumbnailPath": "Streams/vnnh_/2026-07-21 04-22-32/thumbnail.jpg"
       },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/gothamchess/2026-07-27%2017-59-10/thumbnail.jpg",
+      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-24%2023-13-46/thumbnail.jpg",
       "Status": "Finished",
+      "Storage": "Remote",
       "MarkForDeletion": false,
-      "StartedAt": "2026-07-27T18:59:10.1735777",
-      "FinishedAt": "2026-07-27T21:41:56.8350353",
+      "StartedAt": "2026-07-25T00:13:46.9407098",
+      "FinishedAt": "2026-07-25T02:16:42.1186317",
       "Chapters": [
         {
-          "Title": "1000 Elo Chess Lesson | !autograph !omega",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        },
-        {
-          "Title": "1000 Elo Chess Lesson | !autograph",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T20:51:24.4189771",
-          "FinishedAt": "2026-07-27T21:35:29.8137444"
-        },
-        {
-          "Title": "Dont click | !autograph",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T21:35:29.8137444",
-          "FinishedAt": "2026-07-27T21:41:56.8350353"
+          "Title": "Test stream",
+          "CategoryId": "509658",
+          "StartedAt": "2026-07-25T00:13:46.9407098",
+          "FinishedAt": "2026-07-25T02:16:42.1186317"
         }
       ]
     },
     {
-      "TwitchStreamId": "1",
+      "TwitchStreamId": "320892180315",
       "ChannelId": "54507525",
       "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-24 22-14-14/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-24 22-14-14/1/thumbnail.jpg"
+        "RelativePath": "Streams\\pisty\\2026-08-06 19-37-08",
+        "ThumbnailPath": "Streams/pisty/2026-08-06 19-37-08/thumbnail.jpg"
       },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-05-24%2022-14-14/1/thumbnail.jpg",
-      "Status": "Finished",
+      "ThumbnailUrl": "https://localhost:7144/Streams/pisty/2026-08-06%2019-37-08/thumbnail.jpg",
+      "Status": "Recording",
+      "Storage": "Local",
       "MarkForDeletion": false,
-      "StartedAt": "2026-05-24T18:59:10.1735777",
-      "FinishedAt": "2026-05-24T21:41:56.8350353",
+      "StartedAt": "2026-08-06T19:01:07",
+      "FinishedAt": null,
       "Chapters": [
         {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "11",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-21 23-57-28/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-21 23-57-28/1/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-05-21%2023-57-28/1/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "111",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-21 23-09-23/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-21 23-09-23/1/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-05-21%2023-09-23/1/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "1111",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-21 23-09-23/2",
-        "ThumbnailPath": "Streams/pisty/2026-05-21 23-09-23/2/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-05-21%2023-09-23/2/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "11111",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-08 01-12-32/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-08 01-12-32/1/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-05-08%2001-12-32/1/thumbnail.jpg",
-      "Status": "Finished",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
+          "Title": "!Marvel !رابط | و اخيراً نزلت! | MARVEL Tōkon: Fighting Souls | #ad",
+          "CategoryId": "630009802",
+          "StartedAt": "2026-08-06T19:01:07",
+          "FinishedAt": null
         }
       ]
     }

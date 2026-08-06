@@ -21,7 +21,7 @@ public sealed class TwitchWebhookHealthCheckJob(
 
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.TwitchWebhookHealthCheck.Enabled)
+        if (!settingsService.Settings.BackgroundJobs["TwitchWebhookHealthCheck"].Enabled)
             return;
 
         var cancellationToken = context.CancellationToken;

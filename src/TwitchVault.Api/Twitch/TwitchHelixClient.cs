@@ -33,15 +33,14 @@ public sealed class TwitchHelixClient(
 
 
     public async IAsyncEnumerable<Subscription> GetEventSubSubscriptionsAsync(
-        string status = "enabled",
+        string status = "",
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         string? cursor = null;
 
         do
         {
-            var url = $"{HelixSubscriptionUrl}?status={Uri.EscapeDataString(status)}" +
-                (!string.IsNullOrEmpty(cursor) ? $"&after={Uri.EscapeDataString(cursor)}" : string.Empty);
+            var url = $"{HelixSubscriptionUrl}?status={status}&after={cursor}";
 
             using var response = await SendHelixRequestAsync(HttpMethod.Get, url, null, cancellationToken);
 
@@ -91,7 +90,6 @@ public sealed class TwitchHelixClient(
         await _tokenLock.WaitAsync(cancellationToken);
         try
         {
-            // Refresh if missing or within 60 seconds of expiry
             if (_appAccessToken is not null && DateTime.UtcNow < _tokenExpiresAt.AddSeconds(-60))
                 return _appAccessToken;
 
@@ -210,7 +208,6 @@ public sealed class TwitchHelixClient(
                 continue;
             }
 
-            // On 401 Unauthorized, the token may have been invalidated - clear and retry
             if (response.StatusCode == HttpStatusCode.Unauthorized && attempt < maxRetryAttempts)
             {
                 logger.LogWarning("Received 401 from Twitch Helix API — clearing cached token and retrying.");

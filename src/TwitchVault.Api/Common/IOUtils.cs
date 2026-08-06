@@ -27,7 +27,6 @@ public static class IOUtils
             }
         }
 
-        // Final attempt without catching to let the exception bubble up if it still fails
         if (Directory.Exists(path))
             Directory.Delete(path, recursive: true);
     }

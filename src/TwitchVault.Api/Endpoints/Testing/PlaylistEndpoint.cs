@@ -4,7 +4,7 @@ using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
-public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, IStorageService fileSystem) : IAsyncDisposable
+public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, IFileSystem fileSystem) : IAsyncDisposable
 {
     private const string DefaultStreamId = "test-stream";
 
@@ -32,7 +32,7 @@ public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, I
     public string NextSegmentFileName(string streamId)
     {
         var next = _segmentCounters.AddOrUpdate(streamId, 1, (_, count) => count + 1);
-        return $"seg_{next}.ts";
+        return HlsSegmentNaming.FormatSegmentFileName(next, ".ts");
     }
 
     public async Task ResetAsync(string streamId)

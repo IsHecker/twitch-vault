@@ -4,8 +4,6 @@ namespace TwitchVault.Api.Recording.HLS;
 
 public sealed class SegmentStateTracker(SettingsService settingsService)
 {
-    private const string SegmentPrefix = "seg_";
-
     public float AccumulatedDuration { get; private set; }
     public string? CurrentFileName { get; private set; }
 
@@ -17,8 +15,8 @@ public sealed class SegmentStateTracker(SettingsService settingsService)
 
     private string StartNewSegment(string? lastFlushedFileName, string urlExtension)
     {
-        var nextIndex = GetNextSegmentNumber(lastFlushedFileName);
-        CurrentFileName = $"{SegmentPrefix}{nextIndex}{urlExtension}";
+        var nextIndex = HlsSegmentNaming.GetSegmentIndex(lastFlushedFileName) + 1;
+        CurrentFileName = HlsSegmentNaming.FormatSegmentFileName(nextIndex, urlExtension);
         AccumulatedDuration = 0f;
         return CurrentFileName;
     }
@@ -31,14 +29,5 @@ public sealed class SegmentStateTracker(SettingsService settingsService)
         CurrentFileName = null;
         AccumulatedDuration = 0f;
         return result;
-    }
-
-    private static int GetNextSegmentNumber(string? fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-            return 1;
-
-        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        return int.Parse(nameWithoutExtension[SegmentPrefix.Length..]) + 1;
     }
 }

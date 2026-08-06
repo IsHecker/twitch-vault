@@ -9,7 +9,7 @@ namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 public class HlsPlaylistTests
 {
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
-    private readonly IStorageService _fileSystem = Substitute.For<IStorageService>();
+    private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
     private readonly DateTime _testStartTime = new(2026, 7, 1, 12, 0, 0);
     private readonly MemoryStream _memoryStream = new();
 

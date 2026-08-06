@@ -23,5 +23,11 @@ public class MockTwitchEvents : IEndpoint
             await bus.PublishAsync(new ChannelUpdateEvent(channelId, title, categoryId));
             return Results.Ok($"Sent ChannelUpdateEvent: {title} | {categoryId}");
         });
+
+        group.MapPost("/clear-events", async (TwitchSubscriptionService service) =>
+        {
+            await service.ClearAllSubscriptionsAsync(default);
+            return Results.Ok();
+        });
     }
 }

@@ -11,32 +11,34 @@ using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.ChannelMonitor;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Endpoints.Testing;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchLib.EventSub.Webhooks.Core.Models;
-using Microsoft.AspNetCore.DataProtection;
+using TwitchVault.Api.Backblaze;
+using Amazon.S3;
+using Amazon.Runtime;
+using TwitchVault.Api.ChannelMonitor;
 
 namespace TwitchVault.Api.Configuration;
 
-public static class ServiceCollectionExtensions
+public static class DependencyInjection
 {
     public static IServiceCollection AddTwitchVaultServices(
         this IServiceCollection services,
         IConfiguration configuration)
     {
         services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.SectionName));
-        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 
         services.AddAuthenticationInternal(configuration);
+        services.AddBackblazeStorage(configuration);
 
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
         services.AddHttpClient("TwitchHelixClient");
         services.AddSingleton<TwitchHelixClient>();
 
         services.AddSingleton<IDateTimeProvider, EgyptTimeProvider>();
-        services.AddSingleton<IStorageService, PhysicalStorageService>();
+        services.AddSingleton<IFileSystem, PhysicalFileSystem>();
         services.AddSingleton<EventBus>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<IStreamService, StreamService>();
@@ -58,7 +60,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 
-        // EventSub webhook via TwitchLib
         services.AddOptions<TwitchLibEventSubOptions>()
             .Configure<SettingsService>((options, settingsService) =>
             {
@@ -72,6 +73,8 @@ public static class ServiceCollectionExtensions
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
+        services.ConfigureOptions<BackblazeUploadJobConfiguration>();
+        services.ConfigureOptions<LocalCleanupJobConfiguration>();
 
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
@@ -87,6 +90,7 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 
         services.AddSingleton<TokenGeneratorService>();
 
@@ -113,6 +117,30 @@ public static class ServiceCollectionExtensions
 
         services.AddAuthorizationBuilder()
             .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+
+        return services;
+    }
+
+    private static IServiceCollection AddBackblazeStorage(this IServiceCollection services, IConfiguration configuration)
+    {
+        var backblazeOptions = configuration.GetSection(BackblazeStorageOptions.SectionName).Get<BackblazeStorageOptions>()!;
+        services.Configure<BackblazeStorageOptions>(configuration.GetSection(BackblazeStorageOptions.SectionName));
+
+        services.AddSingleton<IAmazonS3>(sp =>
+        {
+            return new AmazonS3Client(
+                new BasicAWSCredentials(backblazeOptions.KeyId, backblazeOptions.ApplicationKey),
+                new AmazonS3Config
+                {
+                    ServiceURL = backblazeOptions.Host,
+                    AuthenticationRegion = backblazeOptions.AuthenticationRegion,
+                    ForcePathStyle = true
+                });
+        });
+
+        services.AddSingleton<BackblazeStorageService>();
+        services.AddSingleton<BackblazeUploadProgressService>();
+        services.AddSingleton<BackblazePlaylistRewriter>();
 
         return services;
     }

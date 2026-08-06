@@ -9,7 +9,7 @@ public class SettingsService
 {
     private readonly string _filePath;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private AppSettings _settings;
+    private readonly AppSettings _settings;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -45,13 +45,6 @@ public class SettingsService
 
             _settings.Twitch.ClientId = request.Twitch.ClientId;
             _settings.Twitch.Authorization = request.Twitch.Authorization;
-
-            _settings.ChannelMonitor.Enabled = request.ChannelMonitor.Enabled;
-            _settings.ChannelMonitor.RunIntervalInMinutes = request.ChannelMonitor.RunIntervalInMinutes;
-
-            _settings.TwitchWebhookHealthCheck.Enabled = request.TwitchWebhookHealthCheck.Enabled;
-            _settings.TwitchWebhookHealthCheck.RunIntervalInMinutes =
-                request.TwitchWebhookHealthCheck.RunIntervalInMinutes;
 
             Flush();
         }
