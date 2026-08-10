@@ -5,6 +5,7 @@ using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch.EventSub;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording;
 
@@ -25,6 +26,7 @@ public sealed class StreamRecorder : IStreamRecorder
     private readonly IHlsPlaylist _hlsPlaylist;
     private readonly IStreamRepository _streamRepository;
     private readonly IStreamFinalizer _finalizer;
+    private readonly IOptions<PathsOptions> pathsOptions;
     private readonly AppSettings _settings;
     private readonly EventBus _eventBus;
     private readonly ILogger<StreamRecorder> _logger;
@@ -40,6 +42,7 @@ public sealed class StreamRecorder : IStreamRecorder
         IStreamRepository streamRepository,
         IStreamFinalizer finalizer,
         SettingsService settingsService,
+        IOptions<PathsOptions> pathsOptions,
         EventBus eventBus,
         IDateTimeProvider dateTimeProvider,
         ILogger<StreamRecorder> logger,
@@ -50,6 +53,7 @@ public sealed class StreamRecorder : IStreamRecorder
         _thumbnailManager = thumbnailManager;
         _streamRepository = streamRepository;
         _finalizer = finalizer;
+        this.pathsOptions = pathsOptions;
         _settings = settingsService.Settings;
         _hlsPlaylist = hlsPlaylist;
         _eventBus = eventBus;
@@ -189,7 +193,7 @@ public sealed class StreamRecorder : IStreamRecorder
     }
 
     private string FormatSegmentUrl(string segmentName) =>
-        $"/hls/{_stream.TwitchStreamId}/segments/{segmentName}";
+        $"{pathsOptions.Value.BaseUrl}/hls/{_stream.TwitchStreamId}/segments/{segmentName}";
 
     private void SetEndReason(SessionEndReason reason) =>
         Interlocked.CompareExchange(ref _finalizeReason, reason, null);

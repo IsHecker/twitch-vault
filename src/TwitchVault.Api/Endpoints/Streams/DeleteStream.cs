@@ -12,13 +12,6 @@ public class DeleteStream : IEndpoint
             IStreamService streamService,
             RecordingOrchestrator controller) =>
         {
-            var stream = await repo.GetByIdAsync(id);
-            if (stream is null)
-                return Results.NotFound();
-
-            if (stream.Status == StreamStatus.Recording)
-                return Results.BadRequest("Cannot delete a stream that is still recording or finishing. Stop it first.");
-
             await streamService.DeleteStreamAsync(id);
             return Results.NoContent();
         })

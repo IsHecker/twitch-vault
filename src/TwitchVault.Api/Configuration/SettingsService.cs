@@ -46,6 +46,21 @@ public class SettingsService
             _settings.Twitch.ClientId = request.Twitch.ClientId;
             _settings.Twitch.Authorization = request.Twitch.Authorization;
 
+            _settings.BackgroundJobs[JobOptions.ChannelMonitor].Enabled =
+                request.BackgroundJobs[JobOptions.ChannelMonitor].Enabled;
+            _settings.BackgroundJobs[JobOptions.ChannelMonitor].RunIntervalInMinutes =
+                request.BackgroundJobs[JobOptions.ChannelMonitor].RunIntervalInMinutes;
+
+            _settings.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].Enabled =
+                request.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].Enabled;
+            _settings.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].RunIntervalInMinutes =
+                request.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].RunIntervalInMinutes;
+
+            _settings.BackgroundJobs[JobOptions.DiscordUpload].Enabled =
+                request.BackgroundJobs[JobOptions.DiscordUpload].Enabled;
+            _settings.BackgroundJobs[JobOptions.DiscordUpload].RunIntervalInMinutes =
+                request.BackgroundJobs[JobOptions.DiscordUpload].RunIntervalInMinutes;
+
             Flush();
         }
         finally

@@ -17,7 +17,7 @@ public sealed class ChannelMonitorJob(
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.BackgroundJobs["ChannelMonitor"].Enabled)
+        if (!settingsService.Settings.BackgroundJobs[JobOptions.ChannelMonitor].Enabled)
             return;
 
         try

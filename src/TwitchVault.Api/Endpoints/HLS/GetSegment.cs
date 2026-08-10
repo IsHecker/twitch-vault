@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using TwitchVault.Api.Backblaze;
 using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.HLS;
@@ -12,7 +11,6 @@ public class GetSegment : IEndpoint
             string segmentName,
             [FromQuery] bool? audioOnly,
             IStreamRepository streamRepo,
-            BackblazeStorageService backblazeStorage,
             IWebHostEnvironment env) =>
         {
             var stream = await streamRepo.GetByIdAsync(streamId);

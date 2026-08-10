@@ -27,6 +27,7 @@ public class StreamRecorderTests
     private readonly IHlsPlaylist _hlsPlaylist = Substitute.For<IHlsPlaylist>();
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly IStreamFinalizer _finalizer = Substitute.For<IStreamFinalizer>();
+    private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
     private readonly EventBus _eventBus;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<StreamRecorder> _logger = Substitute.For<ILogger<StreamRecorder>>();
@@ -37,9 +38,8 @@ public class StreamRecorderTests
 
     public StreamRecorderTests()
     {
-        var pathsOptions = Substitute.For<IOptions<PathsOptions>>();
-        pathsOptions.Value.Returns(new PathsOptions { Settings = "non_existent_file.json" });
-        _settingsService = new SettingsService(pathsOptions);
+        _pathsOptions.Value.Returns(new PathsOptions { Settings = "non_existent_file.json" });
+        _settingsService = new SettingsService(_pathsOptions);
         _settingsService.Settings.Vault.MaxConsecutiveEmptyPolls = 3;
 
         _eventBus = new EventBus(Substitute.For<ILogger<EventBus>>());
@@ -66,10 +66,15 @@ public class StreamRecorderTests
             _streamRepository,
             _finalizer,
             _settingsService,
+            _pathsOptions,
             _eventBus,
             _dateTimeProvider,
             _logger,
             parentToken);
+
+
+    private string FormatSegmentUrl(string segmentName) =>
+        $"{_pathsOptions.Value.BaseUrl}/hls/{_stream.TwitchStreamId}/segments/{segmentName}";
 
     private static async IAsyncEnumerable<(string FileName, float Duration)> Segments(
         params (string FileName, float Duration)[] items)
@@ -203,7 +208,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_5.ts", 12.3f, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).AddSegmentAsync(FormatSegmentUrl("seg_5.ts"), 12.3f, Arg.Any<CancellationToken>());
         await _hlsPlaylist.Received(1).AddDiscontinuityAsync(Arg.Any<CancellationToken>());
     }
 
@@ -240,7 +245,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.Received(1).SetInitSegmentAsync("init.mp4", Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).SetInitSegmentAsync(FormatSegmentUrl("init.mp4"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -259,7 +264,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_1.ts", 6f, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).AddSegmentAsync(FormatSegmentUrl("seg_1.ts"), 6f, Arg.Any<CancellationToken>());
         await _hlsPlaylist.DidNotReceive().SetInitSegmentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 

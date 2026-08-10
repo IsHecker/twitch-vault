@@ -1,4 +1,3 @@
-using TwitchVault.Api.Backblaze;
 using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.HLS;
@@ -9,7 +8,6 @@ public class GetPlaylist : IEndpoint
         app.MapGet("/hls/{streamId}/playlist.m3u8", async (
             string streamId,
             IStreamRepository streamRepo,
-            BackblazePlaylistRewriter playlistRewriter,
             IWebHostEnvironment env) =>
         {
             var stream = await streamRepo.GetByIdAsync(streamId);
@@ -21,12 +19,7 @@ public class GetPlaylist : IEndpoint
             if (!File.Exists(playlistPath))
                 return Results.NotFound();
 
-            if (stream.Storage != Domain.StorageLocation.Remote)
-                return Results.File(playlistPath, "application/vnd.apple.mpegurl");
-
-            var rewritten = await playlistRewriter.RewriteAsync(playlistPath, stream.Folder.RelativePath);
-
-            return Results.Content(rewritten, "application/vnd.apple.mpegurl");
+            return Results.File(playlistPath, "application/vnd.apple.mpegurl");
         })
         .WithName(nameof(GetPlaylist))
         .WithTags("HLS")

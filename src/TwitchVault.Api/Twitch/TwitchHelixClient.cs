@@ -42,7 +42,7 @@ public sealed class TwitchHelixClient(
         {
             var url = $"{HelixSubscriptionUrl}?status={status}&after={cursor}";
 
-            using var response = await SendHelixRequestAsync(HttpMethod.Get, url, null, cancellationToken);
+            using var response = await SendRequestAsync(HttpMethod.Get, url, null, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
                 yield break;
@@ -76,13 +76,13 @@ public sealed class TwitchHelixClient(
             transport = new { method = "webhook", callback = WebhookUrl, secret = WebhookSecret }
         };
 
-        return SendHelixRequestAsync(HttpMethod.Post, HelixSubscriptionUrl, payload, cancellationToken);
+        return SendRequestAsync(HttpMethod.Post, HelixSubscriptionUrl, payload, cancellationToken);
     }
 
     public Task<HttpResponseMessage> DeleteEventSubSubscriptionAsync(string id, CancellationToken cancellationToken)
     {
         string url = $"{HelixSubscriptionUrl}?id={id}";
-        return SendHelixRequestAsync(HttpMethod.Delete, url, null, cancellationToken);
+        return SendRequestAsync(HttpMethod.Delete, url, null, cancellationToken);
     }
 
     private async Task<string> GetAppAccessTokenAsync(CancellationToken cancellationToken)
@@ -151,10 +151,12 @@ public sealed class TwitchHelixClient(
 
         lock (_rateLimitLock)
         {
-            if (!_rateLimitRemaining.HasValue || _rateLimitRemaining > 0)
+            if (!_rateLimitRemaining.HasValue)
+                return;
+
+            if (_rateLimitRemaining > 0)
             {
-                if (_rateLimitRemaining.HasValue)
-                    _rateLimitRemaining--;
+                _rateLimitRemaining--;
                 return;
             }
 
@@ -174,7 +176,7 @@ public sealed class TwitchHelixClient(
         }
     }
 
-    private async Task<HttpResponseMessage> SendHelixRequestAsync(
+    private async Task<HttpResponseMessage> SendRequestAsync(
         HttpMethod method,
         string url,
         object? body = null,

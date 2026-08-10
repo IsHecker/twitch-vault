@@ -3,9 +3,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 
-namespace TwitchVault.Api.Backblaze;
+namespace TwitchVault.Api.Discord;
 
-public sealed class BackblazeUploadProgressService
+public sealed class UploadProgressService
 {
     private readonly string _filePath;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -17,7 +17,7 @@ public sealed class BackblazeUploadProgressService
         PropertyNameCaseInsensitive = true
     };
 
-    public BackblazeUploadProgressService(
+    public UploadProgressService(
         IWebHostEnvironment env,
         IOptions<PathsOptions> pathsOptions)
     {

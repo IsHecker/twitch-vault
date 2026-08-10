@@ -15,9 +15,7 @@ using TwitchVault.Api.Common;
 using TwitchVault.Api.Endpoints.Testing;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchLib.EventSub.Webhooks.Core.Models;
-using TwitchVault.Api.Backblaze;
-using Amazon.S3;
-using Amazon.Runtime;
+using TwitchVault.Api.Discord;
 using TwitchVault.Api.ChannelMonitor;
 
 namespace TwitchVault.Api.Configuration;
@@ -31,7 +29,7 @@ public static class DependencyInjection
         services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.SectionName));
 
         services.AddAuthenticationInternal(configuration);
-        services.AddBackblazeStorage(configuration);
+        services.AddDiscordStorage(configuration);
 
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
         services.AddHttpClient("TwitchHelixClient");
@@ -73,8 +71,7 @@ public static class DependencyInjection
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
-        services.ConfigureOptions<BackblazeUploadJobConfiguration>();
-        services.ConfigureOptions<LocalCleanupJobConfiguration>();
+        // services.ConfigureOptions<LocalCleanupJobConfiguration>();
 
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
@@ -121,26 +118,15 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddBackblazeStorage(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddDiscordStorage(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        var backblazeOptions = configuration.GetSection(BackblazeStorageOptions.SectionName).Get<BackblazeStorageOptions>()!;
-        services.Configure<BackblazeStorageOptions>(configuration.GetSection(BackblazeStorageOptions.SectionName));
+        services.Configure<DiscordOptions>(configuration.GetSection(DiscordOptions.SectionName));
+        services.ConfigureOptions<DiscordUploadJobConfiguration>();
 
-        services.AddSingleton<IAmazonS3>(sp =>
-        {
-            return new AmazonS3Client(
-                new BasicAWSCredentials(backblazeOptions.KeyId, backblazeOptions.ApplicationKey),
-                new AmazonS3Config
-                {
-                    ServiceURL = backblazeOptions.Host,
-                    AuthenticationRegion = backblazeOptions.AuthenticationRegion,
-                    ForcePathStyle = true
-                });
-        });
-
-        services.AddSingleton<BackblazeStorageService>();
-        services.AddSingleton<BackblazeUploadProgressService>();
-        services.AddSingleton<BackblazePlaylistRewriter>();
+        services.AddHttpClient<DiscordClient>();
+        services.AddSingleton<UploadProgressService>();
 
         return services;
     }

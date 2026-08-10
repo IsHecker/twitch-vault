@@ -15,7 +15,6 @@ namespace TwitchVault.Api.Tests.Unit.Recording;
 public class StreamServiceTests
 {
     private readonly StreamService _sut;
-    private readonly IChannelRepository _channelRepository = Substitute.For<IChannelRepository>();
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
@@ -24,7 +23,7 @@ public class StreamServiceTests
     public StreamServiceTests()
     {
         _pathsOptions.Value.Returns(new PathsOptions { Streams = "Streams" });
-        _sut = new StreamService(_channelRepository, _streamRepository, _dateTimeProvider, _pathsOptions, _logger);
+        _sut = new StreamService(_streamRepository, _dateTimeProvider, _pathsOptions, _logger);
     }
 
     [Fact]
@@ -54,7 +53,6 @@ public class StreamServiceTests
         };
 
         _streamRepository.GetByIdAsync(streamId).Returns(stream);
-        _channelRepository.GetByIdAsync("channel-1").Returns(new Channel { Id = "channel-1", Name = "testchannel" });
 
         // Act
         var act = () => _sut.DeleteStreamAsync(streamId);

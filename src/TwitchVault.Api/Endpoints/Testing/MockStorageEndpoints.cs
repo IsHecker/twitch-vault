@@ -1,4 +1,4 @@
-using TwitchVault.Api.Backblaze;
+using TwitchVault.Api.Discord;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
@@ -10,40 +10,11 @@ public class MockStorageEndpoints : IEndpoint
             .WithTags("Testing");
 
         group.MapPost("/upload-file", async (
-            string localPath,
+            string[] localPaths,
             string objectKey,
-            BackblazeStorageService storage) =>
+            DiscordClient client) =>
         {
-            await storage.UploadFileAsync(localPath, objectKey);
-
-            return Results.Ok();
-        });
-
-        group.MapPost("/upload-test", async (
-            BackblazeStorageService storage) =>
-        {
-            var tempFile = Path.GetTempFileName();
-
-            await File.WriteAllTextAsync(tempFile, "Hello Backblaze!");
-
-            await storage.UploadFileAsync(
-                tempFile,
-                $"testing/{Guid.NewGuid()}.txt");
-
-            File.Delete(tempFile);
-
-            return Results.Ok();
-        });
-
-        group.MapGet("/presigned-url", (
-            string objectKey,
-            BackblazeStorageService storage) =>
-        {
-            var url = storage.GetPreSignedUrl(
-                objectKey,
-                TimeSpan.FromMinutes(30));
-
-            return Results.Ok(url);
+            return Results.Ok(await client.UploadAsync(localPaths));
         });
     }
 }

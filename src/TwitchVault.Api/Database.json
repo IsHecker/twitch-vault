@@ -4,9 +4,9 @@
       "Id": "54507525",
       "Name": "pisty",
       "QualityRank": 2,
-      "IsLive": true,
+      "IsLive": false,
       "ShouldRecord": true,
-      "LastStreamedAt": "2026-08-06T19:01:07"
+      "LastStreamedAt": "2026-08-08T00:45:22"
     },
     {
       "Id": "1131131080",
@@ -75,68 +75,24 @@
   ],
   "Streams": [
     {
-      "TwitchStreamId": "320488618073",
+      "TwitchStreamId": "320192460633",
       "ChannelId": "54507525",
       "Folder": {
         "RelativePath": "Streams\\pisty\\2026-07-24 23-13-46",
         "ThumbnailPath": "Streams/pisty/2026-07-24 23-13-46/thumbnail.jpg"
       },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-24%2023-13-46/thumbnail.jpg",
+      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-08%2022-54-01/thumbnail.jpg",
       "Status": "Finished",
       "Storage": "Both",
       "MarkForDeletion": false,
-      "StartedAt": "2026-07-25T00:13:46.9407098",
-      "FinishedAt": "2026-07-25T02:16:42.1186317",
+      "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
+      "FinishedAt": "2026-07-09T00:18:00.9095278+03:00",
       "Chapters": [
         {
-          "Title": "دردشة مع المتابعين و روقان",
-          "CategoryId": "509658",
-          "StartedAt": "2026-07-25T00:13:46.9407098",
-          "FinishedAt": "2026-07-25T02:16:42.1186317"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "7864886183",
-      "ChannelId": "153423171",
-      "Folder": {
-        "RelativePath": "Streams\\vnnh_\\2026-07-21 04-22-32",
-        "ThumbnailPath": "Streams/vnnh_/2026-07-21 04-22-32/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-24%2023-13-46/thumbnail.jpg",
-      "Status": "Finished",
-      "Storage": "Remote",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-25T00:13:46.9407098",
-      "FinishedAt": "2026-07-25T02:16:42.1186317",
-      "Chapters": [
-        {
-          "Title": "Test stream",
-          "CategoryId": "509658",
-          "StartedAt": "2026-07-25T00:13:46.9407098",
-          "FinishedAt": "2026-07-25T02:16:42.1186317"
-        }
-      ]
-    },
-    {
-      "TwitchStreamId": "320892180315",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-06 19-37-08",
-        "ThumbnailPath": "Streams/pisty/2026-08-06 19-37-08/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://localhost:7144/Streams/pisty/2026-08-06%2019-37-08/thumbnail.jpg",
-      "Status": "Recording",
-      "Storage": "Local",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-08-06T19:01:07",
-      "FinishedAt": null,
-      "Chapters": [
-        {
-          "Title": "!Marvel !رابط | و اخيراً نزلت! | MARVEL Tōkon: Fighting Souls | #ad",
-          "CategoryId": "630009802",
-          "StartedAt": "2026-08-06T19:01:07",
-          "FinishedAt": null
+          "Title": "هوبلالا",
+          "CategoryId": null,
+          "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
+          "FinishedAt": "2026-07-09T00:18:00.9095278+03:00"
         }
       ]
     }
@@ -148,6 +104,13 @@
       "Password": "password",
       "IsAdmin": true,
       "CreatedAt": "2026-08-02T17:18:07.2833315+03:00"
+    },
+    {
+      "Id": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
+      "Username": "ypro",
+      "Password": "YPRO1368=yasser",
+      "IsAdmin": false,
+      "CreatedAt": "2026-08-03T00:43:50.9834605"
     }
   ],
   "UserChannels": [
@@ -185,6 +148,16 @@
       "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
       "ChannelId": "634207529",
       "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
+    },
+    {
+      "UserId": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
+      "ChannelId": "451544676",
+      "AddedAt": "2026-08-02T21:46:38.3443403Z"
+    },
+    {
+      "UserId": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
+      "ChannelId": "38632829",
+      "AddedAt": "2026-08-02T21:50:01.6192844Z"
     }
   ]
 }

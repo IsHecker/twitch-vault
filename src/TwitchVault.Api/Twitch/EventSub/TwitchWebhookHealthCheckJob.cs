@@ -1,5 +1,6 @@
 using Quartz;
 using TwitchVault.Api.Configuration;
+using TwitchVault.Api.Domain;
 
 namespace TwitchVault.Api.Twitch.EventSub;
 
@@ -21,7 +22,7 @@ public sealed class TwitchWebhookHealthCheckJob(
 
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.BackgroundJobs["TwitchWebhookHealthCheck"].Enabled)
+        if (!settingsService.Settings.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].Enabled)
             return;
 
         var cancellationToken = context.CancellationToken;

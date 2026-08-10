@@ -17,11 +17,7 @@ public static class IOUtils
                 Directory.Delete(path, recursive: true);
                 return;
             }
-            catch (IOException) when (i < MaxRetries - 1)
-            {
-                await Task.Delay(DelayMs);
-            }
-            catch (UnauthorizedAccessException) when (i < MaxRetries - 1)
+            catch (Exception) when (i < MaxRetries - 1)
             {
                 await Task.Delay(DelayMs);
             }

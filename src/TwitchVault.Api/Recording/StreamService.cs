@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
@@ -10,12 +11,11 @@ namespace TwitchVault.Api.Recording;
 public interface IStreamService
 {
     Task<Domain.Stream> CreateAsync(Channel channel, StreamMetadata metadata);
-    Task DeleteStreamAsync(string twitchStreamId);
+    Task<Result> DeleteStreamAsync(string twitchStreamId);
     Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null);
 }
 
 public class StreamService(
-    IChannelRepository channelRepository,
     IStreamRepository streamRepository,
     IDateTimeProvider dateTimeProvider,
     IOptions<PathsOptions> pathsOptions,
@@ -39,19 +39,22 @@ public class StreamService(
         return stream;
     }
 
-    public async Task DeleteStreamAsync(string twitchStreamId)
+    public async Task<Result> DeleteStreamAsync(string twitchStreamId)
     {
         var stream = await streamRepository.GetByIdAsync(twitchStreamId);
         if (stream == null)
-            return;
+            return Error.NotFound();
+
+        if (stream.Status == StreamStatus.Recording)
+            return Error.Validation("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
         await IOUtils.DeleteDirectoryWithRetriesAsync(stream.Folder.RelativePath);
         await streamRepository.DeleteAsync(twitchStreamId);
 
-        var channel = await channelRepository.GetByIdAsync(stream.ChannelId);
-        using var ctx = logger.BeginScope("{Channel}", channel?.Name ?? "Unknown");
         var title = stream.Chapters.FirstOrDefault()?.Title ?? stream.TwitchStreamId;
         logger.LogInformation("Storage: Removed stream {Title}.", title);
+
+        return Result.Success;
     }
 
     public async Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null)

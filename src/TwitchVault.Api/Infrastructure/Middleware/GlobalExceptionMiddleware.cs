@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
-namespace TwitchVault.Api.Infrastructure.Middleware;
 
+namespace TwitchVault.Api.Infrastructure.Middleware;
 
 public sealed class GlobalExceptionMiddleware(
     RequestDelegate next,
