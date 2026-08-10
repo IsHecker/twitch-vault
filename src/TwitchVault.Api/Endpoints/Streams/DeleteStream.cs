@@ -1,4 +1,3 @@
-using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 namespace TwitchVault.Api.Endpoints.Streams;

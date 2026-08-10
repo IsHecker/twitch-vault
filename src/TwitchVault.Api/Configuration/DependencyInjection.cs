@@ -17,6 +17,9 @@ using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchVault.Api.Discord;
 using TwitchVault.Api.ChannelMonitor;
+using TwitchVault.Api.CloudStorage;
+using TwitchVault.Api.CloudStorage.Providers;
+using TwitchVault.Api.CloudStorage.Jobs;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -29,7 +32,7 @@ public static class DependencyInjection
         services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.SectionName));
 
         services.AddAuthenticationInternal(configuration);
-        services.AddDiscordStorage(configuration);
+        services.AddCloudStorage(configuration);
 
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
         services.AddHttpClient("TwitchHelixClient");
@@ -67,11 +70,11 @@ public static class DependencyInjection
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        services.AddHostedService<TwitchWebhookStartupService>();
+        // services.AddHostedService<TwitchWebhookStartupService>();
 
         services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
-        // services.ConfigureOptions<LocalCleanupJobConfiguration>();
+        // services.ConfigureOptions<StorageCleanupJobConfiguration>();
 
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
@@ -118,15 +121,26 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddDiscordStorage(
+    private static IServiceCollection AddCloudStorage(
         this IServiceCollection services,
         IConfiguration configuration)
     {
         services.Configure<DiscordOptions>(configuration.GetSection(DiscordOptions.SectionName));
-        services.ConfigureOptions<DiscordUploadJobConfiguration>();
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
+        services.ConfigureOptions<StorageUploadJobConfiguration>();
+        // services.ConfigureOptions<DiscordUploadJobConfiguration>();
 
         services.AddHttpClient<DiscordClient>();
         services.AddSingleton<UploadProgressService>();
+
+        // Register multi-provider storage infrastructure
+        services.AddSingleton<StreamLockRegistry>();
+        services.AddSingleton<ICloudStorageProvider, DiscordStorageProvider>();
+        services.AddSingleton<ICloudStorageProvider, DropboxStorageProvider>();
+
+        services.AddSingleton<StorageProviderRegistry>();
+        services.AddSingleton<IInstanceSelector, LeastLoadedInstanceSelector>();
+        services.AddSingleton<UniversalPlaylistRewriter>();
 
         return services;
     }

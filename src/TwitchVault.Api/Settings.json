@@ -20,7 +20,7 @@
       "RunIntervalInMinutes": 1
     },
     "DiscordUpload": {
-      "Enabled": true,
+      "Enabled": false,
       "RunIntervalInMinutes": 1
     }
   }

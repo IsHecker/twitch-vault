@@ -48,11 +48,20 @@ public class StreamService(
         if (stream.Status == StreamStatus.Recording)
             return Error.Validation("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
+        // TODO: should delete from local and remote if storage location is both
+        if (stream.Storage == StorageLocation.Remote || stream.Storage == StorageLocation.Both || !string.IsNullOrEmpty(stream.StorageInstanceId))
+        {
+            stream.SetStatus(StreamStatus.PendingDeletion);
+            await streamRepository.UpdateAsync(stream);
+            logger.LogInformation("Storage: Queued stream {StreamId} for background deletion.", twitchStreamId);
+            return Result.Success;
+        }
+
         await IOUtils.DeleteDirectoryWithRetriesAsync(stream.Folder.RelativePath);
         await streamRepository.DeleteAsync(twitchStreamId);
 
         var title = stream.Chapters.FirstOrDefault()?.Title ?? stream.TwitchStreamId;
-        logger.LogInformation("Storage: Removed stream {Title}.", title);
+        logger.LogInformation("Storage: Removed local stream {Title}.", title);
 
         return Result.Success;
     }

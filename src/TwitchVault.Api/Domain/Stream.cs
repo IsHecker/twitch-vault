@@ -7,7 +7,9 @@ public enum StreamStatus
     Recording,
     Finished,
     Interrupted,
-    Stopped
+    Stopped,
+    PendingDeletion,
+    Deleting
 }
 
 public enum StorageLocation
@@ -27,6 +29,12 @@ public sealed class Stream
     public string ThumbnailUrl { get; private set; } = null!;
     public StreamStatus Status { get; private set; } = StreamStatus.Recording;
     public StorageLocation Storage { get; private set; } = StorageLocation.Local;
+    
+    /// <summary>
+    /// Assigned storage instance ID (e.g. "discord-main", "dropbox-acc1", "s3-backup")
+    /// </summary>
+    public string? StorageInstanceId { get; set; }
+    
     public bool MarkForDeletion { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; private set; }
@@ -36,6 +44,8 @@ public sealed class Stream
     [JsonIgnore]
     [System.Text.Json.Serialization.JsonIgnore]
     public Chapter CurrentChapter => Chapters.LastOrDefault()!;
+
+    public void SetStatus(StreamStatus status) => Status = status;
 
     public void MarkAsFinished(DateTime finishedAt)
     {

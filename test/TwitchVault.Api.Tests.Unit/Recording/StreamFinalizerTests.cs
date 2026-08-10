@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
@@ -165,7 +166,7 @@ public class StreamFinalizerTests
         var stream = CreateStream();
         stream.MarkForDeletion = true;
         _streamService.DeleteStreamAsync(stream.TwitchStreamId)
-            .Returns(Task.FromException(new Exception("cannot delete")));
+            .Returns(Task.FromException<Result>(new Exception("cannot delete")));
         var sut = CreateSut();
 
         // Act

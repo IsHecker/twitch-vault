@@ -74,7 +74,35 @@ public sealed class DiscordClient(
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"{MessagesUrl}/{messageId}");
         request.Headers.Authorization = new AuthenticationHeaderValue(_options.UserToken);
-        return await SendRequestAsync(request, cancellationToken);
+
+        var response = await SendRequestAsync(request, cancellationToken);
+
+        if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
+            return Result.Success;
+
+        return response;
+    }
+
+    public async Task<Result> BulkDeleteMessagesAsync(IEnumerable<string> messageIds, CancellationToken cancellationToken)
+    {
+        var idList = messageIds.Distinct().ToList();
+        if (idList.Count == 0)
+            return Result.Success;
+
+        if (idList.Count == 1)
+            return await DeleteAsync(idList[0], cancellationToken);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
+        request.Headers.Authorization = new AuthenticationHeaderValue(_options.UserToken);
+
+        request.Content = JsonContent.Create(new { messages = idList });
+
+        var response = await SendRequestAsync(request, cancellationToken);
+
+        if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
+            return Result.Success;
+
+        return response;
     }
 
     private async Task<Result<HttpResponseMessage>> SendRequestAsync(

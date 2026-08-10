@@ -53,6 +53,7 @@ public class StreamServiceTests
         };
 
         _streamRepository.GetByIdAsync(streamId).Returns(stream);
+        stream.MarkAsFinished(DateTime.UtcNow);
 
         // Act
         var act = () => _sut.DeleteStreamAsync(streamId);
