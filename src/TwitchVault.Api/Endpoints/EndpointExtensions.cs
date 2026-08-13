@@ -13,6 +13,7 @@ public static class EndpointExtensions
                         && type.ImplementedInterfaces.Contains(typeof(IEndpoint)))
             .Select(type => ServiceDescriptor.Transient(typeof(IEndpoint), type))
             .ToArray();
+
         services.TryAddEnumerable(descriptors);
         return services;
     }
@@ -24,9 +25,11 @@ public static class EndpointExtensions
         IEndpointRouteBuilder builder = routeGroupBuilder is not null
             ? routeGroupBuilder
             : app;
+
         var endpoints = app.Services.GetRequiredService<IEnumerable<IEndpoint>>();
         foreach (var endpoint in endpoints)
             endpoint.MapEndpoint(builder);
+
         return app;
     }
 }

@@ -19,8 +19,8 @@
       "Enabled": false,
       "RunIntervalInMinutes": 1
     },
-    "DiscordUpload": {
-      "Enabled": false,
+    "StorageUpload": {
+      "Enabled": true,
       "RunIntervalInMinutes": 1
     }
   }

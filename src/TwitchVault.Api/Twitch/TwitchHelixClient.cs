@@ -94,7 +94,7 @@ public sealed class TwitchHelixClient(
                 return _appAccessToken;
 
             logger.LogInformation("Fetching new Twitch app access token");
-            var client = httpClientFactory.CreateClient("TwitchHelixClient");
+            var client = httpClientFactory.CreateClient();
 
             using var request = new HttpRequestMessage(HttpMethod.Post, TokenUrl);
             request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -185,7 +185,7 @@ public sealed class TwitchHelixClient(
         const int maxRetryAttempts = 3;
         HttpResponseMessage response = null!;
 
-        var client = httpClientFactory.CreateClient("TwitchHelixClient");
+        var client = httpClientFactory.CreateClient();
 
         for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
         {

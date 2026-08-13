@@ -1,22 +1,17 @@
-using TwitchVault.Api.CloudStorage.Providers;
 using TwitchVault.Api.Common.Results;
 
 namespace TwitchVault.Api.CloudStorage;
 
 public interface ICloudStorageProvider
 {
-    CloudProviderType ProviderType { get; }
-    string ProviderInstanceId { get; }
-    StorageCapabilities Capabilities { get; }
+    StorageInstanceOptions Options { get; }
 
-    void Initialize(string instanceId, Dictionary<string, string> settings);
+    // Task<Result> UploadAsync(Stream data, LocalSegment segment, CancellationToken cancellationToken);
 
-    Task<Result<UploadBatchResult>> UploadBatchAsync(
-        string[] localFilePaths,
+    Task<Result<IEnumerable<string>>> UploadAsync(
+        IEnumerable<Stream> dataStreams,
+        IEnumerable<LocalSegment> segments,
         CancellationToken cancellationToken);
 
-    Task<Result> DeleteStreamDataAsync(
-        string? localPlaylistPath,
-        object? deletionProgress,
-        CancellationToken cancellationToken);
+    Task<Result> DeleteBatchAsync(Domain.Stream stream, string playlistContent, CancellationToken cancellationToken);
 }

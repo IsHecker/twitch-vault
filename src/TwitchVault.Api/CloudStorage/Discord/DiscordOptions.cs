@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Discord;
+namespace TwitchVault.Api.CloudStorage.Discord;
 
 public sealed class DiscordOptions
 {

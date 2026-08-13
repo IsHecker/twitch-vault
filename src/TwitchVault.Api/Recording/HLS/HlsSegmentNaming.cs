@@ -8,22 +8,22 @@ public static class HlsSegmentNaming
     public static string FormatSegmentFileName(int index, string extension) =>
         $"{SegmentPrefix}{index}{extension}";
 
-    public static bool IsSegmentFile(string? fileNameOrPath)
+    public static bool IsSegmentFile(string? filePath)
     {
-        if (string.IsNullOrWhiteSpace(fileNameOrPath))
+        if (string.IsNullOrWhiteSpace(filePath))
             return false;
 
-        var fileName = Path.GetFileName(fileNameOrPath);
+        var fileName = Path.GetFileName(filePath);
         return fileName.StartsWith(SegmentPrefix, StringComparison.OrdinalIgnoreCase) ||
                fileName.StartsWith(InitPrefix, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static int GetSegmentIndex(string? fileNameOrPath)
+    public static int GetSegmentIndex(string? filePath)
     {
-        if (string.IsNullOrWhiteSpace(fileNameOrPath))
+        if (string.IsNullOrWhiteSpace(filePath))
             return 0;
 
-        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileNameOrPath);
+        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
         if (fileNameWithoutExt.StartsWith(InitPrefix, StringComparison.OrdinalIgnoreCase))
             return 0;
 

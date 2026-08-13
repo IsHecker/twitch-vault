@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.CloudStorage.Providers;
+namespace TwitchVault.Api.CloudStorage;
 
 public enum CloudProviderType
 {

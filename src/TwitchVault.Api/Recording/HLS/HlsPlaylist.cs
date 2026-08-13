@@ -170,12 +170,12 @@ public sealed class HlsPlaylist : IHlsPlaylist
         var header = new StringBuilder()
             .Append(HlsTags.ExtM3U).AppendLine()
             .Append(HlsTags.Version(6)).AppendLine()
-            .Append($"{HlsTags.TargetDurationPrefix}:{targetDurationValue}").AppendLine()
+            .Append(HlsTags.TargetDuration(targetDurationValue)).AppendLine()
             .Append(HlsTags.StartTime(_startTime)).AppendLine()
             .Append(HlsTags.PlaylistTypeEvent).AppendLine()
             .Append(HlsTags.MediaSequence(1)).AppendLine()
-            .Append($"{HlsTags.TwitchMediaSequencePrefix}:{mediaSequenceValue}").AppendLine()
-            .Append($"{HlsTags.TotalSecondsPrefix}:{totalSecondsValue}").AppendLine()
+            .Append(HlsTags.TwitchMediaSequence(mediaSequenceValue)).AppendLine()
+            .Append(HlsTags.TotalSeconds(totalSecondsValue)).AppendLine()
             .ToString();
 
         _fileStream.Position = 0;

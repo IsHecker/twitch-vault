@@ -1,18 +1,37 @@
-using TwitchVault.Api.CloudStorage.Providers;
-
 namespace TwitchVault.Api.CloudStorage;
 
-public sealed class StorageInstanceConfig
-{
-    public string Id { get; init; } = null!;
-    public CloudProviderType Type { get; init; }
-    public Dictionary<string, string> Settings { get; init; } = new(StringComparer.OrdinalIgnoreCase);
-}
-
-public sealed class StorageOptions
+public class StorageOptions
 {
     public const string SectionName = "Storage";
-    public string DefaultInstanceId { get; init; } = null!;
-    public List<string> EnabledInstances { get; init; } = [];
-    public List<StorageInstanceConfig> Instances { get; init; } = [];
+    public List<StorageInstanceOptions> Instances { get; init; } = [];
+}
+
+public class StorageInstanceOptions
+{
+    public string Name { get; init; } = string.Empty;
+    public CloudProviderType Provider { get; init; }
+    public bool Enabled { get; init; }
+    public StorageCredentialsOptions Credentials { get; init; } = new();
+    public StorageBehaviorOptions Behavior { get; init; } = new();
+}
+
+public class StorageCredentialsOptions
+{
+    public string? AccessToken { get; init; }
+    public string? ClientId { get; init; }
+    public string? ClientSecret { get; init; }
+    public string? RefreshToken { get; init; }
+    public string? TenantId { get; init; }
+}
+
+public class StorageBehaviorOptions
+{
+    public long? CapacityBytes { get; init; }
+    public int ChunkSizeMB { get; init; }
+    public int MaxBatchSize { get; init; }
+    public long MaxFileSizeBytes { get; init; }
+    public int MaxConcurrentUploads { get; init; }
+    public int RequestTimeoutSeconds { get; init; }
+    public string? SharedLinkVisibility { get; init; }
+    public bool AllowReuse { get; init; } = true;
 }

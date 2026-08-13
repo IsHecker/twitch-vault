@@ -3,9 +3,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 
-namespace TwitchVault.Api.Discord;
+namespace TwitchVault.Api.CloudStorage.Discord;
 
-public sealed class UploadProgressService
+public sealed class ProgressTracker
 {
     private readonly string _filePath;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -17,27 +17,27 @@ public sealed class UploadProgressService
         PropertyNameCaseInsensitive = true
     };
 
-    public UploadProgressService(
+    public ProgressTracker(
         IWebHostEnvironment env,
         IOptions<PathsOptions> pathsOptions)
     {
         var streamsRoot = Path.Combine(env.ContentRootPath, pathsOptions.Value.Streams);
         Directory.CreateDirectory(streamsRoot);
-        _filePath = Path.Combine(streamsRoot, "upload_progress.json");
+        _filePath = Path.Combine(streamsRoot, "progress.json");
         _progress = Load();
     }
 
-    public int GetLastUploadedSegmentIndex(string twitchStreamId)
+    public int GetLastUploadedSegmentIndex(string key)
     {
-        return _progress.TryGetValue(twitchStreamId, out var index) ? index : -1;
+        return _progress.TryGetValue(key, out var index) ? index : -1;
     }
 
-    public async Task SaveProgressAsync(string twitchStreamId, int segmentIndex)
+    public async Task SaveProgressAsync(string key, int segmentIndex)
     {
         await _lock.WaitAsync();
         try
         {
-            _progress[twitchStreamId] = segmentIndex;
+            _progress[key] = segmentIndex;
             await FlushAsync();
         }
         finally
@@ -46,9 +46,9 @@ public sealed class UploadProgressService
         }
     }
 
-    public async Task RemoveProgressAsync(string twitchStreamId)
+    public async Task RemoveProgressAsync(string key)
     {
-        if (!_progress.TryRemove(twitchStreamId, out _))
+        if (!_progress.TryRemove(key, out _))
             return;
 
         await FlushAsync();

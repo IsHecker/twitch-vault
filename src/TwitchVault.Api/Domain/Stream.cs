@@ -7,17 +7,24 @@ public enum StreamStatus
     Recording,
     Finished,
     Interrupted,
-    Stopped,
-    PendingDeletion,
-    Deleting
+    Stopped
 }
 
 public enum StorageLocation
 {
     Local,
+    Remote,
+    Both
+}
+
+public enum StorageOperationStatus
+{
+    None,
     Uploading,
-    Both,
-    Remote
+    Uploaded,
+    UploadFailed,
+    Deleting,
+    DeleteFailed
 }
 
 public sealed class Stream
@@ -27,14 +34,13 @@ public sealed class Stream
 
     public StreamFolder Folder { get; set; } = null!;
     public string ThumbnailUrl { get; private set; } = null!;
-    public StreamStatus Status { get; private set; } = StreamStatus.Recording;
-    public StorageLocation Storage { get; private set; } = StorageLocation.Local;
-    
-    /// <summary>
-    /// Assigned storage instance ID (e.g. "discord-main", "dropbox-acc1", "s3-backup")
-    /// </summary>
-    public string? StorageInstanceId { get; set; }
-    
+    public StreamStatus Status { get; private set; }
+    public StorageLocation StorageLocation { get; private set; }
+    public StorageOperationStatus StorageOperationStatus { get; private set; }
+    public long SizeBytes { get; private set; }
+
+    public string? StorageInstanceId { get; private set; }
+
     public bool MarkForDeletion { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; private set; }
@@ -44,8 +50,6 @@ public sealed class Stream
     [JsonIgnore]
     [System.Text.Json.Serialization.JsonIgnore]
     public Chapter CurrentChapter => Chapters.LastOrDefault()!;
-
-    public void SetStatus(StreamStatus status) => Status = status;
 
     public void MarkAsFinished(DateTime finishedAt)
     {
@@ -88,5 +92,7 @@ public sealed class Stream
     }
 
     public void SetThumbnailUrl(string thumbnailUrl) => ThumbnailUrl = thumbnailUrl;
-    public void SetStorageLocation(StorageLocation storageLocation) => Storage = storageLocation;
+    public void SetStorageLocation(StorageLocation storageLocation) => StorageLocation = storageLocation;
+    public void SetStorageInstance(string instanceName) => StorageInstanceId = instanceName;
+    public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
 }

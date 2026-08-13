@@ -1,6 +1,5 @@
 using Quartz;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Discord;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording.HLS;
@@ -10,40 +9,32 @@ namespace TwitchVault.Api.CloudStorage.Jobs;
 [DisallowConcurrentExecution]
 public sealed class StorageUploadJob(
     IStreamRepository streamRepository,
-    IInstanceSelector instanceSelector,
-    UploadProgressService progressService,
-    UniversalPlaylistRewriter playlistRewriter,
-    StreamLockRegistry lockRegistry,
+    CloudStorageService storageService,
     SettingsService settingsService,
     IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.BackgroundJobs[JobOptions.DiscordUpload].Enabled)
+        if (!settingsService.Settings.BackgroundJobs[JobOptions.StorageUpload].Enabled)
             return;
 
         var pendingStreams = (await streamRepository.GetAllAsync())
             .Where(s => s.Status == StreamStatus.Finished
-                && (s.Storage == StorageLocation.Local || s.Storage == StorageLocation.Uploading))
+                && (s.StorageLocation == StorageLocation.Local || s.StorageOperationStatus == StorageOperationStatus.UploadFailed))
             .OrderBy(s => s.StartedAt);
 
         foreach (var stream in pendingStreams)
         {
-            if (context.CancellationToken.IsCancellationRequested)
-                break;
-
-            await UploadStreamSegmentsAsync(stream, context.CancellationToken);
+            await UploadStreamAsync(stream, context.CancellationToken);
         }
     }
 
-    private async Task UploadStreamSegmentsAsync(Domain.Stream stream, CancellationToken cancellationToken)
+    private async Task UploadStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
     {
-        // Try acquiring exclusive lock on stream
-        await using var streamLock = await lockRegistry.TryAcquireLockAsync(stream.TwitchStreamId);
-        if (streamLock is null)
+        if (stream.StorageOperationStatus == StorageOperationStatus.Deleting)
         {
-            logger.LogDebug("Upload skipped for stream '{StreamId}': lock held by another process.", stream.TwitchStreamId);
+            logger.LogWarning("INVALID_STATE: Stream is being or has been deleted for '{StreamId}'", stream.TwitchStreamId);
             return;
         }
 
@@ -56,76 +47,72 @@ public sealed class StorageUploadJob(
             return;
         }
 
-        var provider = await instanceSelector.SelectInstanceForStreamAsync(stream);
+        if (stream.StorageLocation == StorageLocation.Local)
+        {
+            stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
+            await streamRepository.UpdateAsync(stream);
+        }
 
-        var lastUploadedIndex = progressService.GetLastUploadedSegmentIndex(stream.TwitchStreamId);
-        var pendingSegments = Directory.EnumerateFiles(localDirectory, "*")
-            .Where(HlsSegmentNaming.IsSegmentFile)
-            .OrderBy(HlsSegmentNaming.GetSegmentIndex)
-            .Skip(lastUploadedIndex + 1)
+        var dir = new DirectoryInfo(localDirectory);
+        var pendingSegments = dir.EnumerateFiles()
+            .Where(f => HlsSegmentNaming.IsSegmentFile(f.FullName))
+            .OrderBy(f => HlsSegmentNaming.GetSegmentIndex(f.FullName))
+            .Select(f => new LocalSegment(f.FullName, f.Length))
             .ToList();
 
         var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
+        var rewrittenPlaylistPath = $"{stream.Folder.RelativePath}/new-{StreamFolder.PlaylistFile}";
 
         if (pendingSegments.Count == 0)
         {
             logger.LogInformation("Stream '{Title}' has no segment files to upload.", streamTitle);
             await streamRepository.UpdateAsync(stream);
-            await progressService.RemoveProgressAsync(stream.TwitchStreamId);
             return;
         }
 
-        if (stream.Storage == StorageLocation.Local)
+        logger.LogInformation("Starting upload for '{Title}'. Segments: {Count}.", streamTitle, pendingSegments.Count);
+
+        var result = await storageService.UploadStreamAsync(
+            stream,
+            pendingSegments,
+            cancellationToken);
+
+        if (result.IsFailure)
         {
-            stream.SetStorageLocation(StorageLocation.Uploading);
+            stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
             await streamRepository.UpdateAsync(stream);
+            logger.LogError("Failed to upload segment chunk for '{Title}': {Error}", streamTitle, result.Error);
+            return;
         }
 
-        logger.LogInformation("Starting upload for '{Title}' using instance '{InstanceId}'. Remaining: {Count} segments.",
-            streamTitle, provider.ProviderInstanceId, pendingSegments.Count);
+        var uploadResult = result.Value;
 
-        foreach (var batch in pendingSegments.Chunk(provider.Capabilities.MaxBatchSize))
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
+        if (string.IsNullOrWhiteSpace(stream.StorageInstanceId))
+            stream.SetStorageInstance(uploadResult.StorageInstanceId);
 
-            // Cooperative cancellation check before batch upload
-            var currentStream = await streamRepository.GetByIdAsync(stream.TwitchStreamId);
-            if (currentStream is null || currentStream.Status == StreamStatus.PendingDeletion || currentStream.Status == StreamStatus.Deleting)
-            {
-                logger.LogWarning("Upload aborted for '{Title}': stream marked for deletion.", streamTitle);
-                return; // Exit and release stream lock so cleanup job can process deletion
-            }
+        await HlsPlaylistRewriter.RewriteSegmentsAsync(
+            playlistPath,
+            rewrittenPlaylistPath,
+            uploadResult.RemoteUrls,
+            uploadResult.SegmentsSkipped,
+            cancellationToken);
 
-            var result = await provider.UploadBatchAsync(batch, cancellationToken);
-            if (result.IsFailure)
-            {
-                logger.LogError("Failed to upload segment chunk for '{Title}': {Error}", streamTitle, result.Error);
-                return;
-            }
-
-            await playlistRewriter.RewritePlaylistSegmentsOnDiskAsync(playlistPath, result.Value.Segments, cancellationToken);
-
-            lastUploadedIndex += batch.Length;
-            await progressService.SaveProgressAsync(stream.TwitchStreamId, lastUploadedIndex);
-
-            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-        }
-
-        stream.SetStorageLocation(StorageLocation.Both);
+        stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
+        stream.SetStorageLocation(StorageLocation.Remote);
         await streamRepository.UpdateAsync(stream);
 
-        DeleteLocalSegments(localDirectory);
-        await progressService.RemoveProgressAsync(stream.TwitchStreamId);
+        DeleteLocalSegments(pendingSegments, uploadResult.RemoteUrls.Count);
+        File.Move(rewrittenPlaylistPath, playlistPath, overwrite: true);
 
-        logger.LogInformation("Stream '{Title}' successfully uploaded to storage instance '{InstanceId}'.", streamTitle, provider.ProviderInstanceId);
+        logger.LogInformation("Stream '{StreamId}' successfully uploaded ({Bytes} bytes) to storage instance '{Instance}'.",
+            stream.TwitchStreamId, stream.SizeBytes, uploadResult.StorageInstanceId);
     }
 
-    private static void DeleteLocalSegments(string path)
+    private static void DeleteLocalSegments(List<LocalSegment> segments, int deleteCount)
     {
-        foreach (var file in Directory.EnumerateFiles(path, "*").Where(HlsSegmentNaming.IsSegmentFile))
+        for (int i = 0; i < deleteCount; i++)
         {
-            try { File.Delete(file); } catch { /* Ignore individual file locks */ }
+            File.Delete(segments[i].LocalPath);
         }
     }
 }

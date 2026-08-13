@@ -51,4 +51,7 @@ public static class ManifestSegmentExtractor
         var isStreamEnded = manifestContent.AsSpan().Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
         return new ManifestExtractionResult(segments, initSegmentUrl, currentSequence, isStreamEnded);
     }
+
+    public static ManifestExtractionResult ExtractAllSegments(string manifestContent)
+        => ExtractNewSegments(manifestContent, -1);
 }

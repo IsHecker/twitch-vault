@@ -73,30 +73,7 @@
       "LastStreamedAt": null
     }
   ],
-  "Streams": [
-    {
-      "TwitchStreamId": "320192460633",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-07-24 23-13-46",
-        "ThumbnailPath": "Streams/pisty/2026-07-24 23-13-46/thumbnail.jpg"
-      },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-08%2022-54-01/thumbnail.jpg",
-      "Status": "Finished",
-      "Storage": "Both",
-      "MarkForDeletion": false,
-      "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
-      "FinishedAt": "2026-07-09T00:18:00.9095278+03:00",
-      "Chapters": [
-        {
-          "Title": "هوبلالا",
-          "CategoryId": null,
-          "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
-          "FinishedAt": "2026-07-09T00:18:00.9095278+03:00"
-        }
-      ]
-    }
-  ],
+  "Streams": [],
   "Users": [
     {
       "Id": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",

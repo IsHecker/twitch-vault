@@ -56,10 +56,10 @@ public class SettingsService
             _settings.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].RunIntervalInMinutes =
                 request.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].RunIntervalInMinutes;
 
-            _settings.BackgroundJobs[JobOptions.DiscordUpload].Enabled =
-                request.BackgroundJobs[JobOptions.DiscordUpload].Enabled;
-            _settings.BackgroundJobs[JobOptions.DiscordUpload].RunIntervalInMinutes =
-                request.BackgroundJobs[JobOptions.DiscordUpload].RunIntervalInMinutes;
+            _settings.BackgroundJobs[JobOptions.StorageUpload].Enabled =
+                request.BackgroundJobs[JobOptions.StorageUpload].Enabled;
+            _settings.BackgroundJobs[JobOptions.StorageUpload].RunIntervalInMinutes =
+                request.BackgroundJobs[JobOptions.StorageUpload].RunIntervalInMinutes;
 
             Flush();
         }

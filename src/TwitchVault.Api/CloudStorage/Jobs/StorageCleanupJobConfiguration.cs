@@ -15,6 +15,6 @@ public sealed class StorageCleanupJobConfiguration : IConfigureOptions<QuartzOpt
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(TimeSpan.FromMinutes(2)).RepeatForever()));
+                        schedule.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever()));
     }
 }
