@@ -296,7 +296,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(ChannelName, _stream);
+        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
     }
 
 
@@ -322,7 +322,7 @@ public class StreamRecorderTests
     public async Task StartAsync_ShouldDelegateStreamError_AndStillFinalize()
     {
         // Arrange
-        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, Arg.Any<Domain.Stream>())
+        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, Arg.Any<Domain.Stream>(), CancellationToken.None)
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
         await using var sut = CreateSut();

@@ -124,10 +124,10 @@ public static class DependencyInjection
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
 
         services.AddSingleton<ProgressTracker>();
-        services.AddSingleton<StorageQuotaTracker>();
+        services.AddSingleton<IStorageRoutingStrategy, RoundRobinStrategy>();
         services.AddSingleton<StorageRouter>();
         services.AddSingleton<StorageProviderRegistry>();
-        services.AddSingleton<CloudStorageService>();
+        services.AddSingleton<ICloudStorageService, CloudStorageService>();
         return services;
     }
 }

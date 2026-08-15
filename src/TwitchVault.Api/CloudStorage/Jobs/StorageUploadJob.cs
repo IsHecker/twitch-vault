@@ -9,25 +9,28 @@ namespace TwitchVault.Api.CloudStorage.Jobs;
 [DisallowConcurrentExecution]
 public sealed class StorageUploadJob(
     IStreamRepository streamRepository,
-    CloudStorageService storageService,
+    ICloudStorageService storageService,
     SettingsService settingsService,
     IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
+    private const int BatchSize = 2;
+
     public async Task Execute(IJobExecutionContext context)
     {
         if (!settingsService.Settings.BackgroundJobs[JobOptions.StorageUpload].Enabled)
             return;
 
-        var pendingStreams = (await streamRepository.GetAllAsync())
+        var stream = (await streamRepository.GetAllAsync())
             .Where(s => s.Status == StreamStatus.Finished
                 && (s.StorageLocation == StorageLocation.Local || s.StorageOperationStatus == StorageOperationStatus.UploadFailed))
-            .OrderBy(s => s.StartedAt);
+            .OrderBy(s => s.StartedAt)
+            .FirstOrDefault();
 
-        foreach (var stream in pendingStreams)
-        {
-            await UploadStreamAsync(stream, context.CancellationToken);
-        }
+        if (stream is null)
+            return;
+
+        await UploadStreamAsync(stream, context.CancellationToken);
     }
 
     private async Task UploadStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
@@ -57,11 +60,10 @@ public sealed class StorageUploadJob(
         var pendingSegments = dir.EnumerateFiles()
             .Where(f => HlsSegmentNaming.IsSegmentFile(f.FullName))
             .OrderBy(f => HlsSegmentNaming.GetSegmentIndex(f.FullName))
-            .Select(f => new LocalSegment(f.FullName, f.Length))
             .ToList();
 
         var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
-        var rewrittenPlaylistPath = $"{stream.Folder.RelativePath}/new-{StreamFolder.PlaylistFile}";
+        var tempPlaylistPath = $"{playlistPath}.tmp";
 
         if (pendingSegments.Count == 0)
         {
@@ -72,47 +74,89 @@ public sealed class StorageUploadJob(
 
         logger.LogInformation("Starting upload for '{Title}'. Segments: {Count}.", streamTitle, pendingSegments.Count);
 
-        var result = await storageService.UploadStreamAsync(
-            stream,
-            pendingSegments,
-            cancellationToken);
-
-        if (result.IsFailure)
+        var allRemoteUrls = new List<RemoteUrl>();
+        foreach (var segmentBatch in pendingSegments.Chunk(BatchSize))
         {
-            stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
-            await streamRepository.UpdateAsync(stream);
-            logger.LogError("Failed to upload segment chunk for '{Title}': {Error}", streamTitle, result.Error);
-            return;
+            var storageFiles = segmentBatch.Select(seg =>
+            {
+                var segmentPath = seg.FullName;
+                var content = new FileStream(
+                    segmentPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 81_920,
+                    useAsync: true);
+
+                return new StorageFile(segmentPath, ResolveContentType(segmentPath), content);
+            });
+
+            try
+            {
+                var uploadResult = await storageService.UploadAsync(
+                    storageFiles.ToList(),
+                    stream.StorageInstanceName,
+                    cancellationToken);
+
+                if (uploadResult.IsFailure)
+                {
+                    stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
+                    await streamRepository.UpdateAsync(stream);
+                    logger.LogError("Failed to upload this batch to provider '{Instance}': {Error}",
+                        uploadResult.Value.InstanceName, uploadResult.Error);
+                    return;
+                }
+
+                var (instanceName, remoteUrls) = uploadResult.Value;
+
+                allRemoteUrls.AddRange(remoteUrls);
+
+                if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
+                    stream.SetStorageInstance(uploadResult.Value.InstanceName);
+            }
+            finally
+            {
+                foreach (var file in storageFiles)
+                {
+                    await file.Content.DisposeAsync();
+                }
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
         }
-
-        var uploadResult = result.Value;
-
-        if (string.IsNullOrWhiteSpace(stream.StorageInstanceId))
-            stream.SetStorageInstance(uploadResult.StorageInstanceId);
 
         await HlsPlaylistRewriter.RewriteSegmentsAsync(
             playlistPath,
-            rewrittenPlaylistPath,
-            uploadResult.RemoteUrls,
-            uploadResult.SegmentsSkipped,
+            tempPlaylistPath,
+            allRemoteUrls.ToDictionary(key => key.LocalFilePath, val => val.Url),
             cancellationToken);
 
         stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
         stream.SetStorageLocation(StorageLocation.Remote);
         await streamRepository.UpdateAsync(stream);
 
-        DeleteLocalSegments(pendingSegments, uploadResult.RemoteUrls.Count);
-        File.Move(rewrittenPlaylistPath, playlistPath, overwrite: true);
+        // DeleteLocalSegments(allRemoteUrls);
+        File.Move(tempPlaylistPath, playlistPath, overwrite: true);
 
         logger.LogInformation("Stream '{StreamId}' successfully uploaded ({Bytes} bytes) to storage instance '{Instance}'.",
-            stream.TwitchStreamId, stream.SizeBytes, uploadResult.StorageInstanceId);
+            stream.TwitchStreamId, stream.SizeBytes, stream.StorageInstanceName);
     }
 
-    private static void DeleteLocalSegments(List<LocalSegment> segments, int deleteCount)
+    private static void DeleteLocalSegments(List<RemoteUrl> remoteUrls)
     {
-        for (int i = 0; i < deleteCount; i++)
+        foreach (var remoteUrl in remoteUrls)
         {
-            File.Delete(segments[i].LocalPath);
+            File.Delete(remoteUrl.LocalFilePath);
         }
     }
+
+    private static string ResolveContentType(string filePath) =>
+        Path.GetExtension(filePath).ToLowerInvariant() switch
+        {
+            ".ts" => "video/mp2t",
+            ".mp4" or ".m4s" => "video/mp4",
+            ".m3u8" => "application/vnd.apple.mpegurl",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            _ => "application/octet-stream"
+        };
 }

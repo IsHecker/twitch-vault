@@ -1,8 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Common.Results;
-using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.CloudStorage.Discord;
 
@@ -20,10 +18,12 @@ public sealed class DiscordStorageProvider(
     StorageInstanceOptions instanceOptions,
     DiscordOptions discordOptions,
     IHttpClientFactory clientFactory,
-    IDateTimeProvider timeProvider,
     ILogger<DiscordStorageProvider> logger) : ICloudStorageProvider
 {
-    private readonly TimeSpan BulkDeleteThreshold = TimeSpan.FromDays(14);
+    private static readonly DateTimeOffset DiscordEpoch = new(2015, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    private static readonly TimeSpan BulkDeleteMaxAge = TimeSpan.FromDays(14);
+    private const int BulkDeleteSize = 100;
+
     private readonly string MessagesUrl = $"https://discord.com/api/v10/channels/{discordOptions.ChannelId}/messages";
 
     private readonly object _rateLimitLock = new();
@@ -33,40 +33,42 @@ public sealed class DiscordStorageProvider(
 
     public StorageInstanceOptions Options => instanceOptions;
 
-    public async Task<Result<IEnumerable<string>>> UploadAsync(
-        IEnumerable<Stream> dataStreams,
-        IEnumerable<LocalSegment> segments,
-        CancellationToken cancellationToken)
+    public async Task<Result<IEnumerable<RemoteUrl>>> UploadAsync(
+        IReadOnlyList<StorageFile> files,
+        CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", discordOptions.BotToken);
+        if (files.Count == 0)
+            return Enumerable.Empty<RemoteUrl>().ToResult();
 
-        using var content = new MultipartFormDataContent();
-        request.Content = content;
+        var resultMap = new List<RemoteUrl>(files.Count);
 
-        var fileIndex = 0;
-        foreach (var (stream, segment) in dataStreams.Zip(segments))
+        foreach (var chunk in files.Chunk(discordOptions.MaxAttachmentsPerMessage))
         {
-            var fileContent = new StreamContent(stream);
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue(ResolveContentType(segment.LocalPath));
-            content.Add(fileContent, $"files[{fileIndex++}]", Path.GetFileName(segment.LocalPath));
+            var chunkResult = await SendMessageAsync(chunk, cancellationToken);
+            if (chunkResult.IsFailure)
+                return chunkResult.Error;
+
+            var messageId = chunkResult.Value.MessageId;
+            foreach (var attachment in chunkResult.Value.Attachments)
+            {
+                resultMap.Add(new(attachment.FileName, BuildCDNUrl(messageId, attachment.Id)));
+            }
+
+            if (files.Count > discordOptions.MaxAttachmentsPerMessage)
+                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
         }
 
-        var responseResult = await SendMessageAsync(request, cancellationToken);
-        if (responseResult.IsFailure)
-            return responseResult.Error;
-
-        return responseResult.Value.Attachments
-            .Select(att => BuildCDNUrl(responseResult.Value.MessageId, att.Id))
-            .ToResult();
+        return resultMap;
     }
 
-    public async Task<Result> DeleteBatchAsync(Domain.Stream stream, string playlistContent, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(IReadOnlyList<string> remoteUrls, CancellationToken cancellationToken)
     {
-        var extractionResult = ManifestSegmentExtractor.ExtractAllSegments(playlistContent);
-        var remoteUrls = extractionResult.Segments
-            .Select(seg => seg.Url)
-            .Append(extractionResult.InitSegmentUrl ?? string.Empty);
+        // TODO: continue implementation:
+        // single-delete
+        // count = 1
+        // messages older than 14-days
+
+        const int MinimumBulkDeleteSize = 2;
 
         var messageIds = remoteUrls
             .Select(ExtractMessageId)
@@ -77,24 +79,40 @@ public sealed class DiscordStorageProvider(
         if (messageIds.Count == 0)
             return Result.Success;
 
-        var uploadedAt = DateTime.Parse(HlsTagReader.ReadTagValue(playlistContent, HlsTags.UploadedTimePrefix));
-        if (messageIds.Count > 1 && timeProvider.DateTimeNow < uploadedAt.Add(BulkDeleteThreshold))
-            return await BulkDeleteMessagesAsync(messageIds, cancellationToken);
+        if (messageIds.Count >= MinimumBulkDeleteSize)
+        {
+            var bulkResult = await BulkDeleteMessagesAsync(messageIds, cancellationToken);
+            if (bulkResult.IsFailure || messageIds.Count > BulkDeleteSize)
+                return bulkResult;
+        }
 
         foreach (var id in messageIds)
         {
-            var deleteResult = await DeleteAsync(id, cancellationToken);
+            var deleteResult = await DeleteSingleAsync(id, cancellationToken);
             if (deleteResult.IsFailure)
                 return deleteResult;
         }
-
         return Result.Success;
     }
 
     private async Task<Result<DiscordUploadResult>> SendMessageAsync(
-        HttpRequestMessage request,
-        CancellationToken cancellationToken = default)
+        IReadOnlyList<StorageFile> chunk,
+        CancellationToken cancellationToken)
     {
+        using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", discordOptions.BotToken);
+
+        using var content = new MultipartFormDataContent();
+        request.Content = content;
+
+        for (var i = 0; i < chunk.Count; i++)
+        {
+            var file = chunk[i];
+            var fileContent = new StreamContent(file.Content);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, $"files[{i}]", file.FileName);
+        }
+
         try
         {
             await WaitForRateLimitAsync(cancellationToken);
@@ -113,7 +131,7 @@ public sealed class DiscordStorageProvider(
         }
     }
 
-    private async Task<Result> DeleteAsync(string messageId, CancellationToken cancellationToken)
+    private async Task<Result> DeleteSingleAsync(string messageId, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"{MessagesUrl}/{messageId}");
         request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.UserToken);
@@ -126,18 +144,29 @@ public sealed class DiscordStorageProvider(
         return response;
     }
 
-    private async Task<Result> BulkDeleteMessagesAsync(IEnumerable<string> messageIds, CancellationToken cancellationToken)
+    private async Task<Result> BulkDeleteMessagesAsync(List<string> messageIds, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
-        request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.UserToken);
-        request.Content = JsonContent.Create(new { messages = messageIds });
+        // 150
+        // skip 0   take 100
 
-        var response = await SendRequestAsync(request, cancellationToken);
-        if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
-            return Result.Success;
+        Result result = Result.Success;
+        var messages = messageIds.Where(id => !IsOlderThan14Days(id));
+        var skip = 0;
+        for (int i = 0; i < messageIds.Count; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
+            request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.UserToken);
+            request.Content = JsonContent.Create(new { messages = messages.Skip(skip).Take(BulkDeleteSize) });
 
-        response.Value.Dispose();
-        return response;
+            var response = await SendRequestAsync(request, cancellationToken);
+            if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
+                return Result.Success;
+
+            response.Value.Dispose();
+
+            skip += BulkDeleteSize;
+        }
+        return result;
     }
 
     private async Task<Result<HttpResponseMessage>> SendRequestAsync(
@@ -205,6 +234,20 @@ public sealed class DiscordStorageProvider(
         }
     }
 
+    private static bool IsOlderThan14Days(string messageId)
+    {
+        // The first 22 bits of a Discord Snowflake contain internal worker/process/counter IDs
+        const int SnowflakeTimestampBitShift = 22;
+
+        if (!ulong.TryParse(messageId, out var snowflakeId))
+            return true;
+
+        var millisecondsSinceDiscordEpoch = (long)(snowflakeId >> SnowflakeTimestampBitShift);
+        var messageCreatedAt = DiscordEpoch.AddMilliseconds(millisecondsSinceDiscordEpoch);
+
+        return DateTimeOffset.UtcNow - messageCreatedAt >= BulkDeleteMaxAge;
+    }
+
     private string BuildCDNUrl(string messageId, string attachmentId) => $"{discordOptions.CDNHost}/{messageId}/{attachmentId}";
 
     private static string ExtractMessageId(string remoteKey)
@@ -214,14 +257,4 @@ public sealed class DiscordStorageProvider(
 
         return remoteKey.Split('/')[^2];
     }
-
-    private static string ResolveContentType(string filePath) =>
-        Path.GetExtension(filePath).ToLowerInvariant() switch
-        {
-            ".ts" => "video/mp2t",
-            ".mp4" or ".m4s" => "video/mp4",
-            ".m3u8" => "application/vnd.apple.mpegurl",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            _ => "application/octet-stream"
-        };
 }

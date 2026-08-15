@@ -129,7 +129,7 @@ public sealed class StreamRecorder : IStreamRecorder
         {
             try
             {
-                await _thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream);
+                await _thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream, cancellationToken);
 
                 var (manifest, hasQualityChanged) = await _manifestPoller
                     .GetNextManifestAsync(_channel.Name, cancellationToken);

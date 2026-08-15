@@ -39,7 +39,7 @@ public sealed class Stream
     public StorageOperationStatus StorageOperationStatus { get; private set; }
     public long SizeBytes { get; private set; }
 
-    public string? StorageInstanceId { get; private set; }
+    public string? StorageInstanceName { get; private set; }
 
     public bool MarkForDeletion { get; set; }
     public DateTime StartedAt { get; set; }
@@ -93,6 +93,6 @@ public sealed class Stream
 
     public void SetThumbnailUrl(string thumbnailUrl) => ThumbnailUrl = thumbnailUrl;
     public void SetStorageLocation(StorageLocation storageLocation) => StorageLocation = storageLocation;
-    public void SetStorageInstance(string instanceName) => StorageInstanceId = instanceName;
+    public void SetStorageInstance(string instanceName) => StorageInstanceName = instanceName;
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
 }

@@ -47,9 +47,9 @@ public class ThumbnailManagerTests
         var sut = CreateSut();
 
         // Act
-        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(5));
-        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
 
         // Assert
         await _twitchGqlClient.Received(2).DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -65,11 +65,11 @@ public class ThumbnailManagerTests
         var sut = CreateSut();
 
         // Act
-        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
         _twitchGqlClient.ClearReceivedCalls();
 
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(2));
-        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
 
         // Assert
         await _twitchGqlClient.DidNotReceive().DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -87,7 +87,7 @@ public class ThumbnailManagerTests
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddMinutes(30));
 
         // Act
-        await sut.TryCaptureSnapshotAsync(ChannelName, _stream);
+        await sut.TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
 
         // Assert
         await _twitchGqlClient.DidNotReceive().DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());

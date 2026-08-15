@@ -5,7 +5,7 @@ namespace TwitchVault.Api.Recording;
 
 public interface IThumbnailManager
 {
-    Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream);
+    Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream, CancellationToken cancellationToken);
 }
 
 public sealed class ThumbnailManager(
@@ -19,14 +19,14 @@ public sealed class ThumbnailManager(
     private readonly DateTime _sessionStartTime = dateTimeProvider.DateTimeNow;
     private DateTime _lastSnapshotTime = DateTime.MinValue;
 
-    public async Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream)
+    public async Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream, CancellationToken cancellationToken)
     {
         if (!CanCaptureSnapshot())
             return;
 
         try
         {
-            await SaveThumbnailAsync(BuildLiveThumbnailUrl(channelName), stream.Folder.ThumbnailPath);
+            await SaveThumbnailAsync(BuildLiveThumbnailUrl(channelName), stream.Folder.ThumbnailPath, cancellationToken);
             _lastSnapshotTime = dateTimeProvider.DateTimeNow;
             logger.LogDebug("Captured live thumbnail snapshot");
         }
@@ -46,12 +46,12 @@ public sealed class ThumbnailManager(
             && timeSinceLastSnapshot >= LiveSnapshotCooldown;
     }
 
-    private async Task SaveThumbnailAsync(string imageUrl, string savePath)
+    private async Task SaveThumbnailAsync(string imageUrl, string savePath, CancellationToken cancellationToken)
     {
-        using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, CancellationToken.None);
+        using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, cancellationToken);
 
         await using var fileStream = fileSystem.OpenWrite(savePath, FileMode.Create);
-        await imageStream.CopyToAsync(fileStream, CancellationToken.None);
+        await imageStream.CopyToAsync(fileStream, cancellationToken);
     }
 
     private static string BuildLiveThumbnailUrl(string channelName) =>

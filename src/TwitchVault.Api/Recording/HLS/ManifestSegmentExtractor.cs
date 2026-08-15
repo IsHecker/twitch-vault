@@ -14,7 +14,7 @@ public static class ManifestSegmentExtractor
 {
     public static ManifestExtractionResult ExtractNewSegments(string manifestContent, long lastMediaSequence)
     {
-        var sequenceStr = HlsTagReader.ReadTagValue(manifestContent, "#EXT-X-MEDIA-SEQUENCE");
+        var sequenceStr = HlsTagReader.ReadTagValue(manifestContent, HlsTags.MediaSequencePrefix);
         if (!long.TryParse(sequenceStr, out var firstSequence))
             return new ManifestExtractionResult([], null, lastMediaSequence, IsStreamEnded: false);
 
@@ -29,26 +29,26 @@ public static class ManifestSegmentExtractor
         for (int i = 0; i < lineCount; i++)
         {
             var line = manifestSpan[lineRanges[i]];
-            if (line.StartsWith("#EXT-X-MAP:URI", StringComparison.Ordinal))
+            if (line.StartsWith(HlsTags.MapPrefix, StringComparison.Ordinal))
             {
-                initSegmentUrl = HlsTagReader.ReadTagValue(line, "#EXT-X-MAP:URI").Trim('"');
+                initSegmentUrl = HlsTagReader.ReadTagValue(line, HlsTags.MapPrefix).Trim('"');
                 continue;
             }
 
-            if (!line.StartsWith("#EXTINF", StringComparison.Ordinal))
+            if (!line.StartsWith(HlsTags.ExtInfPrefix, StringComparison.Ordinal))
                 continue;
 
             if (++currentSequence <= lastMediaSequence)
                 continue;
 
-            var duration = float.Parse(HlsTagReader.ReadTagValue(line, "#EXTINF", ','));
+            var duration = float.Parse(HlsTagReader.ReadTagValue(line, HlsTags.ExtInfPrefix, ','));
             if (i + 1 >= lineCount)
                 continue;
 
             segments.Add(new HlsSegment(manifestContent[lineRanges[++i]].Trim('\r').ToString(), duration));
         }
 
-        var isStreamEnded = manifestContent.AsSpan().Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
+        var isStreamEnded = manifestContent.AsSpan().Contains(HlsTags.EndList, StringComparison.Ordinal);
         return new ManifestExtractionResult(segments, initSegmentUrl, currentSequence, isStreamEnded);
     }
 

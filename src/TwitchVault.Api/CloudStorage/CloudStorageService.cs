@@ -1,106 +1,69 @@
-using TwitchVault.Api.CloudStorage.Discord;
 using TwitchVault.Api.Common.Results;
 
 namespace TwitchVault.Api.CloudStorage;
 
-public class CloudStorageService(
-    StorageRouter router,
-    StorageQuotaTracker quotaTracker,
-    StorageProviderRegistry providerRegistry,
-    ProgressTracker progressTracker,
-    IWebHostEnvironment env,
-    ILogger<CloudStorageService> logger)
+public interface ICloudStorageService
 {
-    public async Task<Result<StreamUploadResult>> UploadStreamAsync(
-        Domain.Stream stream,
-        IEnumerable<LocalSegment> segments,
+    Task<Result<StorageUploadResponse>> UploadAsync(
+        IReadOnlyList<StorageFile> files,
+        string? preferredInstanceName = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Result> DeleteBatchAsync(
+        string instanceName,
+        IReadOnlyList<string> remoteUrls,
+        CancellationToken cancellationToken);
+}
+
+public sealed class CloudStorageService(
+    StorageRouter router,
+    StorageProviderRegistry providerRegistry,
+    ILogger<CloudStorageService> logger) : ICloudStorageService
+{
+    public async Task<Result<StorageUploadResponse>> UploadAsync(
+        IReadOnlyList<StorageFile> files,
+        string? preferredInstanceName = null,
         CancellationToken cancellationToken = default)
     {
-        var progressKey = $"Upload:{stream.TwitchStreamId}";
-        var selection = GetUploadStorageProvider(stream);
-        if (selection.IsFailure)
-            return selection.Error;
+        var totalSizeBytes = files.Sum(f => f.Content.Length);
 
-        var provider = selection.Value;
+        var sessionResult = string.IsNullOrWhiteSpace(preferredInstanceName)
+            ? await router.AcquireSessionAsync(totalSizeBytes, cancellationToken)
+            : await router.AcquireSessionAsync(preferredInstanceName, totalSizeBytes, cancellationToken);
 
-        var remoteUrls = new List<string>();
-        var lastUploadedIndex = progressTracker.GetLastUploadedSegmentIndex(progressKey);
-        quotaTracker.Allocate(provider.Options.Name, stream.SizeBytes);
+        if (sessionResult.IsFailure)
+            return sessionResult.Error;
 
-        var segmentsToSkip = lastUploadedIndex;
-        segments = segments.Skip(segmentsToSkip + 1);
-        foreach (var segmentBatch in segments.Chunk(provider.Options.Behavior.MaxBatchSize))
+        using var session = sessionResult.Value;
+        var instance = session.Instance;
+
+        var uploadResult = await instance.Provider.UploadAsync(files, cancellationToken);
+        if (uploadResult.IsFailure)
         {
-            if (cancellationToken.IsCancellationRequested)
-                return Error.Failure("Upload operation cancelled.");
-
-            var dataStreams = segmentBatch.Select(seg => new FileStream(
-                seg.LocalPath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read,
-                bufferSize: 81_920,
-                useAsync: true));
-
-            try
-            {
-                var uploadResult = await provider.UploadAsync(dataStreams, segmentBatch, cancellationToken);
-                if (uploadResult.IsFailure)
-                {
-                    logger.LogError("Failed to upload this batch to provider '{Instance}': {Error}",
-                        provider.Options.Name, uploadResult.Error);
-                    return uploadResult.Error;
-                }
-
-                remoteUrls.AddRange(uploadResult.Value);
-                lastUploadedIndex += segmentBatch.Length;
-                await progressTracker.SaveProgressAsync(progressKey, lastUploadedIndex);
-            }
-            finally
-            {
-                foreach (var data in dataStreams)
-                {
-                    await data.DisposeAsync();
-                }
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            logger.LogError("Failed to upload this batch to provider '{Instance}': {Error}",
+                instance.Provider.Options.Name, uploadResult.Error);
+            return uploadResult.Error;
         }
 
-        await progressTracker.RemoveProgressAsync(progressKey);
-        return new StreamUploadResult(provider.Options.Name, segmentsToSkip, remoteUrls);
+        return new StorageUploadResponse(instance.Provider.Options.Name, uploadResult.Value);
     }
 
-    public async Task<Result> DeleteStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
+    public async Task<Result> DeleteBatchAsync(
+        string instanceName,
+        IReadOnlyList<string> remoteUrls,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(stream.StorageInstanceId))
+        if (string.IsNullOrWhiteSpace(instanceName))
             return Result.Success;
 
         try
         {
-            var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
-            var provider = providerRegistry.GetInstance(stream.StorageInstanceId);
-
-            var deleteResult = await provider.DeleteBatchAsync(stream, File.ReadAllText(playlistPath), cancellationToken);
-            if (deleteResult.IsFailure)
-                return deleteResult.Error;
-
-            quotaTracker.Release(stream.StorageInstanceId, stream.SizeBytes);
-            return Result.Success;
+            var instance = providerRegistry.GetInstance(instanceName);
+            return await instance.Provider.DeleteAsync(remoteUrls, cancellationToken);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting stream data for stream '{StreamId}' on provider instance '{Instance}'.",
-                stream.TwitchStreamId, stream.StorageInstanceId);
-            return Error.Failure($"Failed to delete stream data: {ex.Message}");
+            return Error.Failure($"Failed to delete data: {ex.Message}");
         }
-    }
-
-    private Result<ICloudStorageProvider> GetUploadStorageProvider(Domain.Stream stream)
-    {
-        if (string.IsNullOrWhiteSpace(stream.StorageInstanceId))
-            return router.SelectUploader(stream.SizeBytes);
-
-        return new Result<ICloudStorageProvider>(providerRegistry.GetInstance(stream.StorageInstanceId));
     }
 }

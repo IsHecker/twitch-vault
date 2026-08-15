@@ -6,17 +6,20 @@ namespace TwitchVault.Api.CloudStorage;
 public sealed class StorageProviderRegistry
 {
     // TODO: Need to make storage options editable in runtime.
-    private readonly Dictionary<string, ICloudStorageProvider> _instances = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, StorageInstanceOptions> _optionsMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly record struct ProviderTemplate(Type Type, Type OptionsType);
 
-    public IReadOnlyList<ICloudStorageProvider> EnabledInstances { get; }
+    private static readonly Dictionary<CloudProviderType, ProviderTemplate> ProviderTemplates =
+        GetProvidersFromAssembly(typeof(StorageProviderRegistry).Assembly);
+
+    private readonly Dictionary<string, ManagedStorageInstance> _instances = new(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyList<ManagedStorageInstance> EnabledInstances { get; }
 
     public StorageProviderRegistry(
         IServiceProvider serviceProvider,
         IOptions<StorageOptions> options,
         IConfiguration configuration)
     {
-        var providerTemplates = GetProvidersFromAssembly(Assembly.GetExecutingAssembly());
         var instanceSections = configuration
             .GetSection($"{StorageOptions.SectionName}:{nameof(StorageOptions.Instances)}")
             .GetChildren()
@@ -24,11 +27,11 @@ public sealed class StorageProviderRegistry
 
         foreach (var (instanceConfig, section) in options.Value.Instances.Zip(instanceSections))
         {
-            if (!providerTemplates.TryGetValue(instanceConfig.Provider, out var template))
+            if (!ProviderTemplates.TryGetValue(instanceConfig.Provider, out var template))
                 continue;
 
-            _instances[instanceConfig.Name] = CreateInstance(serviceProvider, template, instanceConfig, section);
-            _optionsMap[instanceConfig.Name] = instanceConfig;
+            var provider = CreateProvider(serviceProvider, template, instanceConfig, section);
+            _instances[instanceConfig.Name] = WrapInstance(provider, instanceConfig);
         }
 
         EnabledInstances = options.Value.Instances
@@ -37,17 +40,14 @@ public sealed class StorageProviderRegistry
             .ToList();
     }
 
-    public ICloudStorageProvider GetInstance(string instanceId) =>
+    public ManagedStorageInstance GetInstance(string instanceId) =>
         _instances.TryGetValue(instanceId, out var instance)
             ? instance
             : throw new InvalidOperationException($"Storage instance '{instanceId}' not found or not configured.");
 
-    public StorageInstanceOptions? GetInstanceOptions(string instanceId) =>
-        _optionsMap.TryGetValue(instanceId, out var options) ? options : null;
-
-    private static ICloudStorageProvider CreateInstance(
+    private static ICloudStorageProvider CreateProvider(
         IServiceProvider serviceProvider,
-        (Type OptionsType, Type ProviderType) template,
+        ProviderTemplate template,
         StorageInstanceOptions instanceConfig,
         IConfigurationSection section)
     {
@@ -55,99 +55,100 @@ public sealed class StorageProviderRegistry
 
         return (ICloudStorageProvider)ActivatorUtilities.CreateInstance(
             serviceProvider,
-            template.ProviderType,
+            template.Type,
             instanceConfig,
             providerProperties);
     }
 
-    private static Dictionary<CloudProviderType, (Type OptionsType, Type ProviderType)> GetProvidersFromAssembly(Assembly assembly)
+    private static ManagedStorageInstance WrapInstance(
+        ICloudStorageProvider provider,
+        StorageInstanceOptions instanceConfig)
+    {
+        var capacity = new StorageCapacityTracker(instanceConfig.Behavior.CapacityBytes);
+        var concurrencyGate = new SemaphoreConcurrencyGate(Math.Max(1, instanceConfig.Behavior.MaxConcurrentUploads));
+
+        return new ManagedStorageInstance(provider, capacity, concurrencyGate);
+    }
+
+    private static Dictionary<CloudProviderType, ProviderTemplate> GetProvidersFromAssembly(Assembly assembly)
     {
         return assembly.GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(ICloudStorageProvider)))
             .Select(type => (Type: type, Attribute: type.GetCustomAttribute<StorageProviderAttribute>()))
             .Where(x => x.Attribute is not null)
-            .ToDictionary(x => x.Attribute!.ProviderType, x => (x.Attribute!.OptionsType, x.Type));
+            .ToDictionary(
+                x => x.Attribute!.ProviderType,
+                // FIX: the original constructed `new ProviderTemplate(x.Attribute!.OptionsType, x.Type)` —
+                // backwards relative to the (Type, OptionsType) declaration order above. That meant
+                // ActivatorUtilities.CreateInstance below was handed the *options* type as the thing to
+                // instantiate, and Get(template.OptionsType) was handed the *provider* type to bind
+                // config into — every registered provider would have failed to construct at startup.
+                x => new ProviderTemplate(x.Type, x.Attribute!.OptionsType));
     }
 }
 
 
-// public sealed class StorageProviderFactory(
-//     IServiceProvider serviceProvider,
-//     IOptionsMonitor<StorageOptions> optionsMonitor,
-//     IConfiguration configuration)
+// public sealed class StorageProviderRegistry
 // {
-//     private readonly Dictionary<CloudProviderType, (Type OptionsType, Type ProviderType)> _providerTemplates =
-//         GetProvidersFromAssembly(Assembly.GetExecutingAssembly());
+//     // TODO: Need to make storage options editable in runtime.
+//     private readonly record struct ProviderTemplate(Type Type, Type OptionsType);
+//     private static readonly Dictionary<CloudProviderType, ProviderTemplate> ProviderTemplates =
+//         GetProvidersFromAssembly(typeof(StorageProviderRegistry).Assembly);
 
-//     public ICloudStorageProvider Create(string instanceName)
+//     private readonly Dictionary<string, ICloudStorageProvider> _instances = new(StringComparer.OrdinalIgnoreCase);
+
+//     public IReadOnlyList<ICloudStorageProvider> EnabledInstances { get; }
+
+//     public StorageProviderRegistry(
+//         IServiceProvider serviceProvider,
+//         IOptions<StorageOptions> options,
+//         IConfiguration configuration)
 //     {
-//         var instanceConfig = GetInstanceOptions(instanceName)
-//             ?? throw new InvalidOperationException($"Storage instance '{instanceName}' not found or not configured.");
-
-//         return Create(instanceConfig);
-//     }
-
-//     public ICloudStorageProvider Create(StorageInstanceOptions instanceConfig)
-//     {
-//         ArgumentNullException.ThrowIfNull(instanceConfig);
-
-//         if (!_providerTemplates.TryGetValue(instanceConfig.Provider, out var template))
-//             throw new InvalidOperationException($"No storage provider registered for provider type '{instanceConfig.Provider}'.");
-
-//         var section = GetInstanceSection(instanceConfig.Name);
-//         var providerProperties = section is not null
-//             ? section.GetSection("Properties").Get(template.OptionsType)
-//             : null;
-//         providerProperties ??= Activator.CreateInstance(template.OptionsType)!;
-
-//         return (ICloudStorageProvider)ActivatorUtilities.CreateInstance(
-//             serviceProvider,
-//             template.ProviderType,
-//             instanceConfig,
-//             providerProperties);
-//     }
-
-//     public IReadOnlyList<ICloudStorageProvider> CreateEnabledInstances()
-//     {
-//         return optionsMonitor.CurrentValue.Instances
-//             .Where(i => i.Enabled)
-//             .Select(Create)
-//             .ToList();
-//     }
-
-//     public StorageInstanceOptions? GetInstanceOptions(string instanceName)
-//     {
-//         return optionsMonitor.CurrentValue.Instances
-//             .FirstOrDefault(i => string.Equals(i.Name, instanceName, StringComparison.OrdinalIgnoreCase));
-//     }
-
-//     private IConfigurationSection? GetInstanceSection(string instanceName)
-//     {
-//         var currentInstances = optionsMonitor.CurrentValue.Instances;
 //         var instanceSections = configuration
 //             .GetSection($"{StorageOptions.SectionName}:{nameof(StorageOptions.Instances)}")
 //             .GetChildren()
 //             .ToArray();
 
-//         var index = -1;
-//         for (var i = 0; i < currentInstances.Count; i++)
+//         foreach (var (instanceConfig, section) in options.Value.Instances.Zip(instanceSections))
 //         {
-//             if (string.Equals(currentInstances[i].Name, instanceName, StringComparison.OrdinalIgnoreCase))
-//             {
-//                 index = i;
-//                 break;
-//             }
+//             if (!ProviderTemplates.TryGetValue(instanceConfig.Provider, out var template))
+//                 continue;
+
+//             _instances[instanceConfig.Name] = CreateInstance(serviceProvider, template, instanceConfig, section);
 //         }
 
-//         return index >= 0 && index < instanceSections.Length ? instanceSections[index] : null;
+//         EnabledInstances = options.Value.Instances
+//             .Where(i => i.Enabled && _instances.ContainsKey(i.Name))
+//             .Select(i => _instances[i.Name])
+//             .ToList();
 //     }
 
-//     private static Dictionary<CloudProviderType, (Type OptionsType, Type ProviderType)> GetProvidersFromAssembly(Assembly assembly)
+//     public ICloudStorageProvider GetInstance(string instanceId) =>
+//         _instances.TryGetValue(instanceId, out var instance)
+//             ? instance
+//             : throw new InvalidOperationException($"Storage instance '{instanceId}' not found or not configured.");
+
+//     private static ICloudStorageProvider CreateInstance(
+//         IServiceProvider serviceProvider,
+//         ProviderTemplate template,
+//         StorageInstanceOptions instanceConfig,
+//         IConfigurationSection section)
+//     {
+//         var providerProperties = section.GetSection("Properties").Get(template.OptionsType)!;
+
+//         return (ICloudStorageProvider)ActivatorUtilities.CreateInstance(
+//             serviceProvider,
+//             template.Type,
+//             instanceConfig,
+//             providerProperties);
+//     }
+
+//     private static Dictionary<CloudProviderType, ProviderTemplate> GetProvidersFromAssembly(Assembly assembly)
 //     {
 //         return assembly.GetTypes()
 //             .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(ICloudStorageProvider)))
 //             .Select(type => (Type: type, Attribute: type.GetCustomAttribute<StorageProviderAttribute>()))
 //             .Where(x => x.Attribute is not null)
-//             .ToDictionary(x => x.Attribute!.ProviderType, x => (x.Attribute!.OptionsType, x.Type));
+//             .ToDictionary(x => x.Attribute!.ProviderType, x => new ProviderTemplate(x.Attribute!.OptionsType, x.Type));
 //     }
 // }

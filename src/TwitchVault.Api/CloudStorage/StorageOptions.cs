@@ -33,5 +33,4 @@ public class StorageBehaviorOptions
     public int MaxConcurrentUploads { get; init; }
     public int RequestTimeoutSeconds { get; init; }
     public string? SharedLinkVisibility { get; init; }
-    public bool AllowReuse { get; init; } = true;
 }
