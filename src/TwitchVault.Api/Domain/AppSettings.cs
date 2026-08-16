@@ -16,6 +16,7 @@ public sealed class JobOptions
     public const string ChannelMonitor = nameof(ChannelMonitor);
     public const string TwitchWebhookHealthCheck = nameof(TwitchWebhookHealthCheck);
     public const string StorageUpload = nameof(StorageUpload);
+    public const string StorageCleanup = nameof(StorageCleanup);
 
     public bool Enabled { get; set; }
     public float RunIntervalInMinutes { get; set; }

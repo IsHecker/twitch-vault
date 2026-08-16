@@ -97,7 +97,11 @@ public sealed class StreamRecorder : IStreamRecorder
 
     public async Task ToggleStreamDeletionAsync(bool markForDeletion)
     {
-        _stream.MarkForDeletion = markForDeletion;
+        var status = markForDeletion ?
+            StorageOperationStatus.DeleteRequest
+            : StorageOperationStatus.None;
+
+        _stream.SetStorageOperationStatus(status);
         await _streamRepository.UpdateAsync(_stream);
     }
 

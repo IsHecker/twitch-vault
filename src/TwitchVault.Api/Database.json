@@ -83,11 +83,10 @@
       },
       "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-08%2022-54-01/thumbnail.jpg",
       "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
+      "StorageLocation": "Local",
+      "StorageOperationStatus": "UploadFailed",
       "SizeBytes": 0,
       "StorageInstanceName": "Discord-Main",
-      "MarkForDeletion": false,
       "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
       "FinishedAt": "2026-07-09T00:18:00.9095278+03:00",
       "Chapters": [

@@ -21,7 +21,11 @@
     },
     "StorageUpload": {
       "Enabled": true,
-      "RunIntervalInMinutes": 1
+      "RunIntervalInMinutes": 5
+    },
+    "StorageCleanup": {
+      "Enabled": true,
+      "RunIntervalInMinutes": 0.1
     }
   }
 }

@@ -23,6 +23,7 @@ public enum StorageOperationStatus
     Uploading,
     Uploaded,
     UploadFailed,
+    DeleteRequest,
     Deleting,
     DeleteFailed
 }
@@ -41,7 +42,6 @@ public sealed class Stream
 
     public string? StorageInstanceName { get; private set; }
 
-    public bool MarkForDeletion { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; private set; }
 

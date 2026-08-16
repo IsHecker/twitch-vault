@@ -6,15 +6,15 @@ using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.CloudStorage.Jobs;
 
-[DisallowConcurrentExecution]
 public sealed class StorageUploadJob(
     IStreamRepository streamRepository,
     ICloudStorageService storageService,
+    StreamJobCoordinator jobCoordinator,
     SettingsService settingsService,
     IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
-    private const int BatchSize = 2;
+    private const int BatchSize = 1;
 
     public async Task Execute(IJobExecutionContext context)
     {
@@ -33,13 +33,17 @@ public sealed class StorageUploadJob(
         await UploadStreamAsync(stream, context.CancellationToken);
     }
 
-    private async Task UploadStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
+    private async Task UploadStreamAsync(Domain.Stream stream, CancellationToken jobCancellationToken)
     {
         if (stream.StorageOperationStatus == StorageOperationStatus.Deleting)
         {
             logger.LogWarning("INVALID_STATE: Stream is being or has been deleted for '{StreamId}'", stream.TwitchStreamId);
             return;
         }
+
+        var uploadToken = jobCoordinator.RegisterUpload(stream.TwitchStreamId);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(jobCancellationToken, uploadToken);
+        var cancellationToken = linkedCts.Token;
 
         var streamTitle = stream.Chapters.FirstOrDefault()?.Title ?? stream.TwitchStreamId;
         var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
@@ -75,61 +79,73 @@ public sealed class StorageUploadJob(
         logger.LogInformation("Starting upload for '{Title}'. Segments: {Count}.", streamTitle, pendingSegments.Count);
 
         var allRemoteUrls = new List<RemoteUrl>();
-        foreach (var segmentBatch in pendingSegments.Chunk(BatchSize))
+        try
         {
-            var storageFiles = segmentBatch.Select(seg =>
+            foreach (var segmentBatch in pendingSegments.Chunk(BatchSize))
             {
-                var segmentPath = seg.FullName;
-                var content = new FileStream(
-                    segmentPath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    bufferSize: 81_920,
-                    useAsync: true);
-
-                return new StorageFile(segmentPath, ResolveContentType(segmentPath), content);
-            });
-
-            try
-            {
-                var uploadResult = await storageService.UploadAsync(
-                    storageFiles.ToList(),
-                    stream.StorageInstanceName,
-                    cancellationToken);
-
-                if (uploadResult.IsFailure)
+                var storageFiles = segmentBatch.Select(seg =>
                 {
-                    stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
-                    await streamRepository.UpdateAsync(stream);
-                    logger.LogError("Failed to upload this batch to provider '{Instance}': {Error}",
-                        uploadResult.Value.InstanceName, uploadResult.Error);
-                    return;
+                    var segmentPath = seg.FullName;
+                    var content = new FileStream(
+                        segmentPath,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read,
+                        bufferSize: 81_920,
+                        useAsync: true);
+
+                    return new StorageFile(segmentPath, ResolveContentType(segmentPath), content);
+                });
+
+                try
+                {
+                    var uploadResult = await storageService.UploadAsync(
+                        storageFiles.ToList(),
+                        stream.StorageInstanceName,
+                        cancellationToken);
+
+                    if (uploadResult.IsFailure)
+                    {
+                        stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
+                        await streamRepository.UpdateAsync(stream);
+                        logger.LogError("Failed to upload this batch to provider: {Error}",
+                            uploadResult.Error);
+                        return;
+                    }
+
+                    var (instanceName, remoteUrls) = uploadResult.Value;
+
+                    allRemoteUrls.AddRange(remoteUrls);
+
+                    if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
+                    {
+                        stream.SetStorageInstance(uploadResult.Value.InstanceName);
+                        await streamRepository.UpdateAsync(stream);
+                    }
+                }
+                catch (OperationCanceledException) { }
+                finally
+                {
+                    foreach (var file in storageFiles)
+                    {
+                        await file.Content.DisposeAsync();
+                    }
                 }
 
-                var (instanceName, remoteUrls) = uploadResult.Value;
-
-                allRemoteUrls.AddRange(remoteUrls);
-
-                if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
-                    stream.SetStorageInstance(uploadResult.Value.InstanceName);
+                // await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(2, 5)), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             }
-            finally
-            {
-                foreach (var file in storageFiles)
-                {
-                    await file.Content.DisposeAsync();
-                }
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("Upload for stream '{StreamId}' was cancelled.", stream.TwitchStreamId);
         }
 
         await HlsPlaylistRewriter.RewriteSegmentsAsync(
             playlistPath,
             tempPlaylistPath,
             allRemoteUrls.ToDictionary(key => key.LocalFilePath, val => val.Url),
-            cancellationToken);
+            jobCancellationToken);
 
         stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
         stream.SetStorageLocation(StorageLocation.Remote);
@@ -140,6 +156,8 @@ public sealed class StorageUploadJob(
 
         logger.LogInformation("Stream '{StreamId}' successfully uploaded ({Bytes} bytes) to storage instance '{Instance}'.",
             stream.TwitchStreamId, stream.SizeBytes, stream.StorageInstanceName);
+
+        jobCoordinator.CompleteUpload(stream.TwitchStreamId); // ALWAYS unblocks a waiting delete
     }
 
     private static void DeleteLocalSegments(List<RemoteUrl> remoteUrls)

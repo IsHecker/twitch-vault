@@ -9,6 +9,7 @@ namespace TwitchVault.Api.CloudStorage.Jobs;
 [DisallowConcurrentExecution]
 public sealed class StorageCleanupJob(
     IStreamRepository streamRepository,
+    StreamJobCoordinator jobCoordinator,
     ICloudStorageService storageService,
     IWebHostEnvironment env,
     ILogger<StorageCleanupJob> logger) : IJob
@@ -27,6 +28,9 @@ public sealed class StorageCleanupJob(
 
     private async Task DeleteStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
     {
+        // Force any in-flight upload for this stream to stop, and wait until it actually has
+        await jobCoordinator.CancelUploadAndWaitAsync(stream.TwitchStreamId, TimeSpan.FromMinutes(5));
+
         if (stream.StorageLocation == StorageLocation.Remote)
         {
             var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);

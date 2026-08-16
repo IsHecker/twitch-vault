@@ -15,8 +15,8 @@ public readonly record struct Attachment(
 
 [StorageProvider(CloudProviderType.Discord, typeof(DiscordOptions))]
 public sealed class DiscordStorageProvider(
-    StorageInstanceOptions instanceOptions,
-    DiscordOptions discordOptions,
+    LiveOptions<StorageInstanceOptions> instanceOptions,
+    LiveOptions<DiscordOptions> discordOptions,
     IHttpClientFactory clientFactory,
     ILogger<DiscordStorageProvider> logger) : ICloudStorageProvider
 {
@@ -24,14 +24,14 @@ public sealed class DiscordStorageProvider(
     private static readonly TimeSpan BulkDeleteMaxAge = TimeSpan.FromDays(14);
     private const int BulkDeleteSize = 100;
 
-    private readonly string MessagesUrl = $"https://discord.com/api/v10/channels/{discordOptions.ChannelId}/messages";
+    private readonly string MessagesUrl = $"https://discord.com/api/v10/channels/{discordOptions.Value.ChannelId}/messages";
 
     private readonly object _rateLimitLock = new();
     private int _rateLimitLimit;
     private int? _rateLimitRemaining;
     private float _rateLimitResetAfter;
 
-    public StorageInstanceOptions Options => instanceOptions;
+    public StorageInstanceOptions Options => instanceOptions.Value;
 
     public async Task<Result<IEnumerable<RemoteUrl>>> UploadAsync(
         IReadOnlyList<StorageFile> files,
@@ -42,7 +42,7 @@ public sealed class DiscordStorageProvider(
 
         var resultMap = new List<RemoteUrl>(files.Count);
 
-        foreach (var chunk in files.Chunk(discordOptions.MaxAttachmentsPerMessage))
+        foreach (var chunk in files.Chunk(discordOptions.Value.MaxAttachmentsPerMessage))
         {
             var chunkResult = await SendMessageAsync(chunk, cancellationToken);
             if (chunkResult.IsFailure)
@@ -54,7 +54,7 @@ public sealed class DiscordStorageProvider(
                 resultMap.Add(new(attachment.FileName, BuildCDNUrl(messageId, attachment.Id)));
             }
 
-            if (files.Count > discordOptions.MaxAttachmentsPerMessage)
+            if (files.Count > discordOptions.Value.MaxAttachmentsPerMessage)
                 await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
         }
 
@@ -100,7 +100,7 @@ public sealed class DiscordStorageProvider(
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", discordOptions.BotToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", discordOptions.Value.BotToken);
 
         using var content = new MultipartFormDataContent();
         request.Content = content;
@@ -134,7 +134,7 @@ public sealed class DiscordStorageProvider(
     private async Task<Result> DeleteSingleAsync(string messageId, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"{MessagesUrl}/{messageId}");
-        request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.UserToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.Value.UserToken);
 
         var response = await SendRequestAsync(request, cancellationToken);
         if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
@@ -155,7 +155,7 @@ public sealed class DiscordStorageProvider(
         for (int i = 0; i < messageIds.Count; i++)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
-            request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.UserToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.Value.UserToken);
             request.Content = JsonContent.Create(new { messages = messages.Skip(skip).Take(BulkDeleteSize) });
 
             var response = await SendRequestAsync(request, cancellationToken);
@@ -248,7 +248,7 @@ public sealed class DiscordStorageProvider(
         return DateTimeOffset.UtcNow - messageCreatedAt >= BulkDeleteMaxAge;
     }
 
-    private string BuildCDNUrl(string messageId, string attachmentId) => $"{discordOptions.CDNHost}/{messageId}/{attachmentId}";
+    private string BuildCDNUrl(string messageId, string attachmentId) => $"{discordOptions.Value.CDNHost}/{messageId}/{attachmentId}";
 
     private static string ExtractMessageId(string remoteKey)
     {

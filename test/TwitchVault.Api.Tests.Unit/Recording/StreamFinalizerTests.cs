@@ -58,7 +58,7 @@ public class StreamFinalizerTests
     {
         // Arrange
         var stream = CreateStream();
-        stream.MarkForDeletion = true;
+        stream.SetStorageOperationStatus(StorageOperationStatus.DeleteRequest);
         var sut = CreateSut();
 
         // Act
@@ -164,7 +164,7 @@ public class StreamFinalizerTests
     {
         // Arrange
         var stream = CreateStream();
-        stream.MarkForDeletion = true;
+        stream.SetStorageOperationStatus(StorageOperationStatus.DeleteRequest);
         _streamService.DeleteStreamAsync(stream.TwitchStreamId)
             .Returns(Task.FromException<Result>(new Exception("cannot delete")));
         var sut = CreateSut();

@@ -28,7 +28,6 @@ public class StreamService(
             ChannelId = channel.Id,
             TwitchStreamId = metadata.TwitchStreamId,
             Folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name),
-            MarkForDeletion = false,
             StartedAt = metadata.StartedAt
         };
 

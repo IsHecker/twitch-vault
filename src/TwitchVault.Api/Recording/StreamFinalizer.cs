@@ -40,7 +40,7 @@ public sealed class StreamFinalizer(
         {
             segmentDownloader.CloseSegment();
 
-            if (stream.MarkForDeletion)
+            if (stream.StorageOperationStatus == StorageOperationStatus.DeleteRequest)
             {
                 await streamService.DeleteStreamAsync(stream.TwitchStreamId);
                 return;

@@ -123,6 +123,7 @@ public static class DependencyInjection
         services.ConfigureOptions<StorageUploadJobConfiguration>();
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
 
+        services.AddSingleton<StreamJobCoordinator>();
         services.AddSingleton<ProgressTracker>();
         services.AddSingleton<IStorageRoutingStrategy, RoundRobinStrategy>();
         services.AddSingleton<StorageRouter>();

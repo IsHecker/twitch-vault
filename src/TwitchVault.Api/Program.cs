@@ -36,7 +36,7 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerDocumentation();
 
-        builder.Configuration.AddJsonFile($"secrets.json", true, false);
+        builder.Configuration.AddJsonFile($"secrets.json", optional: false, reloadOnChange: true);
 
         builder.Services.AddTwitchVaultServices(builder.Configuration);
         builder.Services.ConfigureHttpJsonOptions(opts =>

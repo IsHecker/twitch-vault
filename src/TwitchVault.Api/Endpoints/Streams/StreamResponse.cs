@@ -22,7 +22,6 @@ public record StreamResponse(
     string ChannelId,
     string ThumbnailUrl,
     StreamStatus Status,
-    bool MarkForDeletion,
     DateTime StartedAt,
     DateTime? FinishedAt,
     List<ChapterResponse> Chapters)
@@ -33,7 +32,6 @@ public record StreamResponse(
             stream.ChannelId,
             stream.ThumbnailUrl,
             stream.Status,
-            stream.MarkForDeletion,
             stream.StartedAt,
             stream.FinishedAt,
             stream.Chapters.Select(ChapterResponse.FromDomain).ToList()
