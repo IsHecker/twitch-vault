@@ -60,7 +60,8 @@ public class StreamServiceTests
 
         // Assert
         await act.Should().NotThrowAsync();
-        await _streamRepository.Received(1).DeleteAsync(streamId);
+        await _streamRepository.Received(1)
+            .UpdateAsync(Arg.Is<DomainStream>(s => s.StorageOperationStatus == StorageOperationStatus.DeleteRequest));
     }
 
     [Fact]

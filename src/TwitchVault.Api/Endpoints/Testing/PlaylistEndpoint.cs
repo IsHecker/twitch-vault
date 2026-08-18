@@ -8,7 +8,7 @@ public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, I
 {
     private const string DefaultStreamId = "test-stream";
 
-    private readonly ConcurrentDictionary<string, HlsPlaylist> _playlists = new();
+    private readonly ConcurrentDictionary<string, HlsPlaylistWriter> _playlists = new();
     private readonly ConcurrentDictionary<string, int> _segmentCounters = new();
 
     public static string Normalize(string? streamId) => streamId ?? DefaultStreamId;
@@ -20,12 +20,12 @@ public sealed class HlsPlaylistTestHarness(IDateTimeProvider dateTimeProvider, I
         return folder;
     }
 
-    public async Task<HlsPlaylist> GetOrCreateAsync(string streamId, CancellationToken ct)
+    public async Task<HlsPlaylistWriter> GetOrCreateAsync(string streamId, CancellationToken ct)
     {
         if (_playlists.TryGetValue(streamId, out var existing))
             return existing;
 
-        var playlist = await HlsPlaylist.LoadOrCreateAsync(FolderFor(streamId), dateTimeProvider, fileSystem, ct);
+        var playlist = await HlsPlaylistWriter.LoadOrCreateAsync(FolderFor(streamId), dateTimeProvider, fileSystem, ct);
         return _playlists.GetOrAdd(streamId, playlist);
     }
 

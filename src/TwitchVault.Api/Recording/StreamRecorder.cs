@@ -1,11 +1,10 @@
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Events;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Twitch.EventSub;
-using Microsoft.Extensions.Options;
+using TwitchVault.Api.Twitch;
+using System.Runtime.CompilerServices;
+using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Recording;
 
@@ -16,76 +15,51 @@ public interface IStreamRecorder : IAsyncDisposable
     Task ToggleStreamDeletionAsync(bool markForDeletion);
 }
 
-public sealed class StreamRecorder : IStreamRecorder
+public sealed class StreamRecorder(
+    IThumbnailManager thumbnailManager,
+    IManifestPoller manifestPoller,
+    ITwitchGqlClient twitchGqlClient,
+    IHlsPlaylistWriter playlistWriter,
+    ISegmentStore segmentStore,
+    ChapterTracker chapterTracker,
+    IStreamRepository streamRepository,
+    ISegmentUploader segmentUploader,
+    IStreamFinalizer finalizer,
+    TransientErrorRetryPolicy retryPolicy,
+    SettingsService settingsService,
+    ILogger<StreamRecorder> logger,
+    CancellationToken parentCancellationToken) : IStreamRecorder
 {
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
-    private readonly IThumbnailManager _thumbnailManager;
-    private readonly IManifestPoller _manifestPoller;
-    private readonly ISegmentDownloader _segmentDownloader;
-    private readonly IHlsPlaylist _hlsPlaylist;
-    private readonly IStreamRepository _streamRepository;
-    private readonly IStreamFinalizer _finalizer;
-    private readonly IOptions<PathsOptions> pathsOptions;
-    private readonly AppSettings _settings;
-    private readonly EventBus _eventBus;
-    private readonly ILogger<StreamRecorder> _logger;
-    private readonly CancellationTokenSource _cts;
-    private readonly IDateTimeProvider _dateTimeProvider;
-    private SessionEndReason? _finalizeReason;
-
-    public StreamRecorder(
-        IThumbnailManager thumbnailManager,
-        IManifestPoller manifestPoller,
-        ISegmentDownloader segmentDownloader,
-        IHlsPlaylist hlsPlaylist,
-        IStreamRepository streamRepository,
-        IStreamFinalizer finalizer,
-        SettingsService settingsService,
-        IOptions<PathsOptions> pathsOptions,
-        EventBus eventBus,
-        IDateTimeProvider dateTimeProvider,
-        ILogger<StreamRecorder> logger,
-        CancellationToken parentCancellationToken)
-    {
-        _segmentDownloader = segmentDownloader;
-        _manifestPoller = manifestPoller;
-        _thumbnailManager = thumbnailManager;
-        _streamRepository = streamRepository;
-        _finalizer = finalizer;
-        this.pathsOptions = pathsOptions;
-        _settings = settingsService.Settings;
-        _hlsPlaylist = hlsPlaylist;
-        _eventBus = eventBus;
-        _dateTimeProvider = dateTimeProvider;
-        _logger = logger;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
-
-        eventBus.Subscribe<ChannelUpdateEvent>(OnMetadataChangedAsync);
-    }
+    private readonly AppSettings _settings = settingsService.Settings;
+    private readonly CancellationTokenSource _cts
+        = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
+    private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
 
     public async Task StartAsync(Domain.Stream stream, Channel channel)
     {
-        _logger.LogInformation("Recording started for '{Channel}'", channel.Name);
+        logger.LogInformation("Recording started for '{Channel}'", channel.Name);
         try
         {
             _channel = channel;
             _stream = stream;
+            chapterTracker.Attach(_stream, _channel);
+            segmentUploader.Attach(_stream);
+
             await RecordStreamAsync(_cts.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            logger.LogError(ex, "Unhandled error in recording session.");
             SetEndReason(new SessionEndReason.StreamError(ex));
-            _logger.LogError(ex, "Unhandled error in recording session.");
         }
         finally
         {
+            await CloseCurrentSegmentAsync(CancellationToken.None);
+            await segmentUploader.FlushRemainingAsync();
             await DisposeAsync();
-            await _finalizer.FinalizeAsync(
-                _stream,
-                _channel,
-                _segmentDownloader,
-                _finalizeReason ?? new SessionEndReason.StreamEnded());
+            await finalizer.FinalizeAsync(_channel.Name, _stream, _endReason);
         }
     }
 
@@ -102,113 +76,115 @@ public sealed class StreamRecorder : IStreamRecorder
             : StorageOperationStatus.None;
 
         _stream.SetStorageOperationStatus(status);
-        await _streamRepository.UpdateAsync(_stream);
-    }
-
-    private async Task OnMetadataChangedAsync(ChannelUpdateEvent e)
-    {
-        if (_channel.Id != e.ChannelId)
-            return;
-
-        using var _chnlScope = _logger.BeginScope("{Channel}", _channel.Name);
-        using var _metaScope = _logger.BeginScope("'{Title}' ({CategoryId})", e.Title, e.CategoryId);
-
-        if (_stream.CurrentChapter.Title == e.Title && _stream.CurrentChapter.CategoryId == e.CategoryId)
-        {
-            _logger.LogInformation("Metadata change ignored: title and game unchanged.");
-            return;
-        }
-
-        _logger.LogInformation("Metadata split triggered.");
-        _stream.AddChapter(e.Title, e.CategoryId, _dateTimeProvider.DateTimeNow);
-        await _streamRepository.UpdateAsync(_stream);
+        await streamRepository.UpdateAsync(_stream);
     }
 
     private async Task RecordStreamAsync(CancellationToken cancellationToken)
     {
-        int consecutiveNetworkErrors = 0;
-        int emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+        var emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
 
         while (!cancellationToken.IsCancellationRequested && emptyPollsRemaining > 0)
         {
-            try
+            await thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream, cancellationToken);
+
+            var (manifest, hasQualityChanged) = await retryPolicy.ExecuteAsync(
+                () => manifestPoller.GetNextManifestAsync(_channel.Name, cancellationToken),
+                cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(manifest))
             {
-                await _thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream, cancellationToken);
-
-                var (manifest, hasQualityChanged) = await _manifestPoller
-                    .GetNextManifestAsync(_channel.Name, cancellationToken);
-
-                if (string.IsNullOrWhiteSpace(manifest))
-                {
-                    _logger.LogWarning("No manifest available. Retrying... ({Remaining} attempts left)",
-                    emptyPollsRemaining--);
-                    await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-                    continue;
-                }
-
-                if (hasQualityChanged)
-                {
-                    var (FileName, Duration) = _segmentDownloader.CloseSegment();
-                    await _hlsPlaylist.AddSegmentAsync(FormatSegmentUrl(FileName), Duration, cancellationToken);
-                    await _hlsPlaylist.AddDiscontinuityAsync(cancellationToken);
-                    _logger.LogDebug("Quality switch detected.");
-                }
-
-                var manifestResult = ManifestSegmentExtractor.ExtractNewSegments(manifest, _hlsPlaylist.LastTwitchMediaSequence);
-                _hlsPlaylist.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
-
-                var downloadedSegments = _segmentDownloader.DownloadSegmentsAsync(
-                    _stream.Folder.RelativePath,
-                    manifestResult,
-                    _hlsPlaylist,
-                    cancellationToken);
-
-                await foreach (var (FileName, Duration) in downloadedSegments)
-                {
-                    if (!string.IsNullOrWhiteSpace(manifestResult.InitSegmentUrl) && !_hlsPlaylist.HasInitSegment)
-                        await _hlsPlaylist.SetInitSegmentAsync(FormatSegmentUrl(FileName), cancellationToken);
-                    else
-                        await _hlsPlaylist.AddSegmentAsync(FormatSegmentUrl(FileName), Duration, cancellationToken);
-                }
-
-                if (manifestResult.IsStreamEnded)
-                {
-                    SetEndReason(new SessionEndReason.StreamEnded());
-                    return;
-                }
-
-                emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
-                consecutiveNetworkErrors = 0;
-
-                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                continue;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+
+            emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+
+            if (hasQualityChanged)
+                await HandleQualitySwitchAsync(cancellationToken);
+
+            var manifestResult = PlaylistSegmentExtractor.ExtractNewSegments(manifest, playlistWriter.LastTwitchMediaSequence);
+            playlistWriter.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
+
+            var downloadedSegments = DownloadSegmentsAsync(manifestResult, cancellationToken);
+            await StoreSegmentsAsync(downloadedSegments, cancellationToken);
+
+            if (manifestResult.IsStreamEnded)
             {
-                consecutiveNetworkErrors++;
-                if (consecutiveNetworkErrors > 5)
-                    throw;
-
-                _logger.LogWarning(ex, "Network issue detected ({Message}). Retry {Count}/5.",
-                    ex.Message, consecutiveNetworkErrors);
-
-                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                SetEndReason(new SessionEndReason.StreamEnded());
+                return;
             }
+
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
         }
     }
 
-    private string FormatSegmentUrl(string segmentName) =>
-        $"{pathsOptions.Value.BaseUrl}/hls/{_stream.TwitchStreamId}/segments/{segmentName}";
+    private async Task HandleQualitySwitchAsync(CancellationToken cancellationToken)
+    {
+        await CloseCurrentSegmentAsync(cancellationToken);
+        await playlistWriter.AddDiscontinuityAsync(cancellationToken);
+        logger.LogDebug("Quality switch detected.");
+    }
+
+    private async IAsyncEnumerable<DownloadedSegment> DownloadSegmentsAsync(
+        PlaylistExtractionResult manifestResult,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        foreach (var segment in manifestResult.Segments)
+        {
+            var segmentStream = await retryPolicy.ExecuteAsync(
+                () => twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken),
+                cancellationToken);
+
+            yield return new DownloadedSegment(segment, segmentStream);
+        }
+    }
+
+    private async Task StoreSegmentsAsync(
+        IAsyncEnumerable<DownloadedSegment> downloadedSegments,
+        CancellationToken cancellationToken)
+    {
+        await foreach (var segment in downloadedSegments)
+        {
+            var localSegment = await segmentStore.SaveAsync(
+                _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory),
+                segment,
+                playlistWriter.LastSegmentFileName,
+                cancellationToken);
+
+            if (localSegment is null)
+                continue;
+
+            if (segment.Source.IsInitSegment && !playlistWriter.HasInitSegment)
+                await playlistWriter.SetInitSegmentAsync(localSegment.FilePath, cancellationToken);
+            else
+                await playlistWriter.AddSegmentAsync(localSegment.FilePath, localSegment.Duration, cancellationToken);
+
+            segmentUploader.Add(localSegment);
+        }
+    }
+
+    private async Task CloseCurrentSegmentAsync(CancellationToken cancellationToken)
+    {
+        var segment = segmentStore.CloseCurrentSegment();
+        if (segment is null)
+            return;
+
+        await playlistWriter.AddSegmentAsync(segment.FilePath, segment.Duration, cancellationToken);
+        segmentUploader.Add(segment);
+    }
 
     private void SetEndReason(SessionEndReason reason) =>
-        Interlocked.CompareExchange(ref _finalizeReason, reason, null);
+        Interlocked.Exchange(ref _endReason, reason);
 
     public async ValueTask DisposeAsync()
     {
         if (!_cts.IsCancellationRequested)
             await _cts.CancelAsync();
 
-        await _hlsPlaylist.DisposeAsync();
-        _eventBus.UnSubscribe<ChannelUpdateEvent>(OnMetadataChangedAsync);
+        await playlistWriter.DisposeAsync();
+        segmentUploader.Dispose();
+        chapterTracker.Dispose();
         _cts.Dispose();
     }
 }

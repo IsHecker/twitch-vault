@@ -26,11 +26,11 @@ public record StreamResponse(
     DateTime? FinishedAt,
     List<ChapterResponse> Chapters)
 {
-    public static StreamResponse FromDomain(Domain.Stream stream) =>
+    public static StreamResponse FromDomain(Domain.Stream stream, string baseUrl) =>
         new(
             stream.TwitchStreamId,
             stream.ChannelId,
-            stream.ThumbnailUrl,
+            stream.Folder.GetThumbnailUrl(baseUrl),
             stream.Status,
             stream.StartedAt,
             stream.FinishedAt,

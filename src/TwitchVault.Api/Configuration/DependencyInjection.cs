@@ -49,10 +49,13 @@ public static class DependencyInjection
         services.AddSingleton<IUserChannelRepository, UserChannelRepository>();
 
         services.AddTransient<SegmentStateTracker>();
+        services.AddTransient<ChapterTracker>();
         services.AddTransient<IStreamFinalizer, StreamFinalizer>();
-        services.AddTransient<ISegmentDownloader, SegmentDownloader>();
+        services.AddTransient<ISegmentStore, SegmentStore>();
         services.AddTransient<IManifestPoller, ManifestPoller>();
         services.AddTransient<IThumbnailManager, ThumbnailManager>();
+        services.AddTransient<IStreamStorageService, StreamStorageService>();
+        services.AddTransient<ISegmentUploader, LiveSegmentUploader>();
 
         services.AddSingleton<RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
@@ -120,7 +123,7 @@ public static class DependencyInjection
     private static IServiceCollection AddCloudStorage(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
-        services.ConfigureOptions<StorageUploadJobConfiguration>();
+        // services.ConfigureOptions<StorageUploadJobConfiguration>();
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
 
         services.AddSingleton<StreamJobCoordinator>();

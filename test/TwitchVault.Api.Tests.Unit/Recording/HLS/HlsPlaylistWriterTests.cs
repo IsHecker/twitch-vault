@@ -6,25 +6,28 @@ using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
-public class HlsPlaylistTests
+public class HlsPlaylistWriterTests
 {
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
     private readonly DateTime _testStartTime = new(2026, 7, 1, 12, 0, 0);
     private readonly MemoryStream _memoryStream = new();
 
-    public HlsPlaylistTests()
+    public HlsPlaylistWriterTests()
     {
         _dateTimeProvider.DateTimeNow.Returns(_testStartTime);
         _fileSystem.Exists(Arg.Any<string>()).Returns(false);
         _fileSystem.OpenWrite(Arg.Any<string>(), Arg.Any<FileMode>()).Returns(_memoryStream);
     }
 
+    private Task<HlsPlaylistWriter> LoadOrCreatePlaylistAsync()
+        => HlsPlaylistWriter.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem, CancellationToken.None);
+
     [Fact]
     public async Task LoadOrCreateAsync_ShouldWriteHeader_WhenPlaylistDoesNotExist()
     {
         // Act
-        await using (var playlist = await HlsPlaylist.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem))
+        await using (var playlist = await LoadOrCreatePlaylistAsync())
         {
             // The playlist writes to stream during initialization
         }
@@ -41,9 +44,9 @@ public class HlsPlaylistTests
     public async Task AddSegmentAsync_ShouldAppendSegmentToStream_WhenParametersAreValid()
     {
         // Act
-        await using (var playlist = await HlsPlaylist.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem))
+        await using (var playlist = await LoadOrCreatePlaylistAsync())
         {
-            await playlist.AddSegmentAsync("new_seg.ts", 5.234f);
+            await playlist.AddSegmentAsync("new_seg.ts", 5.234f, CancellationToken.None);
         }
 
         // Assert
@@ -58,10 +61,10 @@ public class HlsPlaylistTests
     public async Task AddDiscontinuityAsync_ShouldAppendDiscontinuity_WhenSegmentsHaveBeenFlushed()
     {
         // Act
-        await using (var playlist = await HlsPlaylist.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem))
+        await using (var playlist = await LoadOrCreatePlaylistAsync())
         {
-            await playlist.AddSegmentAsync("seg_1.ts", 6.0f);
-            await playlist.AddDiscontinuityAsync();
+            await playlist.AddSegmentAsync("seg_1.ts", 6.0f, CancellationToken.None);
+            await playlist.AddDiscontinuityAsync(CancellationToken.None);
         }
 
         // Assert
@@ -73,9 +76,9 @@ public class HlsPlaylistTests
     public async Task SetInitSegmentAsync_ShouldThrowInvalidOperationException_WhenInitSegmentAlreadySet()
     {
         // Act 
-        await using var playlist = await HlsPlaylist.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem);
-        await playlist.SetInitSegmentAsync("init.mp4");
-        var act = async () => await playlist.SetInitSegmentAsync("init_duplicate.mp4");
+        await using var playlist = await LoadOrCreatePlaylistAsync();
+        await playlist.SetInitSegmentAsync("init.mp4", CancellationToken.None);
+        var act = async () => await playlist.SetInitSegmentAsync("init_duplicate.mp4", CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -85,7 +88,7 @@ public class HlsPlaylistTests
     public async Task FinalizeAsync_ShouldAppendEndListTag_WhenPlaylistIsDisposed()
     {
         // Act
-        await using (var playlist = await HlsPlaylist.LoadOrCreateAsync("test-folder", _dateTimeProvider, _fileSystem))
+        await using (var playlist = await LoadOrCreatePlaylistAsync())
         {
         }
 

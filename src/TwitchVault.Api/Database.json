@@ -5,72 +5,24 @@
       "Name": "pisty",
       "QualityRank": 2,
       "IsLive": false,
-      "ShouldRecord": true,
+      "ShouldRecord": false,
       "LastStreamedAt": "2026-08-08T00:45:22"
     },
     {
-      "Id": "1131131080",
-      "Name": "keewidraws",
+      "Id": "456252551",
+      "Name": "charlyne",
       "QualityRank": 1,
       "IsLive": false,
       "ShouldRecord": false,
-      "LastStreamedAt": "2026-07-21T05:04:44.1782519+03:00"
+      "LastStreamedAt": "2026-08-17T02:38:39"
     },
     {
-      "Id": "153423171",
-      "Name": "vnnh_",
+      "Id": "563908141",
+      "Name": "joe_bartolozzi",
       "QualityRank": 1,
-      "IsLive": false,
-      "ShouldRecord": true,
-      "LastStreamedAt": "2026-07-21T05:22:32.5897392+03:00"
-    },
-    {
-      "Id": "151283108",
-      "Name": "gothamchess",
-      "QualityRank": 2,
-      "IsLive": false,
-      "ShouldRecord": true,
-      "LastStreamedAt": "2026-07-27T18:59:10.1735777"
-    },
-    {
-      "Id": "177029122",
-      "Name": "nyyxxii",
-      "QualityRank": 1,
-      "IsLive": false,
+      "IsLive": true,
       "ShouldRecord": false,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "183945752",
-      "Name": "zhanarii",
-      "QualityRank": 1,
-      "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "634207529",
-      "Name": "sidsity",
-      "QualityRank": 1,
-      "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "451544676",
-      "Name": "dream",
-      "QualityRank": 1,
-      "IsLive": false,
-      "ShouldRecord": true,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "38632829",
-      "Name": "ocmz",
-      "QualityRank": 2,
-      "IsLive": false,
-      "ShouldRecord": true,
-      "LastStreamedAt": null
+      "LastStreamedAt": "2026-08-17T21:11:45"
     }
   ],
   "Streams": [
@@ -81,7 +33,6 @@
         "RelativePath": "Streams\\pisty\\2026-07-24 23-13-46",
         "ThumbnailPath": "Streams/pisty/2026-07-24 23-13-46/thumbnail.jpg"
       },
-      "ThumbnailUrl": "https://stream-vault.runasp.net/Streams/pisty/2026-07-08%2022-54-01/thumbnail.jpg",
       "Status": "Finished",
       "StorageLocation": "Local",
       "StorageOperationStatus": "UploadFailed",
@@ -106,60 +57,7 @@
       "Password": "password",
       "IsAdmin": true,
       "CreatedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "Id": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
-      "Username": "ypro",
-      "Password": "YPRO1368=yasser",
-      "IsAdmin": false,
-      "CreatedAt": "2026-08-03T00:43:50.9834605"
     }
   ],
-  "UserChannels": [
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "54507525",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "1131131080",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "153423171",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "151283108",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "177029122",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "183945752",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "634207529",
-      "AddedAt": "2026-08-02T17:18:07.2833315+03:00"
-    },
-    {
-      "UserId": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
-      "ChannelId": "451544676",
-      "AddedAt": "2026-08-02T21:46:38.3443403Z"
-    },
-    {
-      "UserId": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
-      "ChannelId": "38632829",
-      "AddedAt": "2026-08-02T21:50:01.6192844Z"
-    }
-  ]
+  "UserChannels": []
 }

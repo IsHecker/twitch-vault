@@ -1,0 +1,81 @@
+using TwitchVault.Api.Configuration;
+
+namespace TwitchVault.Api.Recording;
+
+public interface ISegmentUploader : IDisposable
+{
+    void Attach(Domain.Stream stream);
+    void Add(LocalSegment segment);
+    Task FlushRemainingAsync();
+}
+
+public sealed class LiveSegmentUploader(
+    IStreamStorageService storageService,
+    IWebHostEnvironment env,
+    SettingsService settingsService,
+    ILogger<LiveSegmentUploader> logger) : ISegmentUploader
+{
+    private readonly List<LocalSegment> _buffer = [];
+    private Task _pendingFlush = Task.CompletedTask;
+    private Domain.Stream _stream = null!;
+    private string _localDirectory = null!;
+    private string _remoteUrlsFilePath = null!;
+    private StreamWriter _remoteUrlsWriter = null!;
+
+    public void Attach(Domain.Stream stream)
+    {
+        _stream = stream;
+        _localDirectory = _stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        _remoteUrlsFilePath = Path.Combine(_localDirectory, IStreamStorageService.RemoteUrlsFileName);
+        _remoteUrlsWriter = new StreamWriter(_remoteUrlsFilePath, append: true);
+    }
+
+    public void Add(LocalSegment segment)
+    {
+        _buffer.Add(segment);
+        if (_buffer.Count < settingsService.Settings.Vault.UploadBatchSize)
+            return;
+
+        StartFlush();
+    }
+
+    public async Task FlushRemainingAsync()
+    {
+        if (_buffer.Count > 0)
+            StartFlush();
+
+        await _pendingFlush;
+    }
+
+    private void StartFlush()
+    {
+        var previous = _pendingFlush;
+        _pendingFlush = FlushAsync(previous);
+    }
+
+    private async Task FlushAsync(Task previousFlush)
+    {
+        await previousFlush.ContinueWith(_ => { });
+
+        var batch = _buffer.Select(seg => seg.FilePath).ToList();
+
+        _buffer.Clear();
+
+        var succeeded = await storageService.UploadBatchAsync(
+            batch,
+            _stream,
+            _remoteUrlsWriter,
+            CancellationToken.None);
+
+        if (!succeeded)
+            logger.LogWarning("Batch upload failed for stream '{StreamId}'. " +
+                "Segments will be picked up by the backup upload job.",
+                _stream.TwitchStreamId);
+    }
+
+    public void Dispose()
+    {
+        _remoteUrlsWriter.Flush();
+        _remoteUrlsWriter.Dispose();
+    }
+}

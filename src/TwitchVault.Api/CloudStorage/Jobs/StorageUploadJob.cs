@@ -2,20 +2,19 @@ using Quartz;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
+using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.CloudStorage.Jobs;
 
 public sealed class StorageUploadJob(
     IStreamRepository streamRepository,
-    ICloudStorageService storageService,
+    IStreamStorageService storageService,
     StreamJobCoordinator jobCoordinator,
     SettingsService settingsService,
     IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
-    private const int BatchSize = 1;
-
     public async Task Execute(IJobExecutionContext context)
     {
         if (!settingsService.Settings.BackgroundJobs[JobOptions.StorageUpload].Enabled)
@@ -54,127 +53,71 @@ public sealed class StorageUploadJob(
             return;
         }
 
-        if (stream.StorageLocation == StorageLocation.Local)
-        {
-            stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
-            await streamRepository.UpdateAsync(stream);
-        }
-
-        var dir = new DirectoryInfo(localDirectory);
-        var pendingSegments = dir.EnumerateFiles()
+        // Segments still on disk are segments the live uploader failed to upload (or never ran).
+        var remainingSegments = new DirectoryInfo(localDirectory)
+            .EnumerateFiles()
             .Where(f => HlsSegmentNaming.IsSegmentFile(f.FullName))
             .OrderBy(f => HlsSegmentNaming.GetSegmentIndex(f.FullName))
+            .Select(f => f.FullName)
             .ToList();
 
-        var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
-        var tempPlaylistPath = $"{playlistPath}.tmp";
+        var remoteUrlsFilePath = Path.Combine(localDirectory, IStreamStorageService.RemoteUrlsFileName);
 
-        if (pendingSegments.Count == 0)
+        if (remainingSegments.Count > 0)
         {
-            logger.LogInformation("Stream '{Title}' has no segment files to upload.", streamTitle);
+            logger.LogInformation(
+                "Backup upload for '{Title}': {Count} segment(s) left on disk.",
+                streamTitle, remainingSegments.Count);
+
+            stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
             await streamRepository.UpdateAsync(stream);
-            return;
+
+            await UploadRemainingSegmentsAsync(
+                remainingSegments, stream, remoteUrlsFilePath, cancellationToken);
         }
-
-        logger.LogInformation("Starting upload for '{Title}'. Segments: {Count}.", streamTitle, pendingSegments.Count);
-
-        var allRemoteUrls = new List<RemoteUrl>();
-        try
+        else
         {
-            foreach (var segmentBatch in pendingSegments.Chunk(BatchSize))
-            {
-                var storageFiles = segmentBatch.Select(seg =>
-                {
-                    var segmentPath = seg.FullName;
-                    var content = new FileStream(
-                        segmentPath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.Read,
-                        bufferSize: 81_920,
-                        useAsync: true);
-
-                    return new StorageFile(segmentPath, ResolveContentType(segmentPath), content);
-                });
-
-                try
-                {
-                    var uploadResult = await storageService.UploadAsync(
-                        storageFiles.ToList(),
-                        stream.StorageInstanceName,
-                        cancellationToken);
-
-                    if (uploadResult.IsFailure)
-                    {
-                        stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
-                        await streamRepository.UpdateAsync(stream);
-                        logger.LogError("Failed to upload this batch to provider: {Error}",
-                            uploadResult.Error);
-                        return;
-                    }
-
-                    var (instanceName, remoteUrls) = uploadResult.Value;
-
-                    allRemoteUrls.AddRange(remoteUrls);
-
-                    if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
-                    {
-                        stream.SetStorageInstance(uploadResult.Value.InstanceName);
-                        await streamRepository.UpdateAsync(stream);
-                    }
-                }
-                catch (OperationCanceledException) { }
-                finally
-                {
-                    foreach (var file in storageFiles)
-                    {
-                        await file.Content.DisposeAsync();
-                    }
-                }
-
-                // await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(2, 5)), cancellationToken);
-                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            logger.LogInformation("Upload for stream '{StreamId}' was cancelled.", stream.TwitchStreamId);
+            logger.LogInformation(
+                "Backup upload for '{Title}': all segments already uploaded by live batcher.",
+                streamTitle);
         }
 
-        await HlsPlaylistRewriter.RewriteSegmentsAsync(
-            playlistPath,
-            tempPlaylistPath,
-            allRemoteUrls.ToDictionary(key => key.LocalFilePath, val => val.Url),
-            jobCancellationToken);
-
-        stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
-        stream.SetStorageLocation(StorageLocation.Remote);
-        await streamRepository.UpdateAsync(stream);
-
-        // DeleteLocalSegments(allRemoteUrls);
-        File.Move(tempPlaylistPath, playlistPath, overwrite: true);
-
-        logger.LogInformation("Stream '{StreamId}' successfully uploaded ({Bytes} bytes) to storage instance '{Instance}'.",
-            stream.TwitchStreamId, stream.SizeBytes, stream.StorageInstanceName);
+        await storageService.TryFinalizeStorageAsync(stream, cancellationToken);
 
         jobCoordinator.CompleteUpload(stream.TwitchStreamId); // ALWAYS unblocks a waiting delete
     }
 
-    private static void DeleteLocalSegments(List<RemoteUrl> remoteUrls)
+    private async Task UploadRemainingSegmentsAsync(
+        List<string> remainingSegments,
+        Domain.Stream stream,
+        string remoteUrlsFilePath,
+        CancellationToken cancellationToken)
     {
-        foreach (var remoteUrl in remoteUrls)
+        await using var remoteUrlsWriter = new StreamWriter(remoteUrlsFilePath, append: true);
+
+        try
         {
-            File.Delete(remoteUrl.LocalFilePath);
+            const int BatchSize = 5;
+            foreach (var batch in remainingSegments.Chunk(BatchSize))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var succeeded = await storageService.UploadBatchAsync(
+                    batch, stream, remoteUrlsWriter, cancellationToken);
+
+                if (!succeeded)
+                {
+                    stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
+                    await streamRepository.UpdateAsync(stream);
+                    logger.LogError("Backup upload batch failed for '{StreamId}'. Aborting.",
+                        stream.TwitchStreamId);
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("Backup upload for stream '{StreamId}' was cancelled.", stream.TwitchStreamId);
         }
     }
-
-    private static string ResolveContentType(string filePath) =>
-        Path.GetExtension(filePath).ToLowerInvariant() switch
-        {
-            ".ts" => "video/mp2t",
-            ".mp4" or ".m4s" => "video/mp4",
-            ".m3u8" => "application/vnd.apple.mpegurl",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            _ => "application/octet-stream"
-        };
 }

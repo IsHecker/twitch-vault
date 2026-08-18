@@ -3,19 +3,19 @@ using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public interface IHlsPlaylist : IAsyncDisposable
+public interface IHlsPlaylistWriter : IAsyncDisposable
 {
     long LastTwitchMediaSequence { get; }
     string? LastSegmentFileName { get; }
     bool HasInitSegment { get; }
 
-    Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken = default);
-    Task AddSegmentAsync(string fileName, float duration, CancellationToken cancellationToken = default);
-    Task AddDiscontinuityAsync(CancellationToken cancellationToken = default);
+    Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken);
+    Task AddSegmentAsync(string fileName, float duration, CancellationToken cancellationToken);
+    Task AddDiscontinuityAsync(CancellationToken cancellationToken);
     void UpdateTwitchMediaSequence(long mediaSequence);
 }
 
-public sealed class HlsPlaylist : IHlsPlaylist
+public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
 {
     private const string PlaylistFileName = "playlist.m3u8";
     private const int TargetDurationDigits = 3;
@@ -28,30 +28,31 @@ public sealed class HlsPlaylist : IHlsPlaylist
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly Stream _fileStream;
+    private readonly DateTime _startTime;
+    private readonly bool _isFinalized;
     private float _targetDuration;
+    private float _totalDuration;
     private bool _lastEntryWasDiscontinuity;
 
-    private readonly DateTime _startTime;
-    private float _totalDuration;
-
-    private HlsPlaylist(Stream fileStream, PlaylistState state)
+    private HlsPlaylistWriter(Stream fileStream, PlaylistState state)
     {
         _fileStream = fileStream;
         _startTime = state.StartTime;
         _targetDuration = state.TargetDuration;
         _totalDuration = state.TotalDuration;
         _lastEntryWasDiscontinuity = state.LastEntryWasDiscontinuity;
+        _isFinalized = state.IsFinalized;
 
         LastTwitchMediaSequence = state.SegmentCount;
         LastSegmentFileName = state.LastSegmentFileName;
         HasInitSegment = state.HasInitSegment;
     }
 
-    public static async Task<HlsPlaylist> LoadOrCreateAsync(
+    public static async Task<HlsPlaylistWriter> LoadOrCreateAsync(
         string streamFolderPath,
         IDateTimeProvider dateTimeProvider,
         IFileSystem fileSystem,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var path = Path.Combine(streamFolderPath, PlaylistFileName);
         var exists = fileSystem.Exists(path);
@@ -62,17 +63,17 @@ public sealed class HlsPlaylist : IHlsPlaylist
 
         var fileStream = fileSystem.OpenWrite(path, FileMode.OpenOrCreate);
 
-        var playlist = new HlsPlaylist(fileStream, state);
+        var playlist = new HlsPlaylistWriter(fileStream, state);
 
         if (!exists)
             await playlist.WriteHeaderAsync(cancellationToken);
-        else if (!state.IsFinalized)
-            await playlist.AddDiscontinuityAsync(cancellationToken);
+        else
+            await playlist.ResumeAsync(cancellationToken);
 
         return playlist;
     }
 
-    public async Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken = default)
+    public async Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken);
         try
@@ -94,7 +95,7 @@ public sealed class HlsPlaylist : IHlsPlaylist
     public async Task AddSegmentAsync(
         string fileName,
         float duration,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken);
         try
@@ -120,7 +121,7 @@ public sealed class HlsPlaylist : IHlsPlaylist
         }
     }
 
-    public async Task AddDiscontinuityAsync(CancellationToken cancellationToken = default)
+    public async Task AddDiscontinuityAsync(CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken);
         try
@@ -140,22 +141,32 @@ public sealed class HlsPlaylist : IHlsPlaylist
         }
     }
 
+    public void UpdateTwitchMediaSequence(long mediaSequence) => LastTwitchMediaSequence = mediaSequence;
+
+    private async Task ResumeAsync(CancellationToken cancellationToken)
+    {
+        if (_isFinalized)
+            RemoveEndListTag();
+
+        await AddDiscontinuityAsync(cancellationToken);
+    }
+
+    private void RemoveEndListTag()
+    {
+        var endListBytes = Encoding.UTF8.GetByteCount($"{HlsTags.EndList}\n");
+        if (_fileStream.Length >= endListBytes)
+        {
+            _fileStream.SetLength(_fileStream.Length - endListBytes);
+        }
+    }
+
     private async Task FinalizeAsync(CancellationToken cancellationToken = default)
     {
         await WriteLineAsync(HlsTags.EndList, cancellationToken);
         await _fileStream.FlushAsync(cancellationToken);
     }
 
-    public void UpdateTwitchMediaSequence(long mediaSequence) => LastTwitchMediaSequence = mediaSequence;
-
-    public async ValueTask DisposeAsync()
-    {
-        await FinalizeAsync();
-        await _fileStream.DisposeAsync();
-        _lock.Dispose();
-    }
-
-    private async Task WriteHeaderAsync(CancellationToken cancellationToken = default)
+    private async Task WriteHeaderAsync(CancellationToken cancellationToken)
     {
         var targetDurationValue = ((int)Math.Ceiling(_targetDuration))
             .ToString()
@@ -191,4 +202,11 @@ public sealed class HlsPlaylist : IHlsPlaylist
 
     private ValueTask WriteLineAsync(string text, CancellationToken ct = default)
         => WriteAsync(text + '\n', ct);
+
+    public async ValueTask DisposeAsync()
+    {
+        await FinalizeAsync();
+        await _fileStream.DisposeAsync();
+        _lock.Dispose();
+    }
 }

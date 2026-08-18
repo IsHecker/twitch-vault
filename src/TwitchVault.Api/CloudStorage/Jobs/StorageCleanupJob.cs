@@ -1,8 +1,7 @@
 using Quartz;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
-using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Recording;
 
 namespace TwitchVault.Api.CloudStorage.Jobs;
 
@@ -10,14 +9,14 @@ namespace TwitchVault.Api.CloudStorage.Jobs;
 public sealed class StorageCleanupJob(
     IStreamRepository streamRepository,
     StreamJobCoordinator jobCoordinator,
-    ICloudStorageService storageService,
-    IWebHostEnvironment env,
+    IStreamStorageService storageService,
     ILogger<StorageCleanupJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
         var pendingStreams = (await streamRepository.GetAllAsync())
-            .Where(s => s.StorageOperationStatus == StorageOperationStatus.Deleting)
+            .Where(s => s.StorageOperationStatus == StorageOperationStatus.DeleteRequest
+                || s.StorageOperationStatus == StorageOperationStatus.Deleting)
             .ToList();
 
         foreach (var stream in pendingStreams)
@@ -29,31 +28,13 @@ public sealed class StorageCleanupJob(
     private async Task DeleteStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
     {
         // Force any in-flight upload for this stream to stop, and wait until it actually has
-        await jobCoordinator.CancelUploadAndWaitAsync(stream.TwitchStreamId, TimeSpan.FromMinutes(5));
+        // await jobCoordinator.CancelUploadAndWaitAsync(stream.TwitchStreamId, TimeSpan.FromMinutes(5));
 
-        if (stream.StorageLocation == StorageLocation.Remote)
-        {
-            var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
-            var extractionResult = ManifestSegmentExtractor.ExtractAllSegments(File.ReadAllText(playlistPath));
-            var remoteUrls = extractionResult.Segments
-                .Select(seg => seg.Url)
-                .Append(extractionResult.InitSegmentUrl ?? string.Empty);
-
-            var result = await storageService.DeleteBatchAsync(stream.StorageInstanceName!, remoteUrls.ToList(), cancellationToken);
-            if (result.IsFailure)
-            {
-                logger.LogError("Failed to delete remote data for stream {StreamId} on instance '{InstanceId}': {Error}",
-                    stream.TwitchStreamId, stream.StorageInstanceName, result.Error);
-                return;
-            }
-        }
-
-        // Delete local folder and playlist on disk
-        var localDir = stream.Folder.GetAbsolutePath(env.ContentRootPath);
-
-        await IOUtils.DeleteDirectoryWithRetriesAsync(localDir);
+        var succeeded = await storageService.DeleteStreamAsync(stream, cancellationToken);
+        if (!succeeded)
+            return;
 
         await streamRepository.DeleteAsync(stream.TwitchStreamId);
-        logger.LogInformation("Stream {StreamId} fully wiped from local and cloud storage.", stream.TwitchStreamId);
+        logger.LogInformation("Stream '{StreamId}' fully wiped from local and cloud storage.", stream.TwitchStreamId);
     }
 }

@@ -18,7 +18,7 @@ public class ManifestSegmentExtractorTests
             "segment_101.ts\n";
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 99);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 99);
 
         // Assert
         result.Segments.Should().HaveCount(2);
@@ -48,7 +48,7 @@ public class ManifestSegmentExtractorTests
             "segment_102.ts\n";
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 101);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 101);
 
         // Assert
         result.Segments.Should().ContainSingle();
@@ -68,12 +68,13 @@ public class ManifestSegmentExtractorTests
             "segment_50.ts\n";
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 49);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 49);
 
         // Assert
-        result.InitSegmentUrl.Should().Be("init_seq.mp4");
-        result.Segments.Should().ContainSingle();
-        result.Segments[0].Url.Should().Be("segment_50.ts");
+        result.Segments.Should().HaveCount(2);
+        result.Segments[0].Url.Should().Be("init_seq.mp4");
+        result.Segments[0].IsInitSegment.Should().BeTrue();
+        result.Segments[1].Url.Should().Be("segment_50.ts");
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class ManifestSegmentExtractorTests
             "#EXT-X-ENDLIST\n";
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
 
         // Assert
         result.IsStreamEnded.Should().BeTrue();
@@ -104,7 +105,7 @@ public class ManifestSegmentExtractorTests
             "segment_1.ts\n";
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 10);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 10);
 
         // Assert
         result.Segments.Should().BeEmpty();
@@ -123,7 +124,7 @@ public class ManifestSegmentExtractorTests
             "segment_1.ts\n";
 
         // Act
-        var act = () => ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
+        var act = () => PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
 
         // Assert
         act.Should().Throw<FormatException>();
@@ -139,7 +140,7 @@ public class ManifestSegmentExtractorTests
             "#EXTINF:2.000,";
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
 
         // Assert
         result.Segments.Should().BeEmpty();
@@ -155,7 +156,7 @@ public class ManifestSegmentExtractorTests
             "#EXTINF:2.000,\n"; // Ends with a trailing newline, split produces empty line
 
         // Act
-        var result = ManifestSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
+        var result = PlaylistSegmentExtractor.ExtractNewSegments(manifest, lastMediaSequence: 0);
 
         // Assert
         result.Segments.Should().ContainSingle();

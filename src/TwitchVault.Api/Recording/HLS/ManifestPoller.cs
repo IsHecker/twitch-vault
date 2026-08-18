@@ -41,7 +41,8 @@ public sealed class ManifestPoller(
         string channelName,
         CancellationToken cancellationToken)
     {
-        await RefreshVariantsAsync(channelName, cancellationToken);
+        if (!IsStable)
+            await RefreshVariantsAsync(channelName, cancellationToken);
 
         if (_variants.Length == 0)
             return (null, false);
@@ -57,9 +58,6 @@ public sealed class ManifestPoller(
 
     private async Task RefreshVariantsAsync(string channelName, CancellationToken cancellationToken)
     {
-        if (IsStable)
-            return;
-
         if (!IsRefreshNeeded)
             return;
 

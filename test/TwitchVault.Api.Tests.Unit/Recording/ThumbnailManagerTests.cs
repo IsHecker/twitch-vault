@@ -24,8 +24,6 @@ public class ThumbnailManagerTests
             TwitchStreamId = "test-stream",
             Folder = StreamFolder.Create("streams_root", "Test Channel")
         };
-        _stream.SetThumbnailUrl("https://twitch.tv/thumb.jpg");
-
 
         _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => new MemoryStream("dummy-image-bytes"u8.ToArray()));

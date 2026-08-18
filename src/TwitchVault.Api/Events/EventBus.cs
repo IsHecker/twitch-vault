@@ -8,10 +8,11 @@ public class EventBus(ILogger<EventBus> logger)
 
     public void Subscribe<TEvent>(Func<TEvent, Task> handler)
     {
-        if (!_handlers.TryGetValue(typeof(TEvent), out var handlers))
-            _handlers[typeof(TEvent)] = handlers = [];
-
-        handlers.Add(handler);
+        var handlers = _handlers.GetOrAdd(typeof(TEvent), _ => []);
+        lock (handlers)
+        {
+            handlers.Add(handler);
+        }
     }
 
     public void UnSubscribe<TEvent>(Func<TEvent, Task> handler)
@@ -19,14 +20,24 @@ public class EventBus(ILogger<EventBus> logger)
         if (!_handlers.TryGetValue(typeof(TEvent), out var handlers))
             return;
 
-        handlers.Remove(handler);
+        lock (handlers)
+        {
+            handlers.Remove(handler);
+        }
     }
 
     public async Task PublishAsync<TEvent>(TEvent e)
     {
-        if (!_handlers.TryGetValue(typeof(TEvent), out var handlers)) return;
+        if (!_handlers.TryGetValue(typeof(TEvent), out var handlers))
+            return;
 
-        foreach (var handler in handlers)
+        List<Delegate> snapshot;
+        lock (handlers)
+        {
+            snapshot = [.. handlers];
+        }
+
+        foreach (var handler in snapshot)
         {
             try
             {

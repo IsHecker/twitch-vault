@@ -1,7 +1,8 @@
 {
   "Vault": {
     "MaxSegmentDurationInSec": 10,
-    "MaxConsecutiveEmptyPolls": 3
+    "MaxConsecutiveEmptyPolls": 3,
+    "UploadBatchSize": 3
   },
   "Twitch": {
     "PublicClientId": "kimne78kx3ncx6brgo4mv6wki5h1ko",
@@ -20,7 +21,7 @@
       "RunIntervalInMinutes": 1
     },
     "StorageUpload": {
-      "Enabled": true,
+      "Enabled": false,
       "RunIntervalInMinutes": 5
     },
     "StorageCleanup": {

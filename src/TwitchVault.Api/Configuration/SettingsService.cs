@@ -42,6 +42,7 @@ public class SettingsService
         {
             _settings.Vault.MaxSegmentDurationInSec = request.Vault.MaxSegmentDurationInSec;
             _settings.Vault.MaxConsecutiveEmptyPolls = request.Vault.MaxConsecutiveEmptyPolls;
+            _settings.Vault.UploadBatchSize = request.Vault.UploadBatchSize;
 
             _settings.Twitch.ClientId = request.Twitch.ClientId;
             _settings.Twitch.Authorization = request.Twitch.Authorization;

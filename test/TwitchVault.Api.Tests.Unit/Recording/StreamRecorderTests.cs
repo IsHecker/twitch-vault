@@ -10,6 +10,7 @@ using TwitchVault.Api.Events;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
@@ -23,15 +24,19 @@ public class StreamRecorderTests
 
     private readonly IThumbnailManager _thumbnailManager = Substitute.For<IThumbnailManager>();
     private readonly IManifestPoller _manifestPoller = Substitute.For<IManifestPoller>();
-    private readonly ISegmentDownloader _segmentDownloader = Substitute.For<ISegmentDownloader>();
-    private readonly IHlsPlaylist _hlsPlaylist = Substitute.For<IHlsPlaylist>();
+    private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
+    private readonly ISegmentStore _segmentStore = Substitute.For<ISegmentStore>();
+    private readonly IHlsPlaylistWriter _hlsPlaylist = Substitute.For<IHlsPlaylistWriter>();
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
+    private readonly ISegmentUploader _uploader = Substitute.For<ISegmentUploader>();
     private readonly IStreamFinalizer _finalizer = Substitute.For<IStreamFinalizer>();
     private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
     private readonly EventBus _eventBus;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly TransientErrorRetryPolicy _retryPolicy = new(1, TimeSpan.FromSeconds(1), null!);
     private readonly ILogger<StreamRecorder> _logger = Substitute.For<ILogger<StreamRecorder>>();
     private readonly SettingsService _settingsService;
+    private readonly ChapterTracker _chapterTracker;
 
     private readonly Channel _channel = new() { Id = ChannelId, Name = ChannelName, QualityRank = 1 };
     private readonly Domain.Stream _stream;
@@ -43,6 +48,7 @@ public class StreamRecorderTests
         _settingsService.Settings.Vault.MaxConsecutiveEmptyPolls = 3;
 
         _eventBus = new EventBus(Substitute.For<ILogger<EventBus>>());
+        _chapterTracker = new ChapterTracker(_eventBus, _streamRepository, _dateTimeProvider, Substitute.For<ILogger<ChapterTracker>>());
 
         _stream = new Domain.Stream { TwitchStreamId = "ts_1", ChannelId = ChannelId };
         _stream.AddChapter("Some Title", "Some Category", new DateTime(2026, 1, 1));
@@ -52,39 +58,27 @@ public class StreamRecorderTests
         _hlsPlaylist.HasInitSegment.Returns(true);
 
         _finalizer.FinalizeAsync(
+            Arg.Any<string>(),
             Arg.Any<Domain.Stream>(),
-            Arg.Any<Channel>(),
-            Arg.Any<ISegmentDownloader>(),
             Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
     }
 
-    private StreamRecorder CreateSut(CancellationToken parentToken = default) =>
+    private StreamRecorder CreateSut(
+        TransientErrorRetryPolicy? retryPolicy = null,
+        CancellationToken parentToken = default) =>
         new(_thumbnailManager,
             _manifestPoller,
-            _segmentDownloader,
+            _twitchGqlClient,
             _hlsPlaylist,
+            _segmentStore,
+            _chapterTracker,
             _streamRepository,
+            _uploader,
             _finalizer,
+            retryPolicy ?? _retryPolicy,
             _settingsService,
-            _pathsOptions,
-            _eventBus,
-            _dateTimeProvider,
             _logger,
             parentToken);
-
-
-    private string FormatSegmentUrl(string segmentName) =>
-        $"{_pathsOptions.Value.BaseUrl}/hls/{_stream.TwitchStreamId}/segments/{segmentName}";
-
-    private static async IAsyncEnumerable<(string FileName, float Duration)> Segments(
-        params (string FileName, float Duration)[] items)
-    {
-        foreach (var item in items)
-        {
-            yield return item;
-            await Task.CompletedTask;
-        }
-    }
 
     private void StubManifestOnce(string manifest, bool hasQualityChanged = false)
     {
@@ -100,10 +94,27 @@ public class StreamRecorderTests
             });
     }
 
-    private void StubDownloadSegments(params (string FileName, float Duration)[] items) =>
-        _segmentDownloader
-            .DownloadSegmentsAsync(Arg.Any<string>(), Arg.Any<ManifestExtractionResult>(), _hlsPlaylist, Arg.Any<CancellationToken>())
-            .Returns(Segments(items));
+    private void StubDownloadSegments(params (string FileName, float Duration, bool IsInit)[] items)
+    {
+        _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new MemoryStream([1, 2, 3]));
+
+        if (items.Length == 0)
+        {
+            _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<DownloadedSegment>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                .Returns((LocalSegment?)null);
+            return;
+        }
+
+        var queue = new Queue<(string FileName, float Duration, bool IsInit)>(items);
+        _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<DownloadedSegment>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                if (queue.TryDequeue(out var item))
+                    return new LocalSegment(item.FileName, item.Duration);
+                return null;
+            });
+    }
 
     private void BlockPollIndefinitely() =>
         _manifestPoller
@@ -114,7 +125,6 @@ public class StreamRecorderTests
                 await Task.Delay(Timeout.Infinite, token);
                 return (null, false);
             });
-
 
     [Fact]
     public async Task StartAsync_ShouldProduceStreamEndedReason_WhenManifestSignalsStreamEnded()
@@ -129,9 +139,8 @@ public class StreamRecorderTests
 
         // Assert
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, Arg.Is(new SessionEndReason.StreamEnded()));
+            _channel.Name, _stream, Arg.Is(new SessionEndReason.StreamEnded()));
     }
-
 
     [Fact]
     public async Task StopAsync_ShouldDelegateStreamStoppedReason_AndCancelTheLoop()
@@ -150,7 +159,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, Arg.Is(new SessionEndReason.StreamStopped()));
+            _channel.Name, _stream, Arg.Is(new SessionEndReason.StreamStopped()));
     }
 
     [Fact]
@@ -170,12 +179,10 @@ public class StreamRecorderTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.DidNotReceive()
             .FinalizeAsync(
+                Arg.Any<string>(),
                 Arg.Any<Domain.Stream>(),
-                Arg.Any<Channel>(),
-                Arg.Any<ISegmentDownloader>(),
                 Arg.Any<SessionEndReason.StreamEnded>());
     }
-
 
     [Fact]
     public async Task StartAsync_ShouldRetryUntilExhausted_WhenManifestAlwaysEmptyOrNull()
@@ -191,14 +198,14 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(3).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, Arg.Any<SessionEndReason.StreamEnded>());
+            _channel.Name, _stream, Arg.Any<SessionEndReason.StreamEnded>());
     }
 
     [Fact]
     public async Task StartAsync_ShouldCloseSegmentAndAddDiscontinuity_WhenQualityChanges()
     {
         // Arrange
-        _segmentDownloader.CloseSegment().Returns(("seg_5.ts", 12.3f));
+        _segmentStore.CloseCurrentSegment().Returns(new LocalSegment("seg_5.ts", 12.3f), (LocalSegment?)null);
         StubManifestOnce(Manifest, hasQualityChanged: true);
         StubDownloadSegments();
 
@@ -208,7 +215,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.Received(1).AddSegmentAsync(FormatSegmentUrl("seg_5.ts"), 12.3f, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_5.ts", 12.3f, Arg.Any<CancellationToken>());
         await _hlsPlaylist.Received(1).AddDiscontinuityAsync(Arg.Any<CancellationToken>());
     }
 
@@ -235,9 +242,7 @@ public class StreamRecorderTests
         // Arrange
         StubManifestOnce(Manifest);
         _hlsPlaylist.HasInitSegment.Returns(false);
-        _segmentDownloader
-            .DownloadSegmentsAsync(Arg.Any<string>(), Arg.Any<ManifestExtractionResult>(), _hlsPlaylist, Arg.Any<CancellationToken>())
-            .Returns(Segments(("init.mp4", 0f)));
+        StubDownloadSegments(("init.mp4", 0f, true));
 
         await using var sut = CreateSut();
 
@@ -245,7 +250,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.Received(1).SetInitSegmentAsync(FormatSegmentUrl("init.mp4"), Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).SetInitSegmentAsync("init.mp4", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -254,9 +259,7 @@ public class StreamRecorderTests
         // Arrange
         StubManifestOnce(Manifest);
         _hlsPlaylist.HasInitSegment.Returns(true);
-        _segmentDownloader
-            .DownloadSegmentsAsync(Arg.Any<string>(), Arg.Any<ManifestExtractionResult>(), _hlsPlaylist, Arg.Any<CancellationToken>())
-            .Returns(Segments(("seg_1.ts", 6f)));
+        StubDownloadSegments(("seg_1.ts", 6f, false));
 
         await using var sut = CreateSut();
 
@@ -264,8 +267,8 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.Received(1).AddSegmentAsync(FormatSegmentUrl("seg_1.ts"), 6f, Arg.Any<CancellationToken>());
         await _hlsPlaylist.DidNotReceive().SetInitSegmentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_1.ts", 6f, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -283,7 +286,6 @@ public class StreamRecorderTests
         _hlsPlaylist.Received().UpdateTwitchMediaSequence(Arg.Any<long>());
     }
 
-
     [Fact]
     public async Task StartAsync_ShouldTakeThumbnailSnapshot_OnEachIteration()
     {
@@ -296,33 +298,40 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(ChannelName, _stream, CancellationToken.None);
+        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(ChannelName, _stream, Arg.Any<CancellationToken>());
     }
-
 
     [Fact]
     public async Task StartAsync_ShouldProduceStreamError_WhenNetworkErrorsExceedRetryLimit()
     {
         // Arrange
+        const int maxAttempts = 3;
+        var retryPolicy = new TransientErrorRetryPolicy(
+            maxAttempts,
+            TimeSpan.FromMilliseconds(1),
+            Substitute.For<ILogger<TransientErrorRetryPolicy>>());
+
         _manifestPoller
             .GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>())
-            .ThrowsAsync(new OperationCanceledException("simulated network blip"));
+            .ThrowsAsync(new HttpRequestException("simulated network blip"));
 
-        await using var sut = CreateSut();
+        await using var sut = CreateSut(retryPolicy: retryPolicy);
 
         // Act
         var act = async () => await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await act.Should().ThrowAsync<OperationCanceledException>();
-        await _manifestPoller.Received(6).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
+        await act.Should().NotThrowAsync();
+        await _manifestPoller.Received(maxAttempts).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
+        await _finalizer.Received(1).FinalizeAsync(
+            _channel.Name, _stream, Arg.Any<SessionEndReason.StreamError>());
     }
 
     [Fact]
     public async Task StartAsync_ShouldDelegateStreamError_AndStillFinalize()
     {
         // Arrange
-        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, Arg.Any<Domain.Stream>(), CancellationToken.None)
+        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, Arg.Any<Domain.Stream>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
         await using var sut = CreateSut();
@@ -333,9 +342,8 @@ public class StreamRecorderTests
         // Assert
         await act.Should().NotThrowAsync();
         await _finalizer.Received(1).FinalizeAsync(
-            _stream, _channel, _segmentDownloader, Arg.Any<SessionEndReason.StreamError>());
+            _channel.Name, _stream, Arg.Any<SessionEndReason.StreamError>());
     }
-
 
     [Fact]
     public async Task MetadataChanged_ShouldAddNewChapter_WhileSessionIsStillActive()
@@ -439,7 +447,6 @@ public class StreamRecorderTests
         // Assert
         await act.Should().ThrowAsync();
         _stream.Chapters.Count.Should().Be(chapterCountBefore + 1);
-
     }
 
     [Fact]

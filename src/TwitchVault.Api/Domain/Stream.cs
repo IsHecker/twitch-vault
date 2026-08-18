@@ -34,7 +34,6 @@ public sealed class Stream
     public string ChannelId { get; set; } = null!;
 
     public StreamFolder Folder { get; set; } = null!;
-    public string ThumbnailUrl { get; private set; } = null!;
     public StreamStatus Status { get; private set; }
     public StorageLocation StorageLocation { get; private set; }
     public StorageOperationStatus StorageOperationStatus { get; private set; }
@@ -91,7 +90,6 @@ public sealed class Stream
         Chapters.Add(new Chapter { Title = title, CategoryId = categoryId, StartedAt = startedAt });
     }
 
-    public void SetThumbnailUrl(string thumbnailUrl) => ThumbnailUrl = thumbnailUrl;
     public void SetStorageLocation(StorageLocation storageLocation) => StorageLocation = storageLocation;
     public void SetStorageInstance(string instanceName) => StorageInstanceName = instanceName;
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;

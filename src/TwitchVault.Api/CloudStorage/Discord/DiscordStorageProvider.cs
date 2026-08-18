@@ -20,9 +20,10 @@ public sealed class DiscordStorageProvider(
     IHttpClientFactory clientFactory,
     ILogger<DiscordStorageProvider> logger) : ICloudStorageProvider
 {
+    private const int MinBulkDeleteSize = 2;
+    private const int MaxBulkDeleteSize = 100;
     private static readonly DateTimeOffset DiscordEpoch = new(2015, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan BulkDeleteMaxAge = TimeSpan.FromDays(14);
-    private const int BulkDeleteSize = 100;
 
     private readonly string MessagesUrl = $"https://discord.com/api/v10/channels/{discordOptions.Value.ChannelId}/messages";
 
@@ -68,8 +69,6 @@ public sealed class DiscordStorageProvider(
         // count = 1
         // messages older than 14-days
 
-        const int MinimumBulkDeleteSize = 2;
-
         var messageIds = remoteUrls
             .Select(ExtractMessageId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
@@ -79,14 +78,31 @@ public sealed class DiscordStorageProvider(
         if (messageIds.Count == 0)
             return Result.Success;
 
-        if (messageIds.Count >= MinimumBulkDeleteSize)
+        /*
+            messageIds: 1(bulkEligible) - 99(old) --> DeleteSingle (all messages)
+            messageIds: 1(bulkEligible) --> DeleteSingle (1 message)
+            messageIds: 30(bulkEligible) - 70(old) --> BulkDeleteMessages (bulkEligible) and DeleteSingle (all messages - bulkEligible)
+        
+        */
+        var bulkDeleted = false;
+        var bulkEligibleIds = messageIds.Where(id => !IsOlderThan14Days(id)).ToList();
+        if (bulkEligibleIds.Count >= MinBulkDeleteSize)
         {
-            var bulkResult = await BulkDeleteMessagesAsync(messageIds, cancellationToken);
-            if (bulkResult.IsFailure || messageIds.Count > BulkDeleteSize)
+            var bulkResult = await BulkDeleteMessagesAsync(bulkEligibleIds, cancellationToken);
+            if (bulkResult.IsFailure)
                 return bulkResult;
+
+            if (bulkEligibleIds.Count >= messageIds.Count)
+                return bulkResult;
+
+            bulkDeleted = true;
         }
 
-        foreach (var id in messageIds)
+        var oldMessages = messageIds.AsEnumerable();
+        if (bulkDeleted)
+            oldMessages = oldMessages.Except(bulkEligibleIds);
+
+        foreach (var id in oldMessages)
         {
             var deleteResult = await DeleteSingleAsync(id, cancellationToken);
             if (deleteResult.IsFailure)
@@ -131,6 +147,27 @@ public sealed class DiscordStorageProvider(
         }
     }
 
+    private async Task<Result> BulkDeleteMessagesAsync(List<string> messageIds, CancellationToken cancellationToken)
+    {
+        foreach (var chunk in messageIds.Chunk(MaxBulkDeleteSize))
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bot", discordOptions.Value.BotToken);
+            request.Content = JsonContent.Create(new { messages = chunk });
+
+            var response = await SendRequestAsync(request, cancellationToken);
+            if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
+                continue;
+
+            if (response.IsFailure)
+                return response.Error;
+
+            response.Value.Dispose();
+        }
+
+        return Result.Success;
+    }
+
     private async Task<Result> DeleteSingleAsync(string messageId, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"{MessagesUrl}/{messageId}");
@@ -142,31 +179,6 @@ public sealed class DiscordStorageProvider(
 
         response.Value.Dispose();
         return response;
-    }
-
-    private async Task<Result> BulkDeleteMessagesAsync(List<string> messageIds, CancellationToken cancellationToken)
-    {
-        // 150
-        // skip 0   take 100
-
-        Result result = Result.Success;
-        var messages = messageIds.Where(id => !IsOlderThan14Days(id));
-        var skip = 0;
-        for (int i = 0; i < messageIds.Count; i++)
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
-            request.Headers.Authorization = new AuthenticationHeaderValue(discordOptions.Value.UserToken);
-            request.Content = JsonContent.Create(new { messages = messages.Skip(skip).Take(BulkDeleteSize) });
-
-            var response = await SendRequestAsync(request, cancellationToken);
-            if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
-                return Result.Success;
-
-            response.Value.Dispose();
-
-            skip += BulkDeleteSize;
-        }
-        return result;
     }
 
     private async Task<Result<HttpResponseMessage>> SendRequestAsync(
@@ -226,7 +238,7 @@ public sealed class DiscordStorageProvider(
         }
 
         logger.LogWarning("Discord API rate limit active. Waiting {Seconds}s...", _rateLimitResetAfter);
-        await Task.Delay(TimeSpan.FromSeconds(_rateLimitResetAfter), cancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(_rateLimitResetAfter + 10), cancellationToken);
 
         lock (_rateLimitLock)
         {

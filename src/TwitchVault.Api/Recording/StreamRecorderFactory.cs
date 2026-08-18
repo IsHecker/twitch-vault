@@ -23,17 +23,26 @@ public class StreamRecorderFactory(
         Channel channel,
         CancellationToken cancellationToken)
     {
+        const int MaxConsecutiveNetworkErrors = 5;
+        var networkErrorDelay = TimeSpan.FromSeconds(2);
+
         stream.Folder.EnsureDirectoryExists(environment.ContentRootPath);
 
-        var playlist = await HlsPlaylist.LoadOrCreateAsync(
+        var playlist = await HlsPlaylistWriter.LoadOrCreateAsync(
             stream.Folder.RelativePath,
             dateTimeProvider,
             fileSystem,
             cancellationToken);
 
+        var retryPolicy = ActivatorUtilities.CreateInstance<TransientErrorRetryPolicy>(
+            serviceProvider,
+            MaxConsecutiveNetworkErrors,
+            networkErrorDelay);
+
         var recorder = ActivatorUtilities.CreateInstance<StreamRecorder>(
             serviceProvider,
             playlist,
+            retryPolicy,
             cancellationToken);
 
         return recorder;
