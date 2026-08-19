@@ -9,14 +9,14 @@ namespace TwitchVault.Api.Twitch;
 
 public sealed class TwitchHelixClient(
     IHttpClientFactory httpClientFactory,
-    SettingsService settingsService,
+    IOptionsMonitor<TwitchOptions> twitchOptions,
     IOptions<PathsOptions> pathsOptions,
     ILogger<TwitchHelixClient> logger)
 {
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
     private const string TokenUrl = "https://id.twitch.tv/oauth2/token";
 
-    private TwitchOptions Options => settingsService.Settings.Twitch;
+    private TwitchOptions Options => twitchOptions.CurrentValue;
 
     private string WebhookSecret => Options.Secret;
     private string WebhookUrl
@@ -94,7 +94,7 @@ public sealed class TwitchHelixClient(
                 return _appAccessToken;
 
             logger.LogInformation("Fetching new Twitch app access token");
-            var client = httpClientFactory.CreateClient();
+            using var client = httpClientFactory.CreateClient();
 
             using var request = new HttpRequestMessage(HttpMethod.Post, TokenUrl);
             request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -185,7 +185,7 @@ public sealed class TwitchHelixClient(
         const int maxRetryAttempts = 3;
         HttpResponseMessage response = null!;
 
-        var client = httpClientFactory.CreateClient();
+        using var client = httpClientFactory.CreateClient();
 
         for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
         {

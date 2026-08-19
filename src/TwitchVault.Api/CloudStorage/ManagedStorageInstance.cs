@@ -1,17 +1,31 @@
+using System.Threading.RateLimiting;
+
 namespace TwitchVault.Api.CloudStorage;
 
-/// <summary>
-/// Wraps a raw <see cref="ICloudStorageProvider"/> with the cross-cutting concerns routing needs
-/// (health, capacity, concurrency) without the provider itself knowing any of this exists. 
-/// </summary>
-public record ManagedStorageInstance(
-    ICloudStorageProvider Provider,
-    StorageCapacityTracker Capacity,
-    SemaphoreConcurrencyGate ConcurrencySlot)
+public sealed class ManagedStorageInstance(
+    ICloudStorageProvider provider,
+    StorageCapacityGate capacity)
 {
+    public ICloudStorageProvider Provider { get; } = provider;
+    public StorageCapacityGate Capacity { get; } = capacity;
+    private RateLimiter _limiter = CreateLimiter(
+        provider.Options.Behavior.MaxConcurrentUploads,
+        provider.Options.Behavior.QueueLimit);
+
+    private static ConcurrencyLimiter CreateLimiter(int maxConcurrent, int queueLimit) =>
+        new(new ConcurrencyLimiterOptions
+        {
+            PermitLimit = Math.Max(1, maxConcurrent),
+            QueueLimit = queueLimit,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        });
+
     public void ApplyBehaviorUpdate(StorageBehaviorOptions behavior)
     {
-        // ConcurrencySlot.UpdateMaxConcurrency(behavior.MaxConcurrentUploads);
-        // Capacity.UpdateCapacity(behavior.CapacityBytes);
+        var old = _limiter;
+        _limiter = CreateLimiter(behavior.MaxConcurrentUploads, behavior.QueueLimit);
+        _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ => old.Dispose());
     }
+
+    public ValueTask<RateLimitLease> AcquireAsync(CancellationToken ct) => _limiter.AcquireAsync(1, ct);
 }

@@ -11,18 +11,15 @@ namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
 public class SegmentStoreTests
 {
+    private const string StreamFolderPath = "test-folder";
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
-    private readonly SettingsService _settingsService;
+    private readonly IOptionsMonitor<VaultOptions> _vaultOptions = Substitute.For<IOptionsMonitor<VaultOptions>>();
     private readonly SegmentStore _sut;
 
     public SegmentStoreTests()
     {
-        var pathsOptions = Substitute.For<IOptions<PathsOptions>>();
-        pathsOptions.Value.Returns(new PathsOptions { Settings = "non_existent.json" });
-        _settingsService = new SettingsService(pathsOptions);
-        _settingsService.Settings.Vault.MaxSegmentDurationInSec = 10;
-
-        _sut = new SegmentStore(_fileSystem, _settingsService);
+        _vaultOptions.CurrentValue.Returns(new VaultOptions { MaxSegmentDurationInSec = 10 });
+        _sut = new SegmentStore(_fileSystem, _vaultOptions);
     }
 
     [Fact]
@@ -37,11 +34,11 @@ public class SegmentStoreTests
         var segment = new DownloadedSegment(new RemoteSegment("https://example.com/init.mp4", 0, IsInitSegment: true), initStream);
 
         // Act
-        var result = await _sut.SaveAsync("test-folder", segment, null, CancellationToken.None);
+        var result = await _sut.SaveAsync(StreamFolderPath, segment, null, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result!.FilePath.Should().Be("init.mp4");
+        result!.FilePath.Should().Be(Path.Combine(StreamFolderPath, "init.mp4"));
         result.Duration.Should().Be(0f);
         mockFileStream.ToArray().Should().BeEquivalentTo(Encoding.UTF8.GetBytes("init-data"));
     }
@@ -60,7 +57,7 @@ public class SegmentStoreTests
         var segment = new DownloadedSegment(new RemoteSegment("https://example.com/index-0.ts", 5.0f), segmentStream);
 
         // Act
-        var result = await _sut.SaveAsync("test-folder", segment, null, CancellationToken.None);
+        var result = await _sut.SaveAsync(StreamFolderPath, segment, null, CancellationToken.None);
 
         // Assert
         result.Should().BeNull();
@@ -81,11 +78,11 @@ public class SegmentStoreTests
         var segment = new DownloadedSegment(new RemoteSegment("https://example.com/index-0.ts", 12.0f), segmentStream);
 
         // Act
-        var result = await _sut.SaveAsync("test-folder", segment, null, CancellationToken.None);
+        var result = await _sut.SaveAsync(StreamFolderPath, segment, null, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result!.FilePath.Should().Be("seg_1.ts");
+        result!.FilePath.Should().Be(Path.Combine(StreamFolderPath, "seg_1.ts"));
         result.Duration.Should().Be(12.0f);
     }
 }

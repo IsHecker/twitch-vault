@@ -22,21 +22,29 @@
       "QualityRank": 1,
       "IsLive": true,
       "ShouldRecord": false,
-      "LastStreamedAt": "2026-08-17T21:11:45"
+      "LastStreamedAt": "2026-08-19T20:02:22"
+    },
+    {
+      "Id": "112399237",
+      "Name": "xweebmaster",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": false,
+      "LastStreamedAt": "2026-08-18T12:14:56"
     }
   ],
   "Streams": [
     {
-      "TwitchStreamId": "123",
+      "TwitchStreamId": "320192460633",
       "ChannelId": "54507525",
       "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-07-24 23-13-46",
-        "ThumbnailPath": "Streams/pisty/2026-07-24 23-13-46/thumbnail.jpg"
+        "RelativePath": "Streams\\pisty\\2026-07-08 22-54-01",
+        "ThumbnailPath": "Streams/pisty/2026-07-08 22-54-01/thumbnail.jpg"
       },
       "Status": "Finished",
-      "StorageLocation": "Local",
-      "StorageOperationStatus": "UploadFailed",
-      "SizeBytes": 0,
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 1024,
       "StorageInstanceName": "Discord-Main",
       "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
       "FinishedAt": "2026-07-09T00:18:00.9095278+03:00",
@@ -46,6 +54,29 @@
           "CategoryId": null,
           "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
           "FinishedAt": "2026-07-09T00:18:00.9095278+03:00"
+        }
+      ]
+    },
+    {
+      "TwitchStreamId": "319878544734",
+      "ChannelId": "563908141",
+      "Folder": {
+        "RelativePath": "Streams\\joe_bartolozzi\\2026-08-19 22-27-09",
+        "ThumbnailPath": "Streams/joe_bartolozzi/2026-08-19 22-27-09/thumbnail.jpg"
+      },
+      "Status": "Recording",
+      "StorageLocation": "Local",
+      "StorageOperationStatus": "Uploading",
+      "SizeBytes": 0,
+      "StorageInstanceName": "discord-main",
+      "StartedAt": "2026-08-19T20:02:22",
+      "FinishedAt": null,
+      "Chapters": [
+        {
+          "Title": "AMERICAN CANCER SOCIETY CHARITY STREAM + REACTS JOIN JOIN JOIN",
+          "CategoryId": "509658",
+          "StartedAt": "2026-08-19T20:02:22",
+          "FinishedAt": null
         }
       ]
     }

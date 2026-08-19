@@ -1,17 +1,17 @@
 using System.Net;
 using System.Text.Json;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Twitch;
 
 public sealed class TwitchGqlClient(
     HttpClient httpClient,
-    SettingsService settingsService,
+    IOptionsMonitor<TwitchOptions> twitchOptions,
     ILogger<TwitchGqlClient> logger) : ITwitchGqlClient
 {
     private const string TwitchGqlUrl = "https://gql.twitch.tv/gql";
-    private TwitchOptions Options => settingsService.Settings.Twitch;
+    private TwitchOptions Options => twitchOptions.CurrentValue;
 
     public async Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(List<Domain.Channel> channels, CancellationToken cancellationToken)
     {

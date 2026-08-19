@@ -5,7 +5,7 @@ using TwitchVault.Api.Domain;
 
 namespace TwitchVault.Api.ChannelMonitor;
 
-public sealed class ChannelMonitorJobConfiguration(SettingsService settingsService)
+public sealed class ChannelMonitorJobConfiguration(IOptions<BackgroundJobsOptions> jobsOptions)
     : IConfigureOptions<QuartzOptions>
 {
     public void Configure(QuartzOptions options)
@@ -18,6 +18,6 @@ public sealed class ChannelMonitorJobConfiguration(SettingsService settingsServi
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(settingsService.Settings.BackgroundJobs[JobOptions.ChannelMonitor].RunInterval).RepeatForever()));
+                        schedule.WithInterval(jobsOptions.Value.GetJob(JobOptions.ChannelMonitor).RunInterval).RepeatForever()));
     }
 }

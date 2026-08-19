@@ -5,7 +5,7 @@ using TwitchVault.Api.Domain;
 
 namespace TwitchVault.Api.Twitch.EventSub;
 
-public sealed class TwitchWebhookHealthCheckJobConfiguration(SettingsService settingsService)
+public sealed class TwitchWebhookHealthCheckJobConfiguration(IOptions<BackgroundJobsOptions> jobsOptions)
     : IConfigureOptions<QuartzOptions>
 {
     public void Configure(QuartzOptions options)
@@ -18,6 +18,6 @@ public sealed class TwitchWebhookHealthCheckJobConfiguration(SettingsService set
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(settingsService.Settings.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].RunInterval).RepeatForever()));
+                        schedule.WithInterval(jobsOptions.Value.GetJob(JobOptions.TwitchWebhookHealthCheck).RunInterval).RepeatForever()));
     }
 }

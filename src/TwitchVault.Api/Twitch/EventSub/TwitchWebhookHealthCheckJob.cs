@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Quartz;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
@@ -8,7 +9,7 @@ namespace TwitchVault.Api.Twitch.EventSub;
 public sealed class TwitchWebhookHealthCheckJob(
     TwitchHelixClient twitchHelixClient,
     TwitchSubscriptionService twitchSubscription,
-    SettingsService settingsService,
+    IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     ILogger<TwitchWebhookHealthCheckJob> logger) : IJob
 {
     private static readonly string TerminalFailureStatuses =
@@ -22,7 +23,7 @@ public sealed class TwitchWebhookHealthCheckJob(
 
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.BackgroundJobs[JobOptions.TwitchWebhookHealthCheck].Enabled)
+        if (!jobsOptions.CurrentValue.GetJob(JobOptions.TwitchWebhookHealthCheck).Enabled)
             return;
 
         var cancellationToken = context.CancellationToken;

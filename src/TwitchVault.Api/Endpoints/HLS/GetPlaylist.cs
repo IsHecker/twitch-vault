@@ -1,3 +1,4 @@
+using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.HLS;
@@ -11,7 +12,7 @@ public class GetPlaylist : IEndpoint
             IWebHostEnvironment env) =>
         {
             var stream = await streamRepo.GetByIdAsync(streamId);
-            if (stream is null)
+            if (stream is null || stream.Status != StreamStatus.Finished || stream.IsDeleted())
                 return Results.NotFound();
 
             var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
@@ -21,9 +22,10 @@ public class GetPlaylist : IEndpoint
 
             return Results.File(playlistPath, "application/vnd.apple.mpegurl");
         })
+        .RequireAuthorization()
         .WithName(nameof(GetPlaylist))
         .WithTags("HLS")
-        .WithSummary("Get the HLS playlist for a live or finished stream")
+        .WithSummary("Get the HLS playlist for a finished stream")
         .Produces(StatusCodes.Status200OK, contentType: "application/vnd.apple.mpegurl")
         .Produces(StatusCodes.Status404NotFound);
 }

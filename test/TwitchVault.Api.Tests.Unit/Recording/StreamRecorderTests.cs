@@ -35,7 +35,7 @@ public class StreamRecorderTests
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly TransientErrorRetryPolicy _retryPolicy = new(1, TimeSpan.FromSeconds(1), null!);
     private readonly ILogger<StreamRecorder> _logger = Substitute.For<ILogger<StreamRecorder>>();
-    private readonly SettingsService _settingsService;
+    private readonly IOptionsMonitor<VaultOptions> _vaultOptions = Substitute.For<IOptionsMonitor<VaultOptions>>();
     private readonly ChapterTracker _chapterTracker;
 
     private readonly Channel _channel = new() { Id = ChannelId, Name = ChannelName, QualityRank = 1 };
@@ -43,9 +43,7 @@ public class StreamRecorderTests
 
     public StreamRecorderTests()
     {
-        _pathsOptions.Value.Returns(new PathsOptions { Settings = "non_existent_file.json" });
-        _settingsService = new SettingsService(_pathsOptions);
-        _settingsService.Settings.Vault.MaxConsecutiveEmptyPolls = 3;
+        _vaultOptions.CurrentValue.Returns(new VaultOptions { MaxConsecutiveEmptyPolls = 3 });
 
         _eventBus = new EventBus(Substitute.For<ILogger<EventBus>>());
         _chapterTracker = new ChapterTracker(_eventBus, _streamRepository, _dateTimeProvider, Substitute.For<ILogger<ChapterTracker>>());
@@ -60,6 +58,7 @@ public class StreamRecorderTests
         _finalizer.FinalizeAsync(
             Arg.Any<string>(),
             Arg.Any<Domain.Stream>(),
+            Arg.Any<long>(),
             Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
     }
 
@@ -76,7 +75,7 @@ public class StreamRecorderTests
             _uploader,
             _finalizer,
             retryPolicy ?? _retryPolicy,
-            _settingsService,
+            _vaultOptions,
             _logger,
             parentToken);
 
@@ -111,7 +110,7 @@ public class StreamRecorderTests
             .Returns(_ =>
             {
                 if (queue.TryDequeue(out var item))
-                    return new LocalSegment(item.FileName, item.Duration);
+                    return new LocalSegment(item.FileName, item.Duration, 0);
                 return null;
             });
     }
@@ -139,7 +138,7 @@ public class StreamRecorderTests
 
         // Assert
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, Arg.Is(new SessionEndReason.StreamEnded()));
+            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
     }
 
     [Fact]
@@ -159,7 +158,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, Arg.Is(new SessionEndReason.StreamStopped()));
+            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamStopped()));
     }
 
     [Fact]
@@ -181,6 +180,7 @@ public class StreamRecorderTests
             .FinalizeAsync(
                 Arg.Any<string>(),
                 Arg.Any<Domain.Stream>(),
+                Arg.Any<long>(),
                 Arg.Any<SessionEndReason.StreamEnded>());
     }
 
@@ -198,14 +198,14 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(3).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, Arg.Any<SessionEndReason.StreamEnded>());
+            _channel.Name, _stream, sizeBytes: 0, Arg.Any<SessionEndReason.StreamEnded>());
     }
 
     [Fact]
     public async Task StartAsync_ShouldCloseSegmentAndAddDiscontinuity_WhenQualityChanges()
     {
         // Arrange
-        _segmentStore.CloseCurrentSegment().Returns(new LocalSegment("seg_5.ts", 12.3f), (LocalSegment?)null);
+        _segmentStore.CloseCurrentSegment().Returns(new LocalSegment("seg_5.ts", 12.3f, 0), (LocalSegment?)null);
         StubManifestOnce(Manifest, hasQualityChanged: true);
         StubDownloadSegments();
 
@@ -324,7 +324,7 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(maxAttempts).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, Arg.Any<SessionEndReason.StreamError>());
+            _channel.Name, _stream, sizeBytes: 0, Arg.Any<SessionEndReason.StreamError>());
     }
 
     [Fact]
@@ -342,7 +342,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().NotThrowAsync();
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, Arg.Any<SessionEndReason.StreamError>());
+            _channel.Name, _stream, sizeBytes: 0, Arg.Any<SessionEndReason.StreamError>());
     }
 
     [Fact]

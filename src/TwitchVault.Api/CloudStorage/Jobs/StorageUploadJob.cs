@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Quartz;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
@@ -11,13 +12,13 @@ public sealed class StorageUploadJob(
     IStreamRepository streamRepository,
     IStreamStorageService storageService,
     StreamJobCoordinator jobCoordinator,
-    SettingsService settingsService,
+    IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.BackgroundJobs[JobOptions.StorageUpload].Enabled)
+        if (!jobsOptions.CurrentValue.GetJob(JobOptions.StorageUpload).Enabled)
             return;
 
         var stream = (await streamRepository.GetAllAsync())

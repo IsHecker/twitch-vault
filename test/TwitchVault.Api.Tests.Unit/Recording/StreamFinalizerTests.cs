@@ -46,7 +46,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, reason);
+        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, reason);
 
         // Assert
         await _streamService.Received(1).DeleteStreamAsync(stream.TwitchStreamId);
@@ -64,7 +64,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, new SessionEndReason.StreamStopped());
+        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamStopped());
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Stopped);
@@ -84,7 +84,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, new SessionEndReason.StreamError(new Exception("network blip")));
+        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("network blip")));
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
@@ -101,7 +101,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, new SessionEndReason.StreamError(new Exception("fatal")));
+        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
 
         // Assert
         stream.Status.Should().Be(originalStatus);
@@ -118,7 +118,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, new SessionEndReason.StreamError(new Exception("fatal")));
+        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
 
         // Assert
         stream.Status.Should().NotBe(StreamStatus.Interrupted);
@@ -136,7 +136,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, new SessionEndReason.StreamEnded());
+        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Finished);
@@ -156,7 +156,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        var act = async () => await sut.FinalizeAsync(_channel.Name, stream, new SessionEndReason.StreamEnded());
+        var act = async () => await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
 
         // Assert
         await act.Should().NotThrowAsync();
@@ -175,6 +175,7 @@ public class StreamFinalizerTests
         var act = async () => await sut.FinalizeAsync(
             _channel.Name,
             stream,
+            sizeBytes: 0,
             new SessionEndReason.StreamError(new Exception("original error")));
 
         // Assert

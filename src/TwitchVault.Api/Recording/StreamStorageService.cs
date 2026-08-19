@@ -12,7 +12,7 @@ public interface IStreamStorageService
     const string RemoteUrlsFileName = "remoteUrls.txt";
 
     Task<bool> UploadBatchAsync(
-        IReadOnlyList<string> localFilePaths,
+        IEnumerable<string> localFilePaths,
         Domain.Stream stream,
         StreamWriter remoteUrlsWriter,
         CancellationToken cancellationToken = default);
@@ -34,13 +34,14 @@ public sealed class StreamStorageService(
 {
     // TODO: Why a streamwriter is being passed?
     public async Task<bool> UploadBatchAsync(
-        IReadOnlyList<string> localFilePaths,
+        IEnumerable<string> localFilePaths,
         Domain.Stream stream,
         StreamWriter remoteUrlsWriter,
         CancellationToken cancellationToken = default)
     {
-        var storageFiles = new List<StorageFile>(localFilePaths.Count);
-        var localPathByFileName = new Dictionary<string, string>(localFilePaths.Count, StringComparer.OrdinalIgnoreCase);
+        _ = localFilePaths.TryGetNonEnumeratedCount(out var filePathsCount);
+        var storageFiles = new List<StorageFile>(filePathsCount);
+        var localPathByFileName = new Dictionary<string, string>(filePathsCount, StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -139,7 +140,7 @@ public sealed class StreamStorageService(
         await streamRepository.UpdateAsync(stream);
 
         logger.LogInformation(
-            "Stream '{StreamId}' storage finalized: playlist rewritten to remote URLs on instance '{Instance}'.",
+            "Stream '{StreamId}' storage finalized on instance '{Instance}'.",
             stream.TwitchStreamId, stream.StorageInstanceName);
 
         return true;
@@ -154,11 +155,10 @@ public sealed class StreamStorageService(
             var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
             if (File.Exists(playlistPath))
             {
+                // TODO: use the urls from the remoteurls file!
                 var remoteUrls = PlaylistSegmentExtractor
-                    .ExtractAllSegments(File.ReadAllText(playlistPath))
-                    .Segments
-                    .Select(seg => seg.Url)
-                    .ToList();
+                    .EnumerateSegments(File.ReadLines(playlistPath))
+                    .Select(seg => seg.Url);
 
                 var result = await cloudStorageService.DeleteBatchAsync(
                     stream.StorageInstanceName!, remoteUrls, cancellationToken);

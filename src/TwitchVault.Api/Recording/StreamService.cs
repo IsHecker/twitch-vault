@@ -40,9 +40,7 @@ public class StreamService(
     public async Task<Result> DeleteStreamAsync(string twitchStreamId)
     {
         var stream = await streamRepository.GetByIdAsync(twitchStreamId);
-        if (stream == null
-            || stream.StorageOperationStatus == StorageOperationStatus.Deleting
-            || stream.StorageOperationStatus == StorageOperationStatus.DeleteRequest)
+        if (stream == null || stream.IsDeleted())
             return Error.NotFound();
 
         if (stream.Status == StreamStatus.Recording)

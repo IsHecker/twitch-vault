@@ -4,11 +4,19 @@ using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Domain;
 
-public class AppSettings
+public class RuntimeSettings
 {
     public VaultOptions Vault { get; set; } = new();
     public TwitchOptions Twitch { get; set; } = new();
-    public Dictionary<string, JobOptions> BackgroundJobs { get; set; } = [];
+    public BackgroundJobsOptions BackgroundJobs { get; set; } = [];
+}
+
+public sealed class BackgroundJobsOptions : Dictionary<string, JobOptions>
+{
+    public const string SectionName = "BackgroundJobs";
+
+    public JobOptions GetJob(string jobName) =>
+        TryGetValue(jobName, out var opt) ? opt : new JobOptions();
 }
 
 public sealed class JobOptions

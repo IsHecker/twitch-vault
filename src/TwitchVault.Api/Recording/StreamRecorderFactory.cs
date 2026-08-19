@@ -14,7 +14,7 @@ public interface IStreamRecorderFactory
 
 public class StreamRecorderFactory(
     IDateTimeProvider dateTimeProvider,
-    IWebHostEnvironment environment,
+    IWebHostEnvironment env,
     IServiceProvider serviceProvider,
     IFileSystem fileSystem) : IStreamRecorderFactory
 {
@@ -26,7 +26,7 @@ public class StreamRecorderFactory(
         const int MaxConsecutiveNetworkErrors = 5;
         var networkErrorDelay = TimeSpan.FromSeconds(2);
 
-        stream.Folder.EnsureDirectoryExists(environment.ContentRootPath);
+        stream.Folder.EnsureDirectoryExists(env.ContentRootPath);
 
         var playlist = await HlsPlaylistWriter.LoadOrCreateAsync(
             stream.Folder.RelativePath,

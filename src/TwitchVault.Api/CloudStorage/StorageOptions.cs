@@ -17,20 +17,17 @@ public class StorageInstanceOptions
 
 public class StorageCredentialsOptions
 {
-    public string? AccessToken { get; init; }
     public string? ClientId { get; init; }
+    public string? AccessToken { get; init; }
     public string? ClientSecret { get; init; }
-    public string? RefreshToken { get; init; }
-    public string? TenantId { get; init; }
 }
 
 public class StorageBehaviorOptions
 {
-    public long? CapacityBytes { get; init; }
-    public int ChunkSizeMB { get; init; }
+    public long? StorageCapacityBytes { get; init; }
     public int MaxBatchSize { get; init; }
     public long MaxFileSizeBytes { get; init; }
+    public int QueueLimit { get; init; }
     public int MaxConcurrentUploads { get; init; }
     public int RequestTimeoutSeconds { get; init; }
-    public string? SharedLinkVisibility { get; init; }
 }

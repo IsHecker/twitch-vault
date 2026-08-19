@@ -16,3 +16,23 @@ public sealed class StorageCapacityTracker(long? capacityBytes)
 
     public void ReleaseCapacity(long sizeBytes) => Interlocked.Add(ref _usedBytes, -sizeBytes);
 }
+
+public sealed class StorageCapacityGate(long? capacityBytes)
+{
+    private long _used;
+
+    public bool HasCapacityFor(long size) => capacityBytes is not { } cap || cap - Interlocked.Read(ref _used) >= size;
+
+    public bool TryReserve(long size)
+    {
+        if (capacityBytes is not { } cap) { Interlocked.Add(ref _used, size); return true; }
+        while (true)
+        {
+            var current = Interlocked.Read(ref _used);
+            if (cap - current < size) return false;
+            if (Interlocked.CompareExchange(ref _used, current + size, current) == current) return true;
+        }
+    }
+
+    public void Release(long size) => Interlocked.Add(ref _used, -size);
+}

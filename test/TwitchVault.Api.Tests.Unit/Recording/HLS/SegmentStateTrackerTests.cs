@@ -8,16 +8,13 @@ namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
 public class SegmentStateTrackerTests
 {
-    private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
-    private readonly SettingsService _settingsService;
+    private readonly IOptionsMonitor<VaultOptions> _vaultOptions = Substitute.For<IOptionsMonitor<VaultOptions>>();
     private readonly SegmentStateTracker _sut;
 
     public SegmentStateTrackerTests()
     {
-        _pathsOptions.Value.Returns(new PathsOptions { Settings = "non_existent_file.json" });
-        _settingsService = new SettingsService(_pathsOptions);
-        _settingsService.Settings.Vault.MaxSegmentDurationInSec = 30;
-        _sut = new SegmentStateTracker(_settingsService);
+        _vaultOptions.CurrentValue.Returns(new VaultOptions { MaxSegmentDurationInSec = 30 });
+        _sut = new SegmentStateTracker(_vaultOptions);
     }
 
     [Fact]

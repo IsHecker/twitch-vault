@@ -1,10 +1,11 @@
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Recording.HLS;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording;
 
-public sealed record LocalSegment(string FilePath, float Duration);
+public sealed record LocalSegment(string FilePath, float Duration, long SizeBytes);
 
 public interface ISegmentStore
 {
@@ -17,13 +18,14 @@ public interface ISegmentStore
     LocalSegment? CloseCurrentSegment();
 }
 
-public sealed class SegmentStore(IFileSystem fileSystem, SettingsService settingsService) : ISegmentStore
+public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOptions> vaultOptions) : ISegmentStore
 {
     // TODO: no need for sequential segment name, i can just use guid.
     private float _accumulatedDuration;
     private string? _currentFileName;
     private string? _currentFilePath;
-    public bool IsFull => _accumulatedDuration >= settingsService.Settings.Vault.MaxSegmentDurationInSec;
+    private long _fileSizeBytes;
+    public bool IsFull => _accumulatedDuration >= vaultOptions.CurrentValue.MaxSegmentDurationInSec;
 
     public async Task<LocalSegment?> SaveAsync(
         string streamFolderPath,
@@ -51,6 +53,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, SettingsService setting
         await segment.Content.DisposeAsync();
 
         _accumulatedDuration += segment.Source.Duration;
+        _fileSizeBytes += fileStream.Length;
 
         return !IsFull ? null : CloseCurrentSegment();
     }
@@ -60,10 +63,11 @@ public sealed class SegmentStore(IFileSystem fileSystem, SettingsService setting
         if (string.IsNullOrEmpty(_currentFilePath))
             return null;
 
-        var closed = new LocalSegment(_currentFilePath, _accumulatedDuration);
+        var closed = new LocalSegment(_currentFilePath, _accumulatedDuration, _fileSizeBytes);
         _currentFileName = null;
         _currentFilePath = null;
         _accumulatedDuration = 0f;
+        _fileSizeBytes = 0;
         return closed;
     }
 
@@ -79,7 +83,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, SettingsService setting
         await segment.Content.CopyToAsync(fileStream, cancellationToken);
         await segment.Content.DisposeAsync();
 
-        return new LocalSegment(initPath, 0);
+        return new LocalSegment(initPath, 0, fileStream.Length);
     }
 
     private static string GetUrlExtension(string url) =>

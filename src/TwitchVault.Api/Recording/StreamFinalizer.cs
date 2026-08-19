@@ -10,6 +10,7 @@ public interface IStreamFinalizer
     Task FinalizeAsync(
         string channelName,
         Domain.Stream stream,
+        long sizeBytes,
         SessionEndReason reason);
 }
 
@@ -32,6 +33,7 @@ public sealed class StreamFinalizer(
     public async Task FinalizeAsync(
         string channelName,
         Domain.Stream stream,
+        long sizeBytes,
         SessionEndReason reason)
     {
         try
@@ -54,7 +56,7 @@ public sealed class StreamFinalizer(
 
                 case SessionEndReason.StreamEnded:
                 default:
-                    await HandleStreamEndedAsync(stream);
+                    await HandleStreamEndedAsync(stream, sizeBytes);
                     break;
             }
         }
@@ -84,9 +86,10 @@ public sealed class StreamFinalizer(
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
     }
 
-    private async Task HandleStreamEndedAsync(Domain.Stream stream)
+    private async Task HandleStreamEndedAsync(Domain.Stream stream, long sizeBytes)
     {
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
+        stream.SetSize(sizeBytes);
         await streamRepository.UpdateAsync(stream);
         await channelRepository.SetLiveAsync(stream.ChannelId, false);
         await storageService.TryFinalizeStorageAsync(stream);

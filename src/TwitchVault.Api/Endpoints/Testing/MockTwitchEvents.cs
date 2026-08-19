@@ -29,5 +29,11 @@ public class MockTwitchEvents : IEndpoint
             await service.ClearAllSubscriptionsAsync(default);
             return Results.Ok();
         });
+
+        // group.MapPost("/rewrite", async () =>
+        // {
+        //     await HlsPlaylistRewriter.RewriteSegmentsAsync("", "", "", CancellationToken.None);
+        //     return Results.Ok();
+        // });
     }
 }

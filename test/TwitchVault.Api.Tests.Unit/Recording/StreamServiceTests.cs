@@ -39,6 +39,30 @@ public class StreamServiceTests
         await _streamRepository.DidNotReceive().DeleteAsync(Arg.Any<string>());
     }
 
+    [Theory]
+    [InlineData(StorageOperationStatus.DeleteRequest)]
+    [InlineData(StorageOperationStatus.Deleting)]
+    [InlineData(StorageOperationStatus.DeleteFailed)]
+    public async Task DeleteStreamAsync_ShouldReturnNotFound_WhenStreamIsAlreadyDeleteRelated(StorageOperationStatus status)
+    {
+        // Arrange
+        var streamId = "stream-123";
+        var stream = new DomainStream
+        {
+            TwitchStreamId = streamId,
+            ChannelId = "channel-1"
+        };
+        stream.SetStorageOperationStatus(status);
+        _streamRepository.GetByIdAsync(streamId).Returns(stream);
+
+        // Act
+        var result = await _sut.DeleteStreamAsync(streamId);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        await _streamRepository.DidNotReceive().UpdateAsync(Arg.Any<DomainStream>());
+    }
+
     [Fact]
     public async Task DeleteStreamAsync_ShouldSucceed_WhenChaptersIsEmpty()
     {

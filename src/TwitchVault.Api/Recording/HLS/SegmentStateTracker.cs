@@ -1,13 +1,14 @@
 using TwitchVault.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public sealed class SegmentStateTracker(SettingsService settingsService)
+public sealed class SegmentStateTracker(IOptionsMonitor<VaultOptions> vaultOptions)
 {
     public float AccumulatedDuration { get; private set; }
     public string? CurrentFileName { get; private set; }
 
-    public bool IsFull => AccumulatedDuration >= settingsService.Settings.Vault.MaxSegmentDurationInSec;
+    public bool IsFull => AccumulatedDuration >= vaultOptions.CurrentValue.MaxSegmentDurationInSec;
     public bool HasOpenSegment => CurrentFileName is not null;
 
     public string GetOrStartSegment(string? lastFlushedFileName, string urlExtension) =>

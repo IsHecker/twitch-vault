@@ -4,61 +4,58 @@ namespace TwitchVault.Api.CloudStorage;
 
 public sealed class StorageRouter(
     StorageProviderRegistry registry,
-    IStorageRoutingStrategy strategy,
-    ILogger<StorageRouter> logger)
+    IStorageRoutingStrategy strategy)
 {
-    public Task<Result<StorageUploadSession>> AcquireSessionAsync(long sizeBytes, CancellationToken cancellationToken) =>
+    public Task<Result<StorageSession>> AcquireSessionAsync(long sizeBytes, CancellationToken cancellationToken) =>
         AcquireSessionAsync(registry.EnabledInstances, sizeBytes, cancellationToken);
 
-    public async Task<Result<StorageUploadSession>> AcquireSessionAsync(
+    public async Task<Result<StorageSession>> AcquireSessionAsync(
         string instanceName, long sizeBytes, CancellationToken cancellationToken)
     {
         var instance = registry.GetInstance(instanceName);
         return await AcquireSessionAsync([instance], sizeBytes, cancellationToken);
     }
 
-    private async Task<Result<StorageUploadSession>> AcquireSessionAsync(
+    public async Task<Result<StorageSession>> AcquireSessionAsync(
         IReadOnlyList<ManagedStorageInstance> pool, long sizeBytes, CancellationToken cancellationToken)
     {
-        var eligible = new List<ManagedStorageInstance>();
+        if (pool.Count == 0)
+            return Error.Failure("NoProvidersAvailable", "No storage providers are configured or enabled.");
 
-        foreach (var instance in pool)
-        {
-            if (!instance.Capacity.HasCapacityFor(sizeBytes))
-                continue;
-
-            eligible.Add(instance);
-        }
-
+        var eligible = pool.Where(i => i.Capacity.HasCapacityFor(sizeBytes)).ToList();
         if (eligible.Count == 0)
-        {
-            return pool.Count == 1
-                ? Error.Failure($"Storage instance '{pool[0].Provider.Options.Name}' is unavailable or lacks capacity for {sizeBytes} bytes.")
-                : Error.Failure("No healthy storage provider is available with sufficient capacity.");
-        }
+            return Error.Failure("InsufficientCapacity", $"No provider has enough capacity for this payload.");
+
+        using var queueTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        queueTimeoutCts.CancelAfter(TimeSpan.FromMinutes(1));
 
         var ordered = strategy.Order(eligible);
-        foreach (var candidate in ordered)
+        var acquireTasks = ordered.Select(async instance =>
         {
-            if (!candidate.ConcurrencySlot.TryAcquire())
+            var lease = await instance.AcquireAsync(queueTimeoutCts.Token);
+            return (instance, lease);
+        }).ToList();
+
+        while (acquireTasks.Count > 0)
+        {
+            var finished = await Task.WhenAny(acquireTasks);
+            acquireTasks.Remove(finished);
+            var (instance, lease) = await finished;
+
+            if (!lease.IsAcquired)
                 continue;
 
-            logger.LogDebug("StorageRouter selected provider '{Name}' for payload of {Size} bytes.",
-                candidate.Provider.Options.Name, sizeBytes);
+            queueTimeoutCts.Cancel();
+            if (instance.Capacity.TryReserve(sizeBytes))
+                return new StorageSession(instance, lease, sizeBytes);
 
-            return new StorageUploadSession(candidate);
+            lease.Dispose();
+            continue;
         }
 
-        var head = ordered[0];
-        var timeout = TimeSpan.FromSeconds(Math.Max(1, head.Provider.Options.Behavior.RequestTimeoutSeconds));
+        if (queueTimeoutCts.IsCancellationRequested)
+            return Error.Failure("UploadCancelled", "Timed out waiting for an available upload slot across all providers.");
 
-        logger.LogInformation(
-            "All eligible storage providers are at their concurrency limit; waiting up to {Timeout}s for '{Name}'.",
-            timeout, head.Provider.Options.Name);
-
-        if (!await head.ConcurrencySlot.WaitAsync(timeout, cancellationToken))
-            return Error.Failure($"Timed out waiting for an available upload slot on '{head.Provider.Options.Name}'.");
-
-        return new StorageUploadSession(head);
+        return Error.Failure("SlotAcquisitionFailed", "All upload concurrency queues are full or timed out.");
     }
 }

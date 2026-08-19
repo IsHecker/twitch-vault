@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using TwitchVault.Api.Common.Results;
@@ -35,15 +36,17 @@ public sealed class DiscordStorageProvider(
     public StorageInstanceOptions Options => instanceOptions.Value;
 
     public async Task<Result<IEnumerable<RemoteUrl>>> UploadAsync(
-        IReadOnlyList<StorageFile> files,
+        IEnumerable<StorageFile> files,
         CancellationToken cancellationToken = default)
     {
-        if (files.Count == 0)
+        if (!files.Any())
             return Enumerable.Empty<RemoteUrl>().ToResult();
 
-        var resultMap = new List<RemoteUrl>(files.Count);
+        _ = files.TryGetNonEnumeratedCount(out var filesCount);
 
-        foreach (var chunk in files.Chunk(discordOptions.Value.MaxAttachmentsPerMessage))
+        var resultMap = new List<RemoteUrl>(filesCount);
+
+        foreach (var chunk in files.Chunk(Options.Behavior.MaxBatchSize))
         {
             var chunkResult = await SendMessageAsync(chunk, cancellationToken);
             if (chunkResult.IsFailure)
@@ -55,20 +58,15 @@ public sealed class DiscordStorageProvider(
                 resultMap.Add(new(attachment.FileName, BuildCDNUrl(messageId, attachment.Id)));
             }
 
-            if (files.Count > discordOptions.Value.MaxAttachmentsPerMessage)
-                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            if (filesCount > Options.Behavior.MaxBatchSize)
+                await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(3, 6)), cancellationToken);
         }
 
         return resultMap;
     }
 
-    public async Task<Result> DeleteAsync(IReadOnlyList<string> remoteUrls, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(IEnumerable<string> remoteUrls, CancellationToken cancellationToken)
     {
-        // TODO: continue implementation:
-        // single-delete
-        // count = 1
-        // messages older than 14-days
-
         var messageIds = remoteUrls
             .Select(ExtractMessageId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
@@ -107,6 +105,8 @@ public sealed class DiscordStorageProvider(
             var deleteResult = await DeleteSingleAsync(id, cancellationToken);
             if (deleteResult.IsFailure)
                 return deleteResult;
+
+            await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(1, 4)), cancellationToken);
         }
         return Result.Success;
     }
@@ -151,6 +151,9 @@ public sealed class DiscordStorageProvider(
     {
         foreach (var chunk in messageIds.Chunk(MaxBulkDeleteSize))
         {
+            if (chunk.Length == 1)
+                return await DeleteSingleAsync(chunk[0], cancellationToken);
+
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{MessagesUrl}/bulk-delete");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bot", discordOptions.Value.BotToken);
             request.Content = JsonContent.Create(new { messages = chunk });
@@ -177,6 +180,9 @@ public sealed class DiscordStorageProvider(
         if (response.IsFailure && response.Error.Type == ErrorType.NotFound)
             return Result.Success;
 
+        if (response.IsFailure)
+            return response.Error;
+
         response.Value.Dispose();
         return response;
     }
@@ -185,15 +191,18 @@ public sealed class DiscordStorageProvider(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var client = clientFactory.CreateClient();
+        using var client = clientFactory.CreateClient();
         var response = await client.SendAsync(request, cancellationToken);
         UpdateRateLimits(response.Headers);
         if (response.IsSuccessStatusCode)
             return response;
 
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return Error.NotFound();
+
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        logger.LogError("Discord API returned {StatusCode}. Body: {Body}",
-            response.StatusCode, body);
+        logger.LogError("Discord API {Method} {StatusCode}: {Body}",
+            request.Method, (int)response.StatusCode, body);
 
         response.Dispose();
         return Error.Failure($"Discord API error {response.StatusCode}: {body}");
@@ -238,7 +247,7 @@ public sealed class DiscordStorageProvider(
         }
 
         logger.LogWarning("Discord API rate limit active. Waiting {Seconds}s...", _rateLimitResetAfter);
-        await Task.Delay(TimeSpan.FromSeconds(_rateLimitResetAfter + 10), cancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(_rateLimitResetAfter + 5), cancellationToken);
 
         lock (_rateLimitLock)
         {

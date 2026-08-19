@@ -6,6 +6,8 @@ using TwitchVault.Api.Twitch;
 using System.Runtime.CompilerServices;
 using TwitchVault.Api.Common;
 
+using Microsoft.Extensions.Options;
+
 namespace TwitchVault.Api.Recording;
 
 public interface IStreamRecorder : IAsyncDisposable
@@ -26,13 +28,14 @@ public sealed class StreamRecorder(
     ISegmentUploader segmentUploader,
     IStreamFinalizer finalizer,
     TransientErrorRetryPolicy retryPolicy,
-    SettingsService settingsService,
+    IOptionsMonitor<VaultOptions> vaultOptions,
     ILogger<StreamRecorder> logger,
     CancellationToken parentCancellationToken) : IStreamRecorder
 {
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
-    private readonly AppSettings _settings = settingsService.Settings;
+    private long _streamSizeBytes = 0;
+    private VaultOptions VaultOptions => vaultOptions.CurrentValue;
     private readonly CancellationTokenSource _cts
         = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
     private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
@@ -59,7 +62,7 @@ public sealed class StreamRecorder(
             await CloseCurrentSegmentAsync(CancellationToken.None);
             await segmentUploader.FlushRemainingAsync();
             await DisposeAsync();
-            await finalizer.FinalizeAsync(_channel.Name, _stream, _endReason);
+            await finalizer.FinalizeAsync(_channel.Name, _stream, _streamSizeBytes, _endReason);
         }
     }
 
@@ -81,7 +84,7 @@ public sealed class StreamRecorder(
 
     private async Task RecordStreamAsync(CancellationToken cancellationToken)
     {
-        var emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+        var emptyPollsRemaining = VaultOptions.MaxConsecutiveEmptyPolls;
 
         while (!cancellationToken.IsCancellationRequested && emptyPollsRemaining > 0)
         {
@@ -98,7 +101,7 @@ public sealed class StreamRecorder(
                 continue;
             }
 
-            emptyPollsRemaining = _settings.Vault.MaxConsecutiveEmptyPolls;
+            emptyPollsRemaining = VaultOptions.MaxConsecutiveEmptyPolls;
 
             if (hasQualityChanged)
                 await HandleQualitySwitchAsync(cancellationToken);
@@ -155,6 +158,7 @@ public sealed class StreamRecorder(
             if (localSegment is null)
                 continue;
 
+            _streamSizeBytes += localSegment.SizeBytes;
             if (segment.Source.IsInitSegment && !playlistWriter.HasInitSegment)
                 await playlistWriter.SetInitSegmentAsync(localSegment.FilePath, cancellationToken);
             else
@@ -170,6 +174,7 @@ public sealed class StreamRecorder(
         if (segment is null)
             return;
 
+        _streamSizeBytes += segment.SizeBytes;
         await playlistWriter.AddSegmentAsync(segment.FilePath, segment.Duration, cancellationToken);
         segmentUploader.Add(segment);
     }

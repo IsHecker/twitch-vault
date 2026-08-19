@@ -12,12 +12,15 @@ using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Endpoints.Testing;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchVault.Api.CloudStorage.Discord;
 using TwitchVault.Api.CloudStorage;
 using TwitchVault.Api.CloudStorage.Jobs;
+using TwitchVault.Api.CloudStorage.Catbox;
+using TwitchVault.Api.ChannelMonitor;
+using TwitchVault.Api.Domain;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -28,6 +31,10 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.SectionName));
+        services.Configure<VaultOptions>(configuration.GetSection(VaultOptions.SectionName));
+        services.Configure<TwitchOptions>(configuration.GetSection(TwitchOptions.SectionName));
+        services.Configure<BackgroundJobsOptions>(configuration.GetSection(BackgroundJobsOptions.SectionName));
+        services.Configure<RuntimeSettings>(configuration);
 
         services.AddAuthenticationInternal(configuration);
         services.AddCloudStorage(configuration);
@@ -38,7 +45,6 @@ public static class DependencyInjection
         services.AddSingleton<IDateTimeProvider, EgyptTimeProvider>();
         services.AddSingleton<IFileSystem, PhysicalFileSystem>();
         services.AddSingleton<EventBus>();
-        services.AddSingleton<SettingsService>();
         services.AddSingleton<IStreamService, StreamService>();
 
         services.AddSingleton<JsonDatabase>();
@@ -62,25 +68,23 @@ public static class DependencyInjection
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 
         services.AddOptions<TwitchLibEventSubOptions>()
-            .Configure<SettingsService>((options, settingsService) =>
+            .Configure<IOptions<TwitchOptions>>((options, twitchOptions) =>
             {
-                options.Secret = settingsService.Settings.Twitch.Secret;
-                options.CallbackPath = settingsService.Settings.Twitch.WebhookPath;
+                options.Secret = twitchOptions.Value.Secret;
+                options.CallbackPath = twitchOptions.Value.WebhookPath;
             });
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        // services.AddHostedService<TwitchWebhookStartupService>();
+        services.AddHostedService<TwitchWebhookStartupService>();
 
-        // services.ConfigureOptions<ChannelMonitorJobConfiguration>();
-        // services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
+        services.ConfigureOptions<ChannelMonitorJobConfiguration>();
+        services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
 
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         services.AddEndpoints(Assembly.GetExecutingAssembly());
-
-        services.AddSingleton<HlsPlaylistTestHarness>();
         return services;
     }
 
@@ -132,6 +136,10 @@ public static class DependencyInjection
         services.AddSingleton<StorageRouter>();
         services.AddSingleton<StorageProviderRegistry>();
         services.AddSingleton<ICloudStorageService, CloudStorageService>();
+
+        // catbox
+        services.AddSingleton<CatboxApiClient>();
+
         return services;
     }
 }

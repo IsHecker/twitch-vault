@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Quartz;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
@@ -12,12 +13,12 @@ public sealed class ChannelMonitorJob(
     RecordingOrchestrator streamController,
     IChannelRepository channelRepository,
     ITwitchGqlClient twitchGqlClient,
-    SettingsService settingsService,
+    IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     ILogger<ChannelMonitorJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsService.Settings.BackgroundJobs[JobOptions.ChannelMonitor].Enabled)
+        if (!jobsOptions.CurrentValue.GetJob(JobOptions.ChannelMonitor).Enabled)
             return;
 
         try

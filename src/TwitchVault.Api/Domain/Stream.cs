@@ -90,7 +90,13 @@ public sealed class Stream
         Chapters.Add(new Chapter { Title = title, CategoryId = categoryId, StartedAt = startedAt });
     }
 
+    public void SetSize(long sizeBytes) => SizeBytes = sizeBytes;
     public void SetStorageLocation(StorageLocation storageLocation) => StorageLocation = storageLocation;
     public void SetStorageInstance(string instanceName) => StorageInstanceName = instanceName;
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
+
+    public bool IsDeleted() => StorageOperationStatus
+        is StorageOperationStatus.DeleteRequest
+        or StorageOperationStatus.Deleting
+        or StorageOperationStatus.DeleteFailed;
 }

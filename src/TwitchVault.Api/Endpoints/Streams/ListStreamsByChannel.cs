@@ -18,7 +18,11 @@ public class ListStreamsByChannel : IEndpoint
                 return Results.NotFound();
 
             var streams = await repo.ListByChannelIdAsync(channelId);
-            return Results.Ok(streams.Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl)).ToList());
+            var activeStreams = streams
+                .Where(s => !s.IsDeleted())
+                .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl));
+
+            return Results.Ok(activeStreams);
         })
         .RequireAuthorization()
         .WithName(nameof(ListStreamsByChannel))

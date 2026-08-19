@@ -5,7 +5,7 @@ using TwitchVault.Api.Domain;
 
 namespace TwitchVault.Api.CloudStorage.Jobs;
 
-public sealed class StorageCleanupJobConfiguration(SettingsService settingsService)
+public sealed class StorageCleanupJobConfiguration(IOptions<BackgroundJobsOptions> jobsOptions)
     : IConfigureOptions<QuartzOptions>
 {
     public void Configure(QuartzOptions options)
@@ -18,6 +18,6 @@ public sealed class StorageCleanupJobConfiguration(SettingsService settingsServi
                     .ForJob(jobName)
                     .StartNow()
                     .WithSimpleSchedule(schedule =>
-                        schedule.WithInterval(settingsService.Settings.BackgroundJobs[JobOptions.StorageCleanup].RunInterval).RepeatForever()));
+                        schedule.WithInterval(jobsOptions.Value.GetJob(JobOptions.StorageCleanup).RunInterval).RepeatForever()));
     }
 }

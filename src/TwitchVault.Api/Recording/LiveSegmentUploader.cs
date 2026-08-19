@@ -1,4 +1,5 @@
 using TwitchVault.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording;
 
@@ -12,7 +13,7 @@ public interface ISegmentUploader : IDisposable
 public sealed class LiveSegmentUploader(
     IStreamStorageService storageService,
     IWebHostEnvironment env,
-    SettingsService settingsService,
+    IOptionsMonitor<VaultOptions> vaultOptions,
     ILogger<LiveSegmentUploader> logger) : ISegmentUploader
 {
     private readonly List<LocalSegment> _buffer = [];
@@ -25,6 +26,8 @@ public sealed class LiveSegmentUploader(
     public void Attach(Domain.Stream stream)
     {
         _stream = stream;
+        _stream.SetStorageOperationStatus(Domain.StorageOperationStatus.Uploading);
+
         _localDirectory = _stream.Folder.GetAbsolutePath(env.ContentRootPath);
         _remoteUrlsFilePath = Path.Combine(_localDirectory, IStreamStorageService.RemoteUrlsFileName);
         _remoteUrlsWriter = new StreamWriter(_remoteUrlsFilePath, append: true);
@@ -33,7 +36,7 @@ public sealed class LiveSegmentUploader(
     public void Add(LocalSegment segment)
     {
         _buffer.Add(segment);
-        if (_buffer.Count < settingsService.Settings.Vault.UploadBatchSize)
+        if (_buffer.Count < vaultOptions.CurrentValue.UploadBatchSize)
             return;
 
         StartFlush();

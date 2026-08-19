@@ -4,93 +4,15 @@ using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.CloudStorage;
 
-// public sealed class StorageProviderRegistry
-// {
-//     // TODO: Need to make storage options editable in runtime.
-//     private readonly record struct ProviderTemplate(Type Type, Type OptionsType);
-
-//     private static readonly Dictionary<CloudProviderType, ProviderTemplate> ProviderTemplates =
-//         GetProvidersFromAssembly(typeof(StorageProviderRegistry).Assembly);
-
-//     private readonly Dictionary<string, ManagedStorageInstance> _instances = new(StringComparer.OrdinalIgnoreCase);
-
-//     public IReadOnlyList<ManagedStorageInstance> EnabledInstances { get; }
-
-//     public StorageProviderRegistry(
-//         IServiceProvider serviceProvider,
-//         IOptions<StorageOptions> options,
-//         IConfiguration configuration)
-//     {
-//         var instanceSections = configuration
-//             .GetSection($"{StorageOptions.SectionName}:{nameof(StorageOptions.Instances)}")
-//             .GetChildren()
-//             .ToArray();
-
-//         foreach (var (instanceOptions, configSection) in options.Value.Instances.Zip(instanceSections))
-//         {
-//             if (!ProviderTemplates.TryGetValue(instanceOptions.Provider, out var template))
-//                 continue;
-
-//             var provider = CreateProvider(serviceProvider, template, instanceOptions, configSection);
-//             _instances[instanceOptions.Name] = WrapInstance(provider, instanceOptions);
-//         }
-
-//         EnabledInstances = options.Value.Instances
-//             .Where(i => i.Enabled && _instances.ContainsKey(i.Name))
-//             .Select(i => _instances[i.Name])
-//             .ToList();
-//     }
-
-//     public ManagedStorageInstance GetInstance(string instanceId) =>
-//         _instances.TryGetValue(instanceId, out var instance)
-//             ? instance
-//             : throw new InvalidOperationException($"Storage instance '{instanceId}' not found or not configured.");
-
-//     private static ICloudStorageProvider CreateProvider(
-//         IServiceProvider serviceProvider,
-//         ProviderTemplate template,
-//         StorageInstanceOptions instanceConfig,
-//         IConfigurationSection section)
-//     {
-//         var providerProperties = section.GetSection("Properties").Get(template.OptionsType)!;
-
-//         return (ICloudStorageProvider)ActivatorUtilities.CreateInstance(
-//             serviceProvider,
-//             template.Type,
-//             instanceConfig,
-//             providerProperties);
-//     }
-
-//     private static ManagedStorageInstance WrapInstance(
-//         ICloudStorageProvider provider,
-//         StorageInstanceOptions instanceConfig)
-//     {
-//         var capacity = new StorageCapacityTracker(instanceConfig.Behavior.CapacityBytes);
-//         var concurrencyGate = new SemaphoreConcurrencyGate(Math.Max(1, instanceConfig.Behavior.MaxConcurrentUploads));
-
-//         return new ManagedStorageInstance(provider, capacity, concurrencyGate);
-//     }
-
-//     private static Dictionary<CloudProviderType, ProviderTemplate> GetProvidersFromAssembly(Assembly assembly)
-//     {
-//         return assembly.GetTypes()
-//             .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(ICloudStorageProvider)))
-//             .Select(type => (Type: type, Attribute: type.GetCustomAttribute<StorageProviderAttribute>()))
-//             .Where(x => x.Attribute is not null)
-//             .ToDictionary(
-//                 x => x.Attribute!.ProviderType,
-//                 x => new ProviderTemplate(x.Type, x.Attribute!.OptionsType));
-//     }
-// }
-
+// TODO: Implementation needs some cleaning
 public sealed class StorageProviderRegistry : IDisposable
 {
-    private readonly record struct ProviderTemplate(Type Type, Type OptionsType);
+    private readonly record struct ProviderTemplate(Type Type, Type? OptionsType);
 
     private readonly record struct RegisteredInstance(
         ManagedStorageInstance Instance,
         LiveOptions<StorageInstanceOptions> InstanceOptions,
-        ILiveOptions ProviderOptions);
+        ILiveOptions? ProviderOptions);
 
     private static readonly Dictionary<CloudProviderType, ProviderTemplate> ProviderTemplates =
         GetProvidersFromAssembly(typeof(StorageProviderRegistry).Assembly);
@@ -101,7 +23,8 @@ public sealed class StorageProviderRegistry : IDisposable
     private readonly IDisposable? _monitorDisposable;
     private readonly ConcurrentDictionary<string, RegisteredInstance> _instances = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<ManagedStorageInstance> EnabledInstances { get; private set; } = [];
+    private IReadOnlyList<ManagedStorageInstance> _enabledInstances = [];
+    public IReadOnlyList<ManagedStorageInstance> EnabledInstances => Volatile.Read(ref _enabledInstances);
 
     public StorageProviderRegistry(
         IServiceProvider serviceProvider,
@@ -131,6 +54,9 @@ public sealed class StorageProviderRegistry : IDisposable
 
         foreach (var (instanceOptions, rawSectionConfig) in options.Instances.Zip(instanceSections))
         {
+            if (!instanceOptions.Enabled)
+                continue;
+
             if (!ProviderTemplates.TryGetValue(instanceOptions.Provider, out var template))
                 continue;
 
@@ -147,10 +73,12 @@ public sealed class StorageProviderRegistry : IDisposable
 
         HandleRemovedInstances(options.Instances);
 
-        EnabledInstances = options.Instances
+        var newEnabled = options.Instances
             .Where(i => i.Enabled && _instances.ContainsKey(i.Name))
             .Select(i => _instances[i.Name].Instance)
             .ToList();
+
+        Volatile.Write(ref _enabledInstances, newEnabled);
     }
 
     private void UpdateInstanceOptions(
@@ -159,10 +87,11 @@ public sealed class StorageProviderRegistry : IDisposable
         ProviderTemplate template,
         RegisteredInstance existing)
     {
-        var providerProperties = configSection.GetSection("Properties").Get(template.OptionsType)!;
-
         existing.InstanceOptions.Update(instanceOptions);
-        existing.ProviderOptions.Update(providerProperties);
+
+        if (template.OptionsType is not null)
+            existing.ProviderOptions!.Update(ResolveProviderOptions(configSection, template.OptionsType));
+
         existing.Instance.ApplyBehaviorUpdate(instanceOptions.Behavior);
 
         _logger.LogInformation("Storage instance '{Name}' reconfigured in place.", instanceOptions.Name);
@@ -178,25 +107,36 @@ public sealed class StorageProviderRegistry : IDisposable
     }
 
     private RegisteredInstance CreateRegisteredInstance(
-        ProviderTemplate template, StorageInstanceOptions instanceConfig, IConfigurationSection section)
+        ProviderTemplate template,
+        StorageInstanceOptions instanceConfig,
+        IConfigurationSection configSection)
     {
-        var providerProperties = section.GetSection("Properties").Get(template.OptionsType)!;
-
         var instanceOptionsLive = new LiveOptions<StorageInstanceOptions>(instanceConfig);
-        var providerOptionsLive = (ILiveOptions)Activator.CreateInstance(
-            typeof(LiveOptions<>).MakeGenericType(template.OptionsType), providerProperties)!;
+
+        ILiveOptions? providerOptionsLive = null;
+        object[] extraArgs = [];
+
+        if (template.OptionsType is not null)
+        {
+            providerOptionsLive = (ILiveOptions)Activator.CreateInstance(
+                typeof(LiveOptions<>).MakeGenericType(template.OptionsType),
+                ResolveProviderOptions(configSection, template.OptionsType))!;
+
+            extraArgs = [providerOptionsLive];
+        }
 
         var provider = (ICloudStorageProvider)ActivatorUtilities.CreateInstance(
-            _serviceProvider, template.Type, instanceOptionsLive, providerOptionsLive);
+            _serviceProvider, template.Type, [instanceOptionsLive, .. extraArgs]);
 
-        var capacity = new StorageCapacityTracker(instanceConfig.Behavior.CapacityBytes);
-        // var gate = new ResizableConcurrencyGate(instanceConfig.Behavior.MaxConcurrentUploads);
-        var concurrencyGate = new SemaphoreConcurrencyGate(Math.Max(1, instanceConfig.Behavior.MaxConcurrentUploads));
+        var capacity = new StorageCapacityGate(instanceConfig.Behavior.StorageCapacityBytes);
 
-        var managed = new ManagedStorageInstance(provider, capacity, concurrencyGate);
+        var managed = new ManagedStorageInstance(provider, capacity);
 
         return new RegisteredInstance(managed, instanceOptionsLive, providerOptionsLive);
     }
+
+    private static object ResolveProviderOptions(IConfigurationSection section, Type optionsType)
+        => section.GetSection("Properties").Get(optionsType) ?? Activator.CreateInstance(optionsType)!;
 
     private static Dictionary<CloudProviderType, ProviderTemplate> GetProvidersFromAssembly(Assembly assembly)
     {
