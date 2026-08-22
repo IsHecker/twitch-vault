@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;

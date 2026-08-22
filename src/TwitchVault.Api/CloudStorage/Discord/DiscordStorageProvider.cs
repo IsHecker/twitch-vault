@@ -28,11 +28,6 @@ public sealed class DiscordStorageProvider(
 
     private readonly string MessagesUrl = $"https://discord.com/api/v10/channels/{discordOptions.Value.ChannelId}/messages";
 
-    private readonly object _rateLimitLock = new();
-    private int _rateLimitLimit;
-    private int? _rateLimitRemaining;
-    private float _rateLimitResetAfter;
-
     public StorageInstanceOptions Options => instanceOptions.Value;
 
     public async Task<Result<IEnumerable<RemoteUrl>>> UploadAsync(
@@ -57,9 +52,6 @@ public sealed class DiscordStorageProvider(
             {
                 resultMap.Add(new(attachment.FileName, BuildCDNUrl(messageId, attachment.Id)));
             }
-
-            if (filesCount > Options.Behavior.MaxBatchSize)
-                await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(3, 6)), cancellationToken);
         }
 
         return resultMap;
@@ -76,12 +68,6 @@ public sealed class DiscordStorageProvider(
         if (messageIds.Count == 0)
             return Result.Success;
 
-        /*
-            messageIds: 1(bulkEligible) - 99(old) --> DeleteSingle (all messages)
-            messageIds: 1(bulkEligible) --> DeleteSingle (1 message)
-            messageIds: 30(bulkEligible) - 70(old) --> BulkDeleteMessages (bulkEligible) and DeleteSingle (all messages - bulkEligible)
-        
-        */
         var bulkDeleted = false;
         var bulkEligibleIds = messageIds.Where(id => !IsOlderThan14Days(id)).ToList();
         if (bulkEligibleIds.Count >= MinBulkDeleteSize)
@@ -105,8 +91,6 @@ public sealed class DiscordStorageProvider(
             var deleteResult = await DeleteSingleAsync(id, cancellationToken);
             if (deleteResult.IsFailure)
                 return deleteResult;
-
-            await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(1, 4)), cancellationToken);
         }
         return Result.Success;
     }
@@ -131,7 +115,6 @@ public sealed class DiscordStorageProvider(
 
         try
         {
-            await WaitForRateLimitAsync(cancellationToken);
             var response = await SendRequestAsync(request, cancellationToken);
             if (response.IsFailure)
                 return response.Error;
@@ -191,11 +174,13 @@ public sealed class DiscordStorageProvider(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        using var client = clientFactory.CreateClient();
+        using var client = clientFactory.CreateClient(Options.Name);
         var response = await client.SendAsync(request, cancellationToken);
-        UpdateRateLimits(response.Headers);
         if (response.IsSuccessStatusCode)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(2, 6)), cancellationToken);
             return response;
+        }
 
         if (response.StatusCode == HttpStatusCode.NotFound)
             return Error.NotFound();
@@ -206,53 +191,6 @@ public sealed class DiscordStorageProvider(
 
         response.Dispose();
         return Error.Failure($"Discord API error {response.StatusCode}: {body}");
-    }
-
-    private void UpdateRateLimits(HttpResponseHeaders headers)
-    {
-        lock (_rateLimitLock)
-        {
-            if (headers.TryGetValues("x-ratelimit-limit", out var limitValues) &&
-            int.TryParse(limitValues.FirstOrDefault(), out var limit))
-            {
-                _rateLimitLimit = limit;
-            }
-
-            if (headers.TryGetValues("x-ratelimit-remaining", out var remainingValues) &&
-                int.TryParse(remainingValues.FirstOrDefault(), out var remaining))
-            {
-                _rateLimitRemaining = remaining;
-            }
-
-            if (headers.TryGetValues("x-ratelimit-reset-after", out var resetValues) &&
-                float.TryParse(resetValues.FirstOrDefault(), out var reset))
-            {
-                _rateLimitResetAfter = reset;
-            }
-        }
-    }
-
-    private async Task WaitForRateLimitAsync(CancellationToken cancellationToken)
-    {
-        lock (_rateLimitLock)
-        {
-            if (!_rateLimitRemaining.HasValue)
-                return;
-
-            if (_rateLimitRemaining > 0)
-            {
-                _rateLimitRemaining--;
-                return;
-            }
-        }
-
-        logger.LogWarning("Discord API rate limit active. Waiting {Seconds}s...", _rateLimitResetAfter);
-        await Task.Delay(TimeSpan.FromSeconds(_rateLimitResetAfter + 5), cancellationToken);
-
-        lock (_rateLimitLock)
-        {
-            _rateLimitRemaining = _rateLimitLimit;
-        }
     }
 
     private static bool IsOlderThan14Days(string messageId)

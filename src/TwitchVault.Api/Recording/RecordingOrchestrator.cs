@@ -5,7 +5,7 @@ using Serilog.Context;
 
 namespace TwitchVault.Api.Recording;
 
-public sealed class RecordingOrchestrator
+public sealed class RecordingOrchestrator : IRecordingOrchestrator
 {
     private readonly IStreamRecorderRegistry _streamRecorderRegistry;
     private readonly IStreamRecorderFactory _streamRecorderFactory;

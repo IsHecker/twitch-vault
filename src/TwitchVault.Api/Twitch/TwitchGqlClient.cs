@@ -84,6 +84,7 @@ public sealed class TwitchGqlClient(
 
         var masterPlaylistUrl = BuildMasterPlaylistUrl(channel, token!);
         var playlistResponse = await httpClient.GetAsync(masterPlaylistUrl, cancellationToken);
+        var shit = await playlistResponse.Content.ReadAsStringAsync();
         if (!playlistResponse.IsSuccessStatusCode)
             return string.Empty;
 
@@ -210,9 +211,10 @@ public sealed class TwitchGqlClient(
         if (!data.TryGetProperty("user", out var user) || user.ValueKind == JsonValueKind.Null)
             return null;
 
-        var stream = user.GetProperty("stream");
-        var broadcastSettings = user.GetProperty("broadcastSettings");
+        if (!user.TryGetProperty("stream", out var stream) || stream.ValueKind == JsonValueKind.Null)
+            return null;
 
+        var broadcastSettings = user.GetProperty("broadcastSettings");
         var streamId = stream.GetProperty("id").GetString()!;
         var startedAt = EgyptTimeProvider.ToEgyptDateTime(stream.GetProperty("createdAt").GetDateTimeOffset());
 

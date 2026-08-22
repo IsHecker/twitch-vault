@@ -1,11 +1,11 @@
 using System.Security.Claims;
+using Microsoft.Extensions.Options;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch.EventSub;
-using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
@@ -18,7 +18,7 @@ public class DeleteChannel : IEndpoint
             TwitchSubscriptionService twitchSubscription,
             IChannelRepository channelRepo,
             IUserChannelRepository userChannelRepo,
-            RecordingOrchestrator recordingController,
+            IRecordingOrchestrator recordingOrchestrator,
             IStreamRepository streamRepository,
             IOptions<PathsOptions> pathsOptions,
             IWebHostEnvironment env) =>
@@ -45,8 +45,8 @@ public class DeleteChannel : IEndpoint
                 var liveStream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
                 if (liveStream is not null)
                 {
-                    await recordingController.ToggleStreamDeletionAsync(liveStream.TwitchStreamId, true);
-                    await recordingController.StopRecordingAsync(liveStream.TwitchStreamId);
+                    await recordingOrchestrator.ToggleStreamDeletionAsync(liveStream.TwitchStreamId, true);
+                    await recordingOrchestrator.StopRecordingAsync(liveStream.TwitchStreamId);
                 }
             }
 

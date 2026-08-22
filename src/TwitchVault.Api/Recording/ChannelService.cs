@@ -14,7 +14,7 @@ public class ChannelService(
     IStreamRepository streamRepository,
     ITwitchGqlClient twitchGqlClient,
     TwitchSubscriptionService twitchSubscription,
-    RecordingOrchestrator recordingController,
+    IRecordingOrchestrator recordingOrchestrator,
     IOptions<PathsOptions> pathsOptions) : IChannelService
 {
     public async Task<Result<Channel>> AddChannelAsync(
@@ -59,8 +59,8 @@ public class ChannelService(
             var stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
             if (stream is not null)
             {
-                await recordingController.ToggleStreamDeletionAsync(stream.TwitchStreamId, true);
-                await recordingController.StopRecordingAsync(stream.TwitchStreamId);
+                await recordingOrchestrator.ToggleStreamDeletionAsync(stream.TwitchStreamId, true);
+                await recordingOrchestrator.StopRecordingAsync(stream.TwitchStreamId);
             }
         }
 

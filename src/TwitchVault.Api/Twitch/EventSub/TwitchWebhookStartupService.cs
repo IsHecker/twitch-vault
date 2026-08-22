@@ -7,7 +7,7 @@ namespace TwitchVault.Api.Twitch.EventSub;
 public sealed class TwitchWebhookStartupService(
     IEventSubWebhooks eventSubWebhooks,
     TwitchSubscriptionService subscriptionService,
-    RecordingOrchestrator orchestrator,
+    IRecordingOrchestrator orchestrator,
     EventBus eventBus,
     ILogger<TwitchWebhookStartupService> logger) : IHostedService
 {

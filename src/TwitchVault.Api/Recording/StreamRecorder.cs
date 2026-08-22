@@ -149,6 +149,9 @@ public sealed class StreamRecorder(
     {
         await foreach (var segment in downloadedSegments)
         {
+            if (segment.Source.IsInitSegment && playlistWriter.HasInitSegment)
+                continue;
+
             var localSegment = await segmentStore.SaveAsync(
                 _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory),
                 segment,
@@ -159,7 +162,8 @@ public sealed class StreamRecorder(
                 continue;
 
             _streamSizeBytes += localSegment.SizeBytes;
-            if (segment.Source.IsInitSegment && !playlistWriter.HasInitSegment)
+
+            if (segment.Source.IsInitSegment)
                 await playlistWriter.SetInitSegmentAsync(localSegment.FilePath, cancellationToken);
             else
                 await playlistWriter.AddSegmentAsync(localSegment.FilePath, localSegment.Duration, cancellationToken);

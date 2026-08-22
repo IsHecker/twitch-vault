@@ -1,5 +1,4 @@
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch;
 
@@ -24,10 +23,10 @@ public abstract record SessionEndReason
 public sealed class StreamFinalizer(
     IStreamRepository streamRepository,
     IChannelRepository channelRepository,
-    IStreamService streamService,
     IStreamStorageService storageService,
     ITwitchGqlClient twitchClient,
     IDateTimeProvider dateTimeProvider,
+    IRecordingOrchestrator recording,
     ILogger<StreamFinalizer> logger) : IStreamFinalizer
 {
     public async Task FinalizeAsync(
@@ -38,21 +37,17 @@ public sealed class StreamFinalizer(
     {
         try
         {
-            if (stream.StorageOperationStatus == StorageOperationStatus.DeleteRequest)
-            {
-                await streamService.DeleteStreamAsync(stream.TwitchStreamId);
-                return;
-            }
+            await channelRepository.SetLiveAsync(stream.ChannelId, false);
 
             switch (reason)
             {
                 case SessionEndReason.StreamStopped:
-                    await MarkStoppedAsync(stream);
-                    return;
+                    await MarkStoppedAsync(stream, sizeBytes);
+                    break;
 
                 case SessionEndReason.StreamError(var ex):
-                    await HandleErrorAsync(stream, channelName, ex);
-                    return;
+                    await HandleErrorAsync(stream, channelName, ex, sizeBytes);
+                    break;
 
                 case SessionEndReason.StreamEnded:
                 default:
@@ -66,24 +61,30 @@ public sealed class StreamFinalizer(
         }
     }
 
-    private async Task MarkStoppedAsync(Domain.Stream stream)
+    private async Task MarkStoppedAsync(Domain.Stream stream, long sizeBytes)
     {
         stream.MarkAsStopped(dateTimeProvider.DateTimeNow);
+        stream.SetSize(sizeBytes);
         await streamRepository.UpdateAsync(stream);
         await storageService.TryFinalizeStorageAsync(stream);
         logger.LogDebug("Recording manually stopped.");
     }
 
-    private async Task HandleErrorAsync(Domain.Stream stream, string channelName, Exception ex)
+    private async Task HandleErrorAsync(Domain.Stream stream, string channelName, Exception ex, long sizeBytes)
     {
         logger.LogError(ex, "Session ended due to an error.");
 
         if (!await IsChannelLiveAsync(stream, channelName))
+        {
+            await HandleStreamEndedAsync(stream, sizeBytes);
             return;
+        }
 
+        // Channel is still live with the same stream — transient disconnect, mark interrupted and wait for reconnect.
         stream.MarkAsInterrupted();
         await streamRepository.UpdateAsync(stream);
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
+        await recording.HandleStreamOnlineAsync(stream.ChannelId, channelName);
     }
 
     private async Task HandleStreamEndedAsync(Domain.Stream stream, long sizeBytes)
@@ -91,7 +92,6 @@ public sealed class StreamFinalizer(
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
         await streamRepository.UpdateAsync(stream);
-        await channelRepository.SetLiveAsync(stream.ChannelId, false);
         await storageService.TryFinalizeStorageAsync(stream);
 
         var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";

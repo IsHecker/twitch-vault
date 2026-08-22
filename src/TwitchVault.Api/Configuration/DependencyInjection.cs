@@ -42,6 +42,19 @@ public static class DependencyInjection
         services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
         services.AddSingleton<TwitchHelixClient>();
 
+        services.AddHttpClient(nameof(TwitchHelixClient))
+            .AddThrottledResilience(opts =>
+            {
+                opts.PermitLimit = 700;
+                opts.Window = TimeSpan.FromMinutes(1);
+                opts.QueueLimit = 5;
+                opts.MaxRetryAttempts = 3;
+                opts.BaseDelay = TimeSpan.FromSeconds(3);
+                opts.RequestTimeout = TimeSpan.FromSeconds(30);
+            });
+
+
+
         services.AddSingleton<IDateTimeProvider, EgyptTimeProvider>();
         services.AddSingleton<IFileSystem, PhysicalFileSystem>();
         services.AddSingleton<EventBus>();
@@ -63,7 +76,7 @@ public static class DependencyInjection
         services.AddTransient<IStreamStorageService, StreamStorageService>();
         services.AddTransient<ISegmentUploader, LiveSegmentUploader>();
 
-        services.AddSingleton<RecordingOrchestrator>();
+        services.AddSingleton<IRecordingOrchestrator, RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 
@@ -84,6 +97,7 @@ public static class DependencyInjection
         services.AddQuartz();
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
+        services.AddSingleton<Endpoints.Testing.LiveTestSession>();
         services.AddEndpoints(Assembly.GetExecutingAssembly());
         return services;
     }
@@ -132,13 +146,29 @@ public static class DependencyInjection
 
         services.AddSingleton<StreamJobCoordinator>();
         services.AddSingleton<ProgressTracker>();
-        services.AddSingleton<IStorageRoutingStrategy, RoundRobinStrategy>();
         services.AddSingleton<StorageRouter>();
         services.AddSingleton<StorageProviderRegistry>();
         services.AddSingleton<ICloudStorageService, CloudStorageService>();
 
-        // catbox
         services.AddSingleton<CatboxApiClient>();
+
+        var storageOptions = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()!;
+        foreach (var instance in storageOptions.Instances)
+        {
+            if (instance.RateLimit is null)
+                continue;
+
+            services.AddHttpClient(instance.Name)
+                .AddThrottledResilience(opts =>
+                {
+                    opts.PermitLimit = instance.RateLimit.PermitLimit;
+                    opts.Window = TimeSpan.FromSeconds(instance.RateLimit.WindowSeconds);
+                    opts.QueueLimit = instance.RateLimit.QueueLimit;
+                    opts.MaxRetryAttempts = instance.RateLimit.MaxRetryAttempts;
+                    opts.BaseDelay = TimeSpan.FromSeconds(instance.RateLimit.BaseDelaySeconds);
+                    opts.RequestTimeout = TimeSpan.FromSeconds(instance.RateLimit.RequestTimeoutSeconds);
+                });
+        }
 
         return services;
     }

@@ -13,7 +13,7 @@ public class ResumeRecording : IEndpoint
             string streamId,
             IStreamRepository streamRepository,
             IChannelRepository channelRepository,
-            RecordingOrchestrator RecordingController,
+            IRecordingOrchestrator recordingOrchestrator,
             ITwitchGqlClient twitchGqlClient,
             IDateTimeProvider dateTimeProvider) =>
         {
@@ -40,7 +40,7 @@ public class ResumeRecording : IEndpoint
             if (metadata.Value.TwitchStreamId != stream.TwitchStreamId)
                 return Results.BadRequest("A different stream is now live on this channel.");
 
-            await RecordingController.ResumeStreamAsync(stream, channel);
+            await recordingOrchestrator.ResumeStreamAsync(stream, channel);
             return Results.NoContent();
         })
         .RequireAuthorization("Admin")

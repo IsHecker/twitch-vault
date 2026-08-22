@@ -22,6 +22,7 @@ public sealed class StorageCleanupJob(
         foreach (var stream in pendingStreams)
         {
             await DeleteStreamAsync(stream, context.CancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }
 

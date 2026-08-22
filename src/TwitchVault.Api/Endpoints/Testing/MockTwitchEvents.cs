@@ -12,9 +12,9 @@ public class MockTwitchEvents : IEndpoint
         group.MapPost("/online", async (
             string channelId,
             string channelName,
-            RecordingOrchestrator controller) =>
+            IRecordingOrchestrator recordingOrchestrator) =>
         {
-            await controller.HandleStreamOnlineAsync(channelId, channelName);
+            await recordingOrchestrator.HandleStreamOnlineAsync(channelId, channelName);
             return Results.Ok($"Sent StreamOnlineEvent for {channelName}");
         });
 
@@ -29,11 +29,5 @@ public class MockTwitchEvents : IEndpoint
             await service.ClearAllSubscriptionsAsync(default);
             return Results.Ok();
         });
-
-        // group.MapPost("/rewrite", async () =>
-        // {
-        //     await HlsPlaylistRewriter.RewriteSegmentsAsync("", "", "", CancellationToken.None);
-        //     return Results.Ok();
-        // });
     }
 }

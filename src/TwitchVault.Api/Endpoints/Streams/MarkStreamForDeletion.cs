@@ -11,7 +11,7 @@ public class ToggleStreamDeletion : IEndpoint
             string id,
             Request request,
             IStreamRepository repo,
-            RecordingOrchestrator controller) =>
+            IRecordingOrchestrator recordingOrchestrator) =>
         {
             var stream = await repo.GetByIdAsync(id);
             if (stream is null)
@@ -20,7 +20,7 @@ public class ToggleStreamDeletion : IEndpoint
             if (stream.Status == StreamStatus.Finished)
                 return Results.BadRequest("Cannot mark a finished stream for deletion — delete it directly.");
 
-            await controller.ToggleStreamDeletionAsync(stream.ChannelId, request.State);
+            await recordingOrchestrator.ToggleStreamDeletionAsync(stream.ChannelId, request.State);
             return Results.NoContent();
         })
         .RequireAuthorization("Admin")

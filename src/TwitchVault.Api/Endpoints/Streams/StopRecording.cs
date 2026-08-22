@@ -6,7 +6,10 @@ namespace TwitchVault.Api.Endpoints.Streams;
 public class StopRecording : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPatch("/api/streams/{id}/stop", async (string id, IStreamRepository repo, RecordingOrchestrator controller) =>
+        app.MapPatch("/api/streams/{id}/stop", async (
+            string id,
+            IStreamRepository repo,
+            IRecordingOrchestrator recordingOrchestrator) =>
         {
             var stream = await repo.GetByIdAsync(id);
             if (stream is null)
@@ -15,7 +18,7 @@ public class StopRecording : IEndpoint
             if (stream.Status != StreamStatus.Recording)
                 return Results.BadRequest("Stream is not currently recording.");
 
-            await controller.StopRecordingAsync(stream.ChannelId);
+            await recordingOrchestrator.StopRecordingAsync(stream.ChannelId);
             return Results.NoContent();
         })
         .RequireAuthorization("Admin")

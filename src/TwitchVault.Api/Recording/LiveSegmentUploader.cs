@@ -35,17 +35,23 @@ public sealed class LiveSegmentUploader(
 
     public void Add(LocalSegment segment)
     {
-        _buffer.Add(segment);
-        if (_buffer.Count < vaultOptions.CurrentValue.UploadBatchSize)
-            return;
+        lock (_buffer)
+        {
+            _buffer.Add(segment);
+            if (_buffer.Count < vaultOptions.CurrentValue.UploadBatchSize)
+                return;
+        }
 
         StartFlush();
     }
 
     public async Task FlushRemainingAsync()
     {
-        if (_buffer.Count > 0)
-            StartFlush();
+        lock (_buffer)
+        {
+            if (_buffer.Count > 0)
+                StartFlush();
+        }
 
         await _pendingFlush;
     }
@@ -60,9 +66,14 @@ public sealed class LiveSegmentUploader(
     {
         await previousFlush.ContinueWith(_ => { });
 
-        var batch = _buffer.Select(seg => seg.FilePath).ToList();
+        List<string> batch;
+        lock (_buffer)
+        {
+            batch = _buffer.Select(seg => seg.FilePath).ToList();
+        }
 
-        _buffer.Clear();
+        if (batch.Count == 0)
+            return;
 
         var succeeded = await storageService.UploadBatchAsync(
             batch,
@@ -71,9 +82,18 @@ public sealed class LiveSegmentUploader(
             CancellationToken.None);
 
         if (!succeeded)
-            logger.LogWarning("Batch upload failed for stream '{StreamId}'. " +
-                "Segments will be picked up by the backup upload job.",
-                _stream.TwitchStreamId);
+        {
+            logger.LogWarning(
+                "Batch upload failed for stream '{StreamId}'. " +
+                "{Count} segment(s) will be retried on the next flush.",
+                _stream.TwitchStreamId, batch.Count);
+            return;
+        }
+
+        lock (_buffer)
+        {
+            _buffer.RemoveRange(0, batch.Count);
+        }
     }
 
     public void Dispose()

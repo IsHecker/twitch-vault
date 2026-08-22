@@ -9,7 +9,7 @@ public class DeleteStream : IEndpoint
             string id,
             IStreamRepository repo,
             IStreamService streamService,
-            RecordingOrchestrator controller) =>
+            IRecordingOrchestrator recordingOrchestrator) =>
         {
             await streamService.DeleteStreamAsync(id);
             return Results.NoContent();

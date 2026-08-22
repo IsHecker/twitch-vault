@@ -14,6 +14,7 @@ public sealed class TwitchHelixClient(
     ILogger<TwitchHelixClient> logger)
 {
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
+    private const string HelixStreamsUrl = "https://api.twitch.tv/helix/streams";
     private const string TokenUrl = "https://id.twitch.tv/oauth2/token";
 
     private TwitchOptions Options => twitchOptions.CurrentValue;
@@ -25,12 +26,6 @@ public sealed class TwitchHelixClient(
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
     private string? _appAccessToken;
     private DateTime _tokenExpiresAt = DateTime.UtcNow.AddMinutes(-60);
-
-    private readonly object _rateLimitLock = new();
-    private int _rateLimitLimit;
-    private int? _rateLimitRemaining;
-    private long _rateLimitReset;
-
 
     public async IAsyncEnumerable<Subscription> GetEventSubSubscriptionsAsync(
         string status = "",
@@ -85,6 +80,90 @@ public sealed class TwitchHelixClient(
         return SendRequestAsync(HttpMethod.Delete, url, null, cancellationToken);
     }
 
+    /// <summary>
+    /// Fetches up to <paramref name="count"/> currently live streams from the Twitch Helix API,
+    /// optionally filtered to a viewer count range. Because Helix has no native viewer range filter,
+    /// results are paginated (max <paramref name="maxPages"/> pages × 100 per page) and filtered
+    /// client-side until <paramref name="count"/> matching streams are collected.
+    /// Streams are returned in descending viewer order by the API, so high-viewer targets are fast;
+    /// low-viewer targets may require more pages.
+    /// </summary>
+    public async Task<List<(string UserId, string UserLogin, int ViewerCount)>> GetLiveStreamsAsync(
+        int count,
+        string language = "",
+        int minViewers = 0,
+        int maxViewers = int.MaxValue,
+        int maxPages = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<(string UserId, string UserLogin, int ViewerCount)>(count);
+        string? cursor = null;
+        int page = 0;
+
+        // Always request 100 per page so we can filter efficiently
+        var baseUrl = $"{HelixStreamsUrl}?first=100&type=live";
+        if (!string.IsNullOrWhiteSpace(language))
+            baseUrl += $"&language={Uri.EscapeDataString(language)}";
+
+        while (results.Count < count && page < maxPages)
+        {
+            var url = baseUrl;
+            if (!string.IsNullOrEmpty(cursor))
+                url += $"&after={cursor}";
+
+            using var response = await SendRequestAsync(HttpMethod.Get, url, null, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("GetLiveStreams page {Page} failed with status {Status}.", page + 1, response.StatusCode);
+                break;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<HelixStreamsResponse>(cancellationToken);
+            if (result is null || result.Data.Length == 0)
+                break;
+
+            foreach (var stream in result.Data)
+            {
+                if (results.Count >= count)
+                    break;
+
+                if (stream.ViewerCount >= minViewers && stream.ViewerCount <= maxViewers)
+                    results.Add((stream.UserId, stream.UserLogin, stream.ViewerCount));
+            }
+
+            // Since Helix returns streams in descending viewer count order,
+            // once the entire page is below minViewers we can stop early.
+            if (result.Data.All(s => s.ViewerCount < minViewers))
+                break;
+
+            cursor = result.Pagination?.Cursor;
+            if (string.IsNullOrEmpty(cursor))
+                break;
+
+            page++;
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+        }
+
+        logger.LogDebug(
+            "GetLiveStreams: collected {Count} streams in {Pages} page(s) (viewers: {Min}–{Max}).",
+            results.Count, page + 1, minViewers, maxViewers == int.MaxValue ? "∞" : maxViewers.ToString());
+
+        return results;
+    }
+
+    private sealed record HelixStreamsResponse(
+        HelixStreamEntry[] Data,
+        HelixPagination? Pagination);
+
+    private sealed record HelixStreamEntry(
+        [property: System.Text.Json.Serialization.JsonPropertyName("user_id")] string UserId,
+        [property: System.Text.Json.Serialization.JsonPropertyName("user_login")] string UserLogin,
+        [property: System.Text.Json.Serialization.JsonPropertyName("viewer_count")] int ViewerCount);
+
+    private sealed record HelixPagination(
+        [property: System.Text.Json.Serialization.JsonPropertyName("cursor")] string? Cursor);
+
     private async Task<string> GetAppAccessTokenAsync(CancellationToken cancellationToken)
     {
         await _tokenLock.WaitAsync(cancellationToken);
@@ -94,7 +173,7 @@ public sealed class TwitchHelixClient(
                 return _appAccessToken;
 
             logger.LogInformation("Fetching new Twitch app access token");
-            using var client = httpClientFactory.CreateClient();
+            using var client = httpClientFactory.CreateClient(nameof(TwitchHelixClient));
 
             using var request = new HttpRequestMessage(HttpMethod.Post, TokenUrl);
             request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -121,103 +200,28 @@ public sealed class TwitchHelixClient(
         }
     }
 
-    private void UpdateRateLimits(HttpResponseMessage message)
-    {
-        lock (_rateLimitLock)
-        {
-            if (message.Headers.TryGetValues("Ratelimit-Limit", out var limitValues) &&
-            int.TryParse(limitValues.FirstOrDefault(), out var limit))
-            {
-                _rateLimitLimit = limit;
-            }
-
-            if (message.Headers.TryGetValues("Ratelimit-Remaining", out var remainingValues) &&
-                int.TryParse(remainingValues.FirstOrDefault(), out var remaining))
-            {
-                _rateLimitRemaining = remaining;
-            }
-
-            if (message.Headers.TryGetValues("Ratelimit-Reset", out var resetValues) &&
-                long.TryParse(resetValues.FirstOrDefault(), out var reset))
-            {
-                _rateLimitReset = reset;
-            }
-        }
-    }
-
-    private async Task WaitForRateLimitAsync(CancellationToken cancellationToken)
-    {
-        long resetUnixTime;
-
-        lock (_rateLimitLock)
-        {
-            if (!_rateLimitRemaining.HasValue)
-                return;
-
-            if (_rateLimitRemaining > 0)
-            {
-                _rateLimitRemaining--;
-                return;
-            }
-
-            resetUnixTime = _rateLimitReset;
-        }
-
-        var delaySeconds = resetUnixTime - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        if (delaySeconds > 0)
-        {
-            logger.LogWarning("Twitch Helix API rate limit active. Waiting {Seconds}s...", delaySeconds);
-            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
-        }
-
-        lock (_rateLimitLock)
-        {
-            _rateLimitRemaining = _rateLimitLimit;
-        }
-    }
-
     private async Task<HttpResponseMessage> SendRequestAsync(
         HttpMethod method,
         string url,
         object? body = null,
         CancellationToken cancellationToken = default)
     {
-        const int maxRetryAttempts = 3;
-        HttpResponseMessage response = null!;
+        var client = httpClientFactory.CreateClient(nameof(TwitchHelixClient));
+        var token = await GetAppAccessTokenAsync(cancellationToken);
 
-        using var client = httpClientFactory.CreateClient();
+        using var request = new HttpRequestMessage(method, url);
+        request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
+        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
 
-        for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+        if (body is not null)
+            request.Content = JsonContent.Create(body);
+
+        var response = await client.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            await WaitForRateLimitAsync(cancellationToken);
-
-            var token = await GetAppAccessTokenAsync(cancellationToken);
-
-            using var request = new HttpRequestMessage(method, url);
-            request.Headers.TryAddWithoutValidation("Client-Id", Options.ClientId);
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-
-            if (body is not null)
-                request.Content = JsonContent.Create(body);
-
-            response = await client.SendAsync(request, cancellationToken);
-            UpdateRateLimits(response);
-
-            if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxRetryAttempts)
-            {
-                logger.LogWarning("Twitch Helix API rate limit (429) hit for request to {Url}. Retrying after reset window...", url);
-                response.Dispose();
-                continue;
-            }
-
-            if (response.StatusCode == HttpStatusCode.Unauthorized && attempt < maxRetryAttempts)
-            {
-                logger.LogWarning("Received 401 from Twitch Helix API — clearing cached token and retrying.");
-                await InvalidateTokenAsync(cancellationToken);
-                response.Dispose();
-                continue;
-            }
-
+            logger.LogWarning("Received 401 from Twitch Helix API — clearing cached token and retrying.");
+            await InvalidateTokenAsync(cancellationToken);
             return response;
         }
 

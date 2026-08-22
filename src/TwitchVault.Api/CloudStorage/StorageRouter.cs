@@ -1,11 +1,13 @@
+using System.Threading.Channels;
+using System.Threading.RateLimiting;
 using TwitchVault.Api.Common.Results;
 
 namespace TwitchVault.Api.CloudStorage;
 
-public sealed class StorageRouter(
-    StorageProviderRegistry registry,
-    IStorageRoutingStrategy strategy)
+public sealed class StorageRouter(StorageProviderRegistry registry, ILogger<StorageRouter> logger)
 {
+    private static readonly TimeSpan QueueTimeout = TimeSpan.FromMinutes(1);
+
     public Task<Result<StorageSession>> AcquireSessionAsync(long sizeBytes, CancellationToken cancellationToken) =>
         AcquireSessionAsync(registry.EnabledInstances, sizeBytes, cancellationToken);
 
@@ -26,36 +28,71 @@ public sealed class StorageRouter(
         if (eligible.Count == 0)
             return Error.Failure("InsufficientCapacity", $"No provider has enough capacity for this payload.");
 
-        using var queueTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        queueTimeoutCts.CancelAfter(TimeSpan.FromMinutes(1));
+        var channel = Channel.CreateUnbounded<(ManagedStorageInstance Instance, RateLimitLease Lease)>();
 
-        var ordered = strategy.Order(eligible);
-        var acquireTasks = ordered.Select(async instance =>
+        try
         {
-            var lease = await instance.AcquireAsync(queueTimeoutCts.Token);
-            return (instance, lease);
-        }).ToList();
+            using var queueTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            queueTimeoutCts.CancelAfter(QueueTimeout);
 
-        while (acquireTasks.Count > 0)
+            var racers = eligible.Select(i => AcquireLeaseAsync(i, channel.Writer, queueTimeoutCts.Token)).ToArray();
+            _ = Task.WhenAll(racers)
+                .ContinueWith(_ => channel.Writer.TryComplete(), TaskScheduler.Default);
+
+            StorageSession? winner = null;
+            await foreach (var (instance, lease) in channel.Reader.ReadAllAsync(CancellationToken.None))
+            {
+                if (winner is not null || !instance.Capacity.TryReserve(sizeBytes))
+                {
+                    lease.Dispose();
+                    continue;
+                }
+
+                queueTimeoutCts.Cancel();
+                winner = new StorageSession(instance, lease, sizeBytes);
+            }
+
+            if (winner is not null)
+                return winner;
+        }
+        catch (Exception ex)
         {
-            var finished = await Task.WhenAny(acquireTasks);
-            acquireTasks.Remove(finished);
-            var (instance, lease) = await finished;
-
-            if (!lease.IsAcquired)
-                continue;
-
-            queueTimeoutCts.Cancel();
-            if (instance.Capacity.TryReserve(sizeBytes))
-                return new StorageSession(instance, lease, sizeBytes);
-
-            lease.Dispose();
-            continue;
+            return Error.Failure(ex.Message);
+        }
+        finally
+        {
+            channel.Writer.TryComplete();
         }
 
-        if (queueTimeoutCts.IsCancellationRequested)
-            return Error.Failure("UploadCancelled", "Timed out waiting for an available upload slot across all providers.");
-
         return Error.Failure("SlotAcquisitionFailed", "All upload concurrency queues are full or timed out.");
+    }
+
+    private async Task AcquireLeaseAsync(
+        ManagedStorageInstance instance,
+        ChannelWriter<(ManagedStorageInstance, RateLimitLease)> writer,
+        CancellationToken token)
+    {
+        RateLimitLease? lease = null;
+        try
+        {
+            lease = await instance.AcquireAsync(token);
+            token.ThrowIfCancellationRequested();
+
+            if (!lease.IsAcquired)
+            {
+                lease.Dispose();
+                return;
+            }
+
+            await writer.WriteAsync((instance, lease), token);
+        }
+        catch (Exception ex)
+        {
+            lease?.Dispose();
+            if (ex is OperationCanceledException)
+                return;
+
+            logger.LogError(ex, "Provider '{Instance}' failed to acquire permit", instance.Provider.Options.Name);
+        }
     }
 }

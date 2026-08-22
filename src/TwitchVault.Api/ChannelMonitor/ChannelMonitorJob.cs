@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
@@ -10,7 +9,7 @@ namespace TwitchVault.Api.ChannelMonitor;
 
 [DisallowConcurrentExecution]
 public sealed class ChannelMonitorJob(
-    RecordingOrchestrator streamController,
+    IRecordingOrchestrator recordingOrchestrator,
     IChannelRepository channelRepository,
     ITwitchGqlClient twitchGqlClient,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
@@ -51,7 +50,7 @@ public sealed class ChannelMonitorJob(
             try
             {
                 logger.LogInformation("Monitor detected channel {Channel} is live", channel.Name);
-                await streamController.HandleStreamOnlineAsync(channel.Id, channel.Name);
+                await recordingOrchestrator.HandleStreamOnlineAsync(channel.Id, channel.Name);
             }
             catch (Exception ex)
             {

@@ -1,94 +1,112 @@
 {
   "Channels": [
     {
-      "Id": "54507525",
-      "Name": "pisty",
-      "QualityRank": 2,
-      "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-08-08T00:45:22"
-    },
-    {
-      "Id": "456252551",
-      "Name": "charlyne",
+      "Id": "47733806",
+      "Name": "chopperinho",
       "QualityRank": 1,
       "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-08-17T02:38:39"
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-08-22T16:00:05"
     },
     {
-      "Id": "563908141",
-      "Name": "joe_bartolozzi",
-      "QualityRank": 1,
-      "IsLive": true,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-08-19T20:02:22"
-    },
-    {
-      "Id": "112399237",
-      "Name": "xweebmaster",
+      "Id": "465131731",
+      "Name": "shadowkekw",
       "QualityRank": 1,
       "IsLive": false,
-      "ShouldRecord": false,
-      "LastStreamedAt": "2026-08-18T12:14:56"
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-08-22T16:51:37"
+    },
+    {
+      "Id": "43683025",
+      "Name": "ohnepixel",
+      "QualityRank": 1,
+      "IsLive": false,
+      "ShouldRecord": true,
+      "LastStreamedAt": "2026-08-22T16:51:59"
     }
   ],
   "Streams": [
     {
-      "TwitchStreamId": "320192460633",
-      "ChannelId": "54507525",
+      "TwitchStreamId": "316696560597",
+      "ChannelId": "47733806",
       "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-07-08 22-54-01",
-        "ThumbnailPath": "Streams/pisty/2026-07-08 22-54-01/thumbnail.jpg"
+        "RelativePath": "Streams\\chopperinho\\2026-08-22 19-52-29",
+        "ThumbnailPath": "Streams/chopperinho/2026-08-22 19-52-29/thumbnail.jpg"
       },
-      "Status": "Finished",
+      "Status": "Stopped",
       "StorageLocation": "Remote",
       "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
-      "FinishedAt": "2026-07-09T00:18:00.9095278+03:00",
+      "SizeBytes": 3338504,
+      "StorageInstanceName": "discord-main",
+      "StartedAt": "2026-08-22T16:00:05",
+      "FinishedAt": "2026-08-22T19:53:11.8211205",
       "Chapters": [
         {
-          "Title": "هوبلالا",
-          "CategoryId": null,
-          "StartedAt": "2026-07-08T23:54:01.5431797+03:00",
-          "FinishedAt": "2026-07-09T00:18:00.9095278+03:00"
+          "Title": "Furia [1:1] FUT w/ @perfecto_of | BO3 | Esports World Cup 2026 | !tg !yt !bb !розыгрыш !1080",
+          "CategoryId": "32399",
+          "StartedAt": "2026-08-22T16:00:05",
+          "FinishedAt": "2026-08-22T19:53:11.8211205"
         }
       ]
     },
     {
-      "TwitchStreamId": "319878544734",
-      "ChannelId": "563908141",
+      "TwitchStreamId": "316722091734",
+      "ChannelId": "465131731",
       "Folder": {
-        "RelativePath": "Streams\\joe_bartolozzi\\2026-08-19 22-27-09",
-        "ThumbnailPath": "Streams/joe_bartolozzi/2026-08-19 22-27-09/thumbnail.jpg"
+        "RelativePath": "Streams\\shadowkekw\\2026-08-22 19-52-30",
+        "ThumbnailPath": "Streams/shadowkekw/2026-08-22 19-52-30/thumbnail.jpg"
       },
-      "Status": "Recording",
-      "StorageLocation": "Local",
-      "StorageOperationStatus": "Uploading",
-      "SizeBytes": 0,
+      "Status": "Stopped",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 3352980,
       "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-19T20:02:22",
-      "FinishedAt": null,
+      "StartedAt": "2026-08-22T16:51:37",
+      "FinishedAt": "2026-08-22T19:53:13.9037711",
       "Chapters": [
         {
-          "Title": "AMERICAN CANCER SOCIETY CHARITY STREAM + REACTS JOIN JOIN JOIN",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-19T20:02:22",
-          "FinishedAt": null
+          "Title": "FURIA [1:1] FUT | Esports World Cup 2026 SF 👉 !тг !betboom !розыгрыш",
+          "CategoryId": "32399",
+          "StartedAt": "2026-08-22T16:51:37",
+          "FinishedAt": "2026-08-22T19:53:13.9037711"
+        }
+      ]
+    },
+    {
+      "TwitchStreamId": "317524454370",
+      "ChannelId": "43683025",
+      "Folder": {
+        "RelativePath": "Streams\\ohnepixel\\2026-08-22 19-52-32",
+        "ThumbnailPath": "Streams/ohnepixel/2026-08-22 19-52-32/thumbnail.jpg"
+      },
+      "Status": "Stopped",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 2927912,
+      "StorageInstanceName": "discord-main",
+      "StartedAt": "2026-08-22T16:51:59",
+      "FinishedAt": "2026-08-22T19:53:11.8242005",
+      "Chapters": [
+        {
+          "Title": "🔴FURIA vs FUT [SEMIFINAL] ESPORTS WORLD CUP 2026🔴",
+          "CategoryId": "32399",
+          "StartedAt": "2026-08-22T16:51:59",
+          "FinishedAt": "2026-08-22T19:53:11.8242005"
         }
       ]
     }
   ],
-  "Users": [
+  "Users": [],
+  "UserChannels": [
     {
-      "Id": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "Username": "hecker",
-      "Password": "password",
-      "IsAdmin": true,
-      "CreatedAt": "2026-08-02T17:18:07.2833315+03:00"
+      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+      "ChannelId": "465131731",
+      "AddedAt": "2026-08-22T16:52:30.9101698Z"
+    },
+    {
+      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+      "ChannelId": "43683025",
+      "AddedAt": "2026-08-22T16:52:32.2292035Z"
     }
-  ],
-  "UserChannels": []
+  ]
 }

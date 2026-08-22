@@ -17,13 +17,18 @@ public sealed class CatboxCloudStorageProviderNew(
         if (fileList.Count == 0)
             return Enumerable.Empty<RemoteUrl>().ToResult();
 
-        var results = await Task.WhenAll(fileList.Select(file => UploadSingleAsync(file, cancellationToken)));
+        var remoteUrls = new List<RemoteUrl>();
+        foreach (var file in fileList)
+        {
+            var result = await UploadSingleAsync(file, cancellationToken);
+            if (result.IsFailure)
+                return Error.Failure("UploadFailed", result.Error.Message);
 
-        var errors = results.Where(r => r.IsFailure).Select(r => r.Error);
-        if (errors.Any())
-            return Error.Failure("UploadFailed", string.Join(" | ", errors.Select(e => e.Message)));
+            remoteUrls.Add(result.Value);
+            await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(1, 4)), cancellationToken);
+        }
 
-        return results.Select(r => r.Value).ToResult();
+        return remoteUrls;
     }
 
     private async Task<Result<RemoteUrl>> UploadSingleAsync(StorageFile file, CancellationToken cancellationToken)
@@ -32,15 +37,12 @@ public sealed class CatboxCloudStorageProviderNew(
             return Error.Failure("FileTooLarge", $"File '{file.FileName}' ({file.Content.Length} bytes) exceeds limit.");
 
         var urlResult = await catboxClient.UploadFileAsync(
-            file.Content,
-            file.FileName,
-            file.ContentType,
+            file,
             Options.Credentials.AccessToken,
-            Options.Behavior,
+            Options,
             cancellationToken);
 
-        return urlResult.IsSuccess
-            ? new RemoteUrl(file.FileName, urlResult.Value) : urlResult.Error;
+        return urlResult.IsSuccess ? new RemoteUrl(file.FileName, urlResult.Value) : urlResult.Error;
     }
 
     public async Task<Result> DeleteAsync(
@@ -65,18 +67,22 @@ public sealed class CatboxCloudStorageProviderNew(
         var batchSize = Math.Max(1, Options.Behavior.MaxBatchSize);
         var batches = fileNames.Chunk(batchSize);
 
-        var results = await Task.WhenAll(batches.Select(batch =>
-            catboxClient.DeleteFilesAsync(batch!, Options.Credentials.AccessToken!, Options.Behavior, cancellationToken)));
+        foreach (var batch in batches)
+        {
+            var result = await catboxClient.DeleteFilesAsync(batch!, Options.Credentials.AccessToken!, Options, cancellationToken);
 
-        var errors = results.Where(r => r.IsFailure).Select(r => r.Error).ToList();
-        return errors.Count == 0
-            ? Result.Success
-            : Error.Failure("DeleteFailed", string.Join(" | ", errors.Select(e => e.Message)));
+            if (result.IsFailure)
+                return Error.Failure("DeleteFailed", result.Error.Message);
+
+            await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(1, 4)), cancellationToken);
+        }
+        return Result.Success;
     }
 
     private static string? ExtractFileName(string url)
     {
-        if (string.IsNullOrWhiteSpace(url)) return null;
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
 
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return Path.GetFileName(uri.LocalPath);

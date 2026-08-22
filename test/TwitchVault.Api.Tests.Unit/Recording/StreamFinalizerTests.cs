@@ -1,9 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
@@ -15,16 +13,16 @@ public class StreamFinalizerTests
 {
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly IChannelRepository _channelRepository = Substitute.For<IChannelRepository>();
-    private readonly IStreamService _streamService = Substitute.For<IStreamService>();
     private readonly ITwitchGqlClient _twitchClient = Substitute.For<ITwitchGqlClient>();
     private readonly IStreamStorageService _storageService = Substitute.For<IStreamStorageService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly IRecordingOrchestrator _recordingOrchestrator = Substitute.For<IRecordingOrchestrator>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
 
     private readonly Channel _channel = new() { Id = "chan_1", Name = "testchannel" };
 
     private StreamFinalizer CreateSut() =>
-        new(_streamRepository, _channelRepository, _streamService, _storageService, _twitchClient, _dateTimeProvider, _logger);
+        new(_streamRepository, _channelRepository, _storageService, _twitchClient, _dateTimeProvider, _recordingOrchestrator, _logger);
 
     private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1")
     {
@@ -49,8 +47,7 @@ public class StreamFinalizerTests
         await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, reason);
 
         // Assert
-        await _streamService.Received(1).DeleteStreamAsync(stream.TwitchStreamId);
-        await _channelRepository.DidNotReceive().SetLiveAsync(Arg.Any<string>(), Arg.Any<bool>());
+        await _channelRepository.Received().SetLiveAsync(Arg.Any<string>(), Arg.Any<bool>());
     }
 
 
@@ -69,7 +66,7 @@ public class StreamFinalizerTests
         // Assert
         stream.Status.Should().Be(StreamStatus.Stopped);
         stream.FinishedAt.Should().Be(stoppedAt);
-        await _channelRepository.DidNotReceive().SetLiveAsync(Arg.Any<string>(), Arg.Any<bool>());
+        await _channelRepository.Received().SetLiveAsync(Arg.Any<string>(), Arg.Any<bool>());
         await _storageService.Received(1).TryFinalizeStorageAsync(stream);
     }
 
@@ -88,23 +85,6 @@ public class StreamFinalizerTests
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
-    }
-
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldNotChangeStatus_WhenErrorOccurs_AndChannelNoLongerLive()
-    {
-        // Arrange
-        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>()).ReturnsNull();
-        var stream = CreateStream("ts_current");
-        var originalStatus = stream.Status;
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
-
-        // Assert
-        stream.Status.Should().Be(originalStatus);
     }
 
     [Fact]
@@ -143,23 +123,6 @@ public class StreamFinalizerTests
         stream.FinishedAt.Should().Be(finishedAt);
         await _channelRepository.Received(1).SetLiveAsync(_channel.Id, false);
         await _storageService.Received(1).TryFinalizeStorageAsync(stream);
-    }
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldSwallowException_WhenDeleteStreamThrows()
-    {
-        // Arrange
-        var stream = CreateStream();
-        stream.SetStorageOperationStatus(StorageOperationStatus.DeleteRequest);
-        _streamService.DeleteStreamAsync(stream.TwitchStreamId)
-            .Returns(Task.FromException<Result>(new Exception("cannot delete")));
-        var sut = CreateSut();
-
-        // Act
-        var act = async () => await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
-
-        // Assert
-        await act.Should().NotThrowAsync();
     }
 
     [Fact]

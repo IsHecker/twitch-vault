@@ -2,6 +2,7 @@ using System.Security.Claims;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence;
+using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 
@@ -17,6 +18,7 @@ public class AddChannel : IEndpoint
             ITwitchGqlClient twitchGqlClient,
             TwitchSubscriptionService twitchSubscription,
             IChannelRepository channelRepo,
+            IRecordingOrchestrator recordingOrchestrator,
             IUserChannelRepository userChannelRepo) =>
         {
             var userId = principal.GetUserId();
@@ -50,9 +52,15 @@ public class AddChannel : IEndpoint
 
             await channelRepo.AddAsync(channel);
             if (shouldRecord)
+            {
                 await twitchSubscription.AddChannelsAsync([channel], default);
 
+                // TODO: delete
+                await recordingOrchestrator.HandleStreamOnlineAsync(channel.Id, channel.Name);
+            }
+
             await userChannelRepo.AddAsync(new UserChannel(userId, channelId, DateTime.UtcNow));
+
             return Results.Created($"/api/channels/{channel.Id}", ChannelResponse.FromDomain(channel));
         })
         .RequireAuthorization()

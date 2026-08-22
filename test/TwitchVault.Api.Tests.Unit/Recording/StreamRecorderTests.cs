@@ -20,7 +20,7 @@ public class StreamRecorderTests
     private const string ChannelId = "54507525";
     private const string ChannelName = "testchannel";
     private const string Manifest =
-        "#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:100\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXT-X-ENDLIST\n";
+        "#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:100\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:6.000,\nseg_1.ts\n#EXT-X-ENDLIST\n";
 
     private readonly IThumbnailManager _thumbnailManager = Substitute.For<IThumbnailManager>();
     private readonly IManifestPoller _manifestPoller = Substitute.For<IManifestPoller>();
@@ -178,10 +178,10 @@ public class StreamRecorderTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.DidNotReceive()
             .FinalizeAsync(
-                Arg.Any<string>(),
-                Arg.Any<Domain.Stream>(),
-                Arg.Any<long>(),
-                Arg.Any<SessionEndReason.StreamEnded>());
+                _channel.Name,
+                _stream,
+                0,
+                Arg.Is(new SessionEndReason.StreamEnded()));
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(3).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Any<SessionEndReason.StreamEnded>());
+            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _hlsPlaylist.DidNotReceive().SetInitSegmentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _hlsPlaylist.DidNotReceive().SetInitSegmentAsync("init.mp4", Arg.Any<CancellationToken>());
         await _hlsPlaylist.Received(1).AddSegmentAsync("seg_1.ts", 6f, Arg.Any<CancellationToken>());
     }
 
@@ -276,14 +276,14 @@ public class StreamRecorderTests
     {
         // Arrange
         StubManifestOnce(Manifest);
-        StubDownloadSegments();
+        StubDownloadSegments(("seg_1.ts", 6f, false));
         await using var sut = CreateSut();
 
         // Act
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        _hlsPlaylist.Received().UpdateTwitchMediaSequence(Arg.Any<long>());
+        _hlsPlaylist.Received(1).UpdateTwitchMediaSequence(100L);
     }
 
     [Fact]
@@ -311,9 +311,10 @@ public class StreamRecorderTests
             TimeSpan.FromMilliseconds(1),
             Substitute.For<ILogger<TransientErrorRetryPolicy>>());
 
+        var exception = new HttpRequestException("simulated network blip");
         _manifestPoller
             .GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("simulated network blip"));
+            .ThrowsAsync(exception);
 
         await using var sut = CreateSut(retryPolicy: retryPolicy);
 
@@ -324,15 +325,16 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(maxAttempts).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Any<SessionEndReason.StreamError>());
+            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));
     }
 
     [Fact]
     public async Task StartAsync_ShouldDelegateStreamError_AndStillFinalize()
     {
         // Arrange
-        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, Arg.Any<Domain.Stream>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("boom")));
+        var exception = new InvalidOperationException("boom");
+        _thumbnailManager.TryCaptureSnapshotAsync(ChannelName, _stream, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(exception));
 
         await using var sut = CreateSut();
 
@@ -342,7 +344,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().NotThrowAsync();
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Any<SessionEndReason.StreamError>());
+            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));
     }
 
     [Fact]
