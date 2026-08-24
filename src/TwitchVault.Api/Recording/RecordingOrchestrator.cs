@@ -1,5 +1,4 @@
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch;
 using Serilog.Context;
 

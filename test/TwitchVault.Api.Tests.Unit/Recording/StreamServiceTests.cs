@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using FluentAssertions;
 using TwitchVault.Api.Common;
@@ -47,11 +45,7 @@ public class StreamServiceTests
     {
         // Arrange
         var streamId = "stream-123";
-        var stream = new DomainStream
-        {
-            TwitchStreamId = streamId,
-            ChannelId = "channel-1"
-        };
+        var stream = DomainStream.Create(streamId, "channel-1", StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
         stream.SetStorageOperationStatus(status);
         _streamRepository.GetByIdAsync(streamId).Returns(stream);
 
@@ -68,13 +62,7 @@ public class StreamServiceTests
     {
         // Arrange
         var streamId = "stream-123";
-        var stream = new DomainStream
-        {
-            TwitchStreamId = streamId,
-            ChannelId = "channel-1",
-            Folder = StreamFolder.Create("Streams", "testchannel"),
-            Chapters = []
-        };
+        var stream = DomainStream.Create(streamId, "channel-1", StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
 
         _streamRepository.GetByIdAsync(streamId).Returns(stream);
         stream.MarkAsFinished(DateTime.UtcNow);
@@ -93,18 +81,9 @@ public class StreamServiceTests
     {
         // Arrange
         var channelId = "channel-1";
-        var staleStream = new DomainStream
-        {
-            TwitchStreamId = "stale-1",
-            ChannelId = channelId
-        };
-
+        var staleStream = DomainStream.Create("stale-1", channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
         var activeStreamId = "active-1";
-        var activeStream = new DomainStream
-        {
-            TwitchStreamId = activeStreamId,
-            ChannelId = channelId
-        };
+        var activeStream = DomainStream.Create(activeStreamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
 
         _streamRepository.ListByChannelIdAsync(channelId)
             .Returns([staleStream, activeStream]);

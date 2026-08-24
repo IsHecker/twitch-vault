@@ -1,7 +1,6 @@
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Events;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Recording;

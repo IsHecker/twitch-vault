@@ -4,7 +4,6 @@ using TwitchVault.Api.Common;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using FluentAssertions;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
@@ -21,7 +20,7 @@ public class ManifestPollerTests
     {
         _channelRepository.GetAllAsync().Returns(
         [
-            new() { Id = "54507525", Name = ChannelName, QualityRank = 1 }
+            Channel.Create("54507525", ChannelName, 1)
         ]);
 
         _twitchGqlClient.GetPlaylistContentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("some_manifest");

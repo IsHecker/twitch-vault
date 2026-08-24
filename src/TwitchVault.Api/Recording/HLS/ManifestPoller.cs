@@ -1,6 +1,5 @@
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Recording.HLS;
 

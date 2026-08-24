@@ -2,8 +2,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 
@@ -45,13 +43,13 @@ public class RecordingOrchestratorTests
             _appLifetime);
 
     private static Channel CreateChannel(string id = ChannelId, string name = ChannelName) =>
-        new() { Id = id, Name = name, QualityRank = 1 };
+        Channel.Create(id, name, 1);
 
     private static StreamMetadata CreateMetadata(string twitchStreamId = "ts_1") =>
         new(twitchStreamId, "Some Title", "Some Game", DateTime.Now);
 
     private static Domain.Stream CreateStream(string twitchStreamId, string channelId) =>
-        new() { TwitchStreamId = twitchStreamId, ChannelId = channelId };
+        Domain.Stream.Create(twitchStreamId, channelId, StreamFolder.Create("streams_root", ChannelName), DateTime.Now, "Test", "Test");
 
     private IStreamRecorder StubFactoryReturnsRecorder()
     {
@@ -70,9 +68,9 @@ public class RecordingOrchestratorTests
     {
         // Arrange
         var liveChannel = CreateChannel();
-        liveChannel.IsLive = true;
+        liveChannel.SetLive(true);
         var offlineChannel = CreateChannel("other_id", "other_channel");
-        offlineChannel.IsLive = false;
+        offlineChannel.SetLive(false);
 
         _channelRepository.GetAllAsync().Returns([liveChannel, offlineChannel]);
 

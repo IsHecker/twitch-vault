@@ -3,7 +3,6 @@ using TwitchVault.Api.Common;
 using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording;
@@ -23,17 +22,16 @@ public class StreamService(
 {
     public async Task<Domain.Stream> CreateAsync(Channel channel, StreamMetadata metadata)
     {
-        var stream = new Domain.Stream
-        {
-            ChannelId = channel.Id,
-            TwitchStreamId = metadata.TwitchStreamId,
-            Folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name),
-            StartedAt = metadata.StartedAt
-        };
+        var folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name);
+        var stream = Domain.Stream.Create(
+            metadata.TwitchStreamId,
+            channel.Id,
+            folder,
+            metadata.StartedAt,
+            metadata.Title,
+            metadata.CategoryId);
 
-        stream.AddChapter(metadata.Title, metadata.CategoryId, stream.StartedAt);
         await streamRepository.AddAsync(stream);
-
         return stream;
     }
 
@@ -46,7 +44,7 @@ public class StreamService(
         if (stream.Status == StreamStatus.Recording)
             return Error.Validation("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
-        stream.SetStorageOperationStatus(StorageOperationStatus.DeleteRequest);
+        stream.RequestDeletion();
         await streamRepository.UpdateAsync(stream);
         return Result.Success;
     }

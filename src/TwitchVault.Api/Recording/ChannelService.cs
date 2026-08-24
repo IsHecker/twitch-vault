@@ -3,7 +3,6 @@ using TwitchVault.Api.Common;
 using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 
@@ -31,14 +30,7 @@ public class ChannelService(
         if (string.IsNullOrWhiteSpace(channelId))
             return Error.NotFound($"Channel '{channelName}' was not found on Twitch.");
 
-        var channel = new Channel
-        {
-            Id = channelId,
-            Name = channelName,
-            QualityRank = qualityRank,
-            ShouldRecord = shouldRecord,
-            IsLive = false
-        };
+        var channel = Channel.Create(channelId, channelName, qualityRank, shouldRecord);
 
         if (shouldRecord)
             _ = twitchSubscription.AddChannelsAsync([channel], cancellationToken);
@@ -80,7 +72,7 @@ public class ChannelService(
         if (channel.ShouldRecord == shouldRecord)
             return Result.Failure(Error.Validation($"Recording status is already set to {shouldRecord}."));
 
-        channel.ShouldRecord = shouldRecord;
+        channel.SetRecordingStatus(shouldRecord);
         await channelRepository.UpdateAsync(channel);
 
         if (shouldRecord)
@@ -97,7 +89,7 @@ public class ChannelService(
         if (channel is null)
             return Result.Failure<Channel>(Error.NotFound($"Channel '{channelId}' was not found."));
 
-        channel.QualityRank = qualityRank;
+        channel.UpdateQualityRank(qualityRank);
         await channelRepository.UpdateAsync(channel);
         return channel;
     }

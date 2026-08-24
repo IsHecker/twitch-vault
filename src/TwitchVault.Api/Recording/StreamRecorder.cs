@@ -1,6 +1,5 @@
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using System.Runtime.CompilerServices;
@@ -27,7 +26,6 @@ public sealed class StreamRecorder(
     IStreamRepository streamRepository,
     ISegmentUploader segmentUploader,
     IStreamFinalizer finalizer,
-    TransientErrorRetryPolicy retryPolicy,
     IOptionsMonitor<VaultOptions> vaultOptions,
     ILogger<StreamRecorder> logger,
     CancellationToken parentCancellationToken) : IStreamRecorder
@@ -90,9 +88,7 @@ public sealed class StreamRecorder(
         {
             await thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream, cancellationToken);
 
-            var (manifest, hasQualityChanged) = await retryPolicy.ExecuteAsync(
-                () => manifestPoller.GetNextManifestAsync(_channel.Name, cancellationToken),
-                cancellationToken);
+            var (manifest, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel.Name, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(manifest))
             {
@@ -135,9 +131,7 @@ public sealed class StreamRecorder(
     {
         foreach (var segment in manifestResult.Segments)
         {
-            var segmentStream = await retryPolicy.ExecuteAsync(
-                () => twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken),
-                cancellationToken);
+            var segmentStream = await twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken);
 
             yield return new DownloadedSegment(segment, segmentStream);
         }

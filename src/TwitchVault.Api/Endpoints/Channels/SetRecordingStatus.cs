@@ -1,4 +1,3 @@
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Endpoints.Channels;
@@ -19,7 +18,7 @@ public class SetRecordingStatus : IEndpoint
             if (channel.ShouldRecord == request.ShouldRecord)
                 return Results.BadRequest();
 
-            channel.ShouldRecord = request.ShouldRecord;
+            channel.SetRecordingStatus(request.ShouldRecord);
             await repo.UpdateAsync(channel);
 
             if (request.ShouldRecord)

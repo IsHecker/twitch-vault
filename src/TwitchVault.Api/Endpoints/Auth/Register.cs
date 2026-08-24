@@ -1,7 +1,6 @@
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.Auth;
 
@@ -24,15 +23,7 @@ public class Register : IEndpoint
             if (existing is not null)
                 return Results.Conflict("Username is already taken.");
 
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Username = request.Username.Trim(),
-                Password = request.Password,
-                IsAdmin = false,
-                CreatedAt = timeProvider.DateTimeNow
-            };
-
+            var user = User.Create(request.Username, request.Password, timeProvider.DateTimeNow, isAdmin: false);
             await userRepo.AddAsync(user);
 
             return Results.Ok(tokenService.GenerateToken(user));

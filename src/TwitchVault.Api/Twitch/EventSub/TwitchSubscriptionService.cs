@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Net;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Twitch.EventSub;
 

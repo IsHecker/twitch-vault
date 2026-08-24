@@ -1,5 +1,3 @@
-using TwitchVault.Api.Persistence;
-
 namespace TwitchVault.Api.Endpoints.Admin;
 
 public class GetUserChannels : IEndpoint

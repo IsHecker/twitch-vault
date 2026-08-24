@@ -2,8 +2,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 
@@ -19,19 +17,20 @@ public class StreamFinalizerTests
     private readonly IRecordingOrchestrator _recordingOrchestrator = Substitute.For<IRecordingOrchestrator>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
 
-    private readonly Channel _channel = new() { Id = "chan_1", Name = "testchannel" };
+    private readonly Channel _channel = Channel.Create("chan_1", "testchannel");
 
     private StreamFinalizer CreateSut() =>
         new(_streamRepository, _channelRepository, _storageService, _twitchClient, _dateTimeProvider, _recordingOrchestrator, _logger);
 
-    private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1")
+    private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null)
     {
-        return new Domain.Stream
-        {
-            TwitchStreamId = twitchStreamId,
-            ChannelId = channelId,
-            Folder = StreamFolder.Create("streams_root", "testchannel")
-        };
+        return Domain.Stream.Create(
+            twitchStreamId,
+            channelId,
+            StreamFolder.Create("streams_root", "testchannel"),
+            startedAt ?? new DateTime(2026, 1, 1, 10, 0, 0),
+            "Test Title",
+            "Test Category");
     }
 
     [Theory]
@@ -109,8 +108,7 @@ public class StreamFinalizerTests
     public async Task FinalizeAsync_ShouldMarkFinished_WhenReasonIsStreamEnded()
     {
         // Arrange
-        var stream = CreateStream();
-        stream.StartedAt = new DateTime(2026, 1, 1, 10, 0, 0);
+        var stream = CreateStream(startedAt: new DateTime(2026, 1, 1, 10, 0, 0));
         var finishedAt = new DateTime(2026, 1, 1, 11, 30, 0);
         _dateTimeProvider.DateTimeNow.Returns(finishedAt);
         var sut = CreateSut();

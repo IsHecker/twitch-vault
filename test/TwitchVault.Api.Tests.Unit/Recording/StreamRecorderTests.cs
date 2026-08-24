@@ -5,9 +5,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
 using TwitchVault.Api.Events;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
@@ -30,15 +28,13 @@ public class StreamRecorderTests
     private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly ISegmentUploader _uploader = Substitute.For<ISegmentUploader>();
     private readonly IStreamFinalizer _finalizer = Substitute.For<IStreamFinalizer>();
-    private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
     private readonly EventBus _eventBus;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
-    private readonly TransientErrorRetryPolicy _retryPolicy = new(1, TimeSpan.FromSeconds(1), null!);
     private readonly ILogger<StreamRecorder> _logger = Substitute.For<ILogger<StreamRecorder>>();
     private readonly IOptionsMonitor<VaultOptions> _vaultOptions = Substitute.For<IOptionsMonitor<VaultOptions>>();
     private readonly ChapterTracker _chapterTracker;
 
-    private readonly Channel _channel = new() { Id = ChannelId, Name = ChannelName, QualityRank = 1 };
+    private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1);
     private readonly Domain.Stream _stream;
 
     public StreamRecorderTests()
@@ -48,9 +44,13 @@ public class StreamRecorderTests
         _eventBus = new EventBus(Substitute.For<ILogger<EventBus>>());
         _chapterTracker = new ChapterTracker(_eventBus, _streamRepository, _dateTimeProvider, Substitute.For<ILogger<ChapterTracker>>());
 
-        _stream = new Domain.Stream { TwitchStreamId = "ts_1", ChannelId = ChannelId };
-        _stream.AddChapter("Some Title", "Some Category", new DateTime(2026, 1, 1));
-        _stream.Folder = StreamFolder.Create("streams_root", ChannelName);
+        _stream = Domain.Stream.Create(
+            "ts_1",
+            ChannelId,
+            StreamFolder.Create("streams_root", ChannelName),
+            new DateTime(2026, 1, 1),
+            "Some Title",
+            "Some Category");
 
         _hlsPlaylist.LastTwitchMediaSequence.Returns(0L);
         _hlsPlaylist.HasInitSegment.Returns(true);
@@ -74,7 +74,6 @@ public class StreamRecorderTests
             _streamRepository,
             _uploader,
             _finalizer,
-            retryPolicy ?? _retryPolicy,
             _vaultOptions,
             _logger,
             parentToken);

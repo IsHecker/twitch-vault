@@ -1,5 +1,4 @@
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording;

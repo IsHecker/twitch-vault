@@ -36,7 +36,8 @@ public class StorageCredentialsOptions
 public class StorageBehaviorOptions
 {
     public long? StorageCapacityBytes { get; init; }
-    public int MaxBatchSize { get; init; }
+    public int MaxUploadBatchSize { get; init; }
+    public int MaxDeleteBatchSize { get; init; }
     public long MaxFileSizeBytes { get; init; }
     public int QueueLimit { get; init; }
     public int MaxConcurrentUploads { get; init; }

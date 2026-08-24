@@ -1,9 +1,9 @@
-namespace TwitchVault.Api.Persistence;
+namespace TwitchVault.Api.Persistence.Repositories;
 
 public interface IStreamRepository
 {
-    Task<List<Domain.Stream>> GetAllAsync();
-    Task<List<Domain.Stream>> ListByChannelIdAsync(string channelId);
+    Task<IEnumerable<Domain.Stream>> GetAllAsync();
+    Task<IEnumerable<Domain.Stream>> ListByChannelIdAsync(string channelId);
     Task<Domain.Stream?> GetByIdAsync(string twitchStreamId);
     Task AddAsync(Domain.Stream stream);
     Task UpdateAsync(Domain.Stream stream);

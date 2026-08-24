@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace TwitchVault.Api.Domain;
 
@@ -8,10 +8,15 @@ public sealed class StreamFolder
     private const string ThumbnailFile = "thumbnail.jpg";
     private const string TimestampFormat = "yyyy-MM-dd HH-mm-ss";
 
-    public string RelativePath { get; init; } = null!;
+    public string RelativePath { get; init; } = string.Empty;
+
+    public StreamFolder() { }
 
     [JsonConstructor]
-    private StreamFolder() { }
+    public StreamFolder(string relativePath)
+    {
+        RelativePath = relativePath ?? string.Empty;
+    }
 
     public static StreamFolder Create(string streamsRoot, string channelName)
     {

@@ -41,7 +41,7 @@ public sealed class DiscordStorageProvider(
 
         var resultMap = new List<RemoteUrl>(filesCount);
 
-        foreach (var chunk in files.Chunk(Options.Behavior.MaxBatchSize))
+        foreach (var chunk in files.Chunk(Options.Behavior.MaxUploadBatchSize))
         {
             var chunkResult = await SendMessageAsync(chunk, cancellationToken);
             if (chunkResult.IsFailure)

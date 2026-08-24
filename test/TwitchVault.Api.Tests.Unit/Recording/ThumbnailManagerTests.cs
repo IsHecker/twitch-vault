@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 

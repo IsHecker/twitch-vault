@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch.EventSub;
 

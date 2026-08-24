@@ -22,7 +22,7 @@ public class MockStorageEndpoints : IEndpoint
 
             var result = await service.UploadAsync(
                 storageFiles,
-                "catbox-main",
+                null,
                 CancellationToken.None);
 
             return result.IsFailure
@@ -31,10 +31,11 @@ public class MockStorageEndpoints : IEndpoint
         }).DisableAntiforgery();
 
         group.MapPost("/delete-file", async (
+            string storageInstance,
             string[] urls,
             ICloudStorageService service) =>
         {
-            var result = await service.DeleteBatchAsync("catbox-main", urls, CancellationToken.None);
+            var result = await service.DeleteBatchAsync(storageInstance, urls, CancellationToken.None);
             return Results.Ok(result);
         });
 

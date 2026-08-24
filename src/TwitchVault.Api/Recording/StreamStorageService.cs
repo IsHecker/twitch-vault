@@ -1,7 +1,6 @@
 using TwitchVault.Api.CloudStorage;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording.HLS;
 
 namespace TwitchVault.Api.Recording;

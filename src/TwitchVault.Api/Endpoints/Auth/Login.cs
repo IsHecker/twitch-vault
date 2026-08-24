@@ -1,5 +1,4 @@
 using TwitchVault.Api.Auth;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.Auth;
 

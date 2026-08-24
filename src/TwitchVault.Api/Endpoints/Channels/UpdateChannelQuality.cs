@@ -1,5 +1,3 @@
-using TwitchVault.Api.Persistence;
-
 namespace TwitchVault.Api.Endpoints.Channels;
 
 public class UpdateChannelQuality : IEndpoint
@@ -10,7 +8,7 @@ public class UpdateChannelQuality : IEndpoint
             var channel = await repo.GetByIdAsync(channelId);
             if (channel is null)
                 return Results.NotFound();
-            channel.QualityRank = request.QualityRank;
+            channel.UpdateQualityRank(request.QualityRank);
             await repo.UpdateAsync(channel);
             return Results.Ok(ChannelResponse.FromDomain(channel));
         })

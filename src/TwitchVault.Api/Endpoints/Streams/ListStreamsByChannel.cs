@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.Streams;
 

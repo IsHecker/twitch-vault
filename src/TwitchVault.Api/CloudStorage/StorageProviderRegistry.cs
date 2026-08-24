@@ -151,3 +151,51 @@ public sealed class StorageProviderRegistry : IDisposable
 
     public void Dispose() => _monitorDisposable?.Dispose();
 }
+
+
+// public static class StorageServiceCollectionExtensions
+// {
+//     public static IServiceCollection AddStorageInstances(
+//         this IServiceCollection services, IConfiguration config)
+//     {
+//         // Reflection map: CloudProviderType -> concrete provider type, driven by [StorageProvider]
+//         var registry = Assembly.GetExecutingAssembly().GetTypes()
+//             .Select(t => (Type: t, Attr: t.GetCustomAttribute<StorageProviderAttribute>()))
+//             .Where(x => x.Attr is not null)
+//             .ToDictionary(x => x.Attr!.ProviderType, x => x.Type);
+
+//         var instances = config.GetSection("Storage:Instances").Get<List<StorageInstanceOptions>>() ?? [];
+
+//         foreach (var options in instances.Where(o => o.Enabled))
+//         {
+//             if (!registry.TryGetValue(options.Provider, out var providerType))
+//                 throw new InvalidOperationException($"No provider registered for {options.Provider}.");
+
+//             if (options.Provider == CloudProviderType.Telegram)
+//             {
+//                 services.AddHttpClient($"telegram:{options.Name}")
+//                     .ConfigureHttpClient(c =>
+//                         c.Timeout = TimeSpan.FromSeconds(
+//                             options.RateLimit?.RequestTimeoutSeconds ?? 30));
+
+//                 services.AddKeyedSingleton<ITelegramBotClient>(options.Name, (sp, _) =>
+//                 {
+//                     var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+//                     var httpClient = httpFactory.CreateClient($"telegram:{options.Name}");
+//                     var clientOptions = new TelegramBotClientOptions(options.Credentials.AccessToken!)
+//                     {
+//                         RetryThreshold = 60,
+//                         RetryCount = Math.Max(1, options.RateLimit?.MaxRetryAttempts ?? 3)
+//                     };
+//                     return new TelegramBotClient(clientOptions, httpClient);
+//                 });
+//             }
+
+//             services.AddKeyedSingleton(typeof(IStorageProvider), options.Name, (sp, key) =>
+//                 (IStorageProvider)ActivatorUtilities.CreateInstance(sp, providerType, options,
+//                     sp.GetRequiredKeyedService<ITelegramBotClient>((string)key!)));
+//         }
+
+//         return services;
+//     }
+// }

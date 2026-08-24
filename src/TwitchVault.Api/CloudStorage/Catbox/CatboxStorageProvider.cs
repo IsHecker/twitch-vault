@@ -64,7 +64,7 @@ public sealed class CatboxCloudStorageProviderNew(
         if (fileNames.Count == 0)
             return Error.Failure("DeleteFailed", "No valid filenames could be extracted from URLs.");
 
-        var batchSize = Math.Max(1, Options.Behavior.MaxBatchSize);
+        var batchSize = Math.Max(1, Options.Behavior.MaxUploadBatchSize);
         var batches = fileNames.Chunk(batchSize);
 
         foreach (var batch in batches)

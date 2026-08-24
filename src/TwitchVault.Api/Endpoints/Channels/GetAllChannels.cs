@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using TwitchVault.Api.Auth;
-using TwitchVault.Api.Persistence;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 

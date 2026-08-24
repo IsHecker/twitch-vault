@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
@@ -41,14 +40,7 @@ public class AddChannel : IEndpoint
             var qualityRank = isAdmin ? (request.QualityRank ?? 2) : 2;
             var shouldRecord = !isAdmin || (request.ShouldRecord ?? true);
 
-            var channel = new Channel
-            {
-                Id = channelId,
-                Name = request.ChannelName,
-                QualityRank = qualityRank,
-                ShouldRecord = shouldRecord,
-                IsLive = false
-            };
+            var channel = Channel.Create(channelId, request.ChannelName, qualityRank, shouldRecord);
 
             await channelRepo.AddAsync(channel);
             if (shouldRecord)
