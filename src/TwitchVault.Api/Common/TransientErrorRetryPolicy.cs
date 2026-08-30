@@ -1,8 +1,11 @@
 namespace TwitchVault.Api.Common;
 
-public sealed class TransientErrorRetryPolicy(int maxAttempts, TimeSpan delay, ILogger<TransientErrorRetryPolicy> logger)
+public static class TransientErrorRetryPolicy
 {
-    public async Task<T> ExecuteAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
+    private const int MaxAttempts = 5;
+    private static readonly TimeSpan _networkErrorDelay = TimeSpan.FromSeconds(2);
+
+    public static async Task<T> ExecuteAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
     {
         var attempt = 0;
         while (true)
@@ -11,11 +14,9 @@ public sealed class TransientErrorRetryPolicy(int maxAttempts, TimeSpan delay, I
             {
                 return await action();
             }
-            catch (Exception ex) when (IsTransient(ex) && ++attempt < maxAttempts)
+            catch (Exception ex) when (IsTransient(ex) && ++attempt < MaxAttempts)
             {
-                logger?.LogWarning(ex, "Transient error on attempt {Attempt}/{Max}. Retrying in {Delay}.",
-                    attempt, maxAttempts, delay);
-                await Task.Delay(delay, cancellationToken);
+                await Task.Delay(_networkErrorDelay, cancellationToken);
             }
         }
     }

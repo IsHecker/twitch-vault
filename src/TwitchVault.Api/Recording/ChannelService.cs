@@ -1,16 +1,17 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Recording;
 
 public class ChannelService(
-    IChannelRepository channelRepository,
-    IStreamRepository streamRepository,
+    AppDbContext db,
     ITwitchGqlClient twitchGqlClient,
     TwitchSubscriptionService twitchSubscription,
     IRecordingOrchestrator recordingOrchestrator,
@@ -22,7 +23,7 @@ public class ChannelService(
         bool shouldRecord,
         CancellationToken cancellationToken = default)
     {
-        var existingChannel = await channelRepository.GetByNameAsync(channelName);
+        var existingChannel = await db.Channels.GetByNameAsync(channelName, cancellationToken);
         if (existingChannel is not null)
             return Error.Conflict($"Channel '{channelName}' is already being monitored.");
 
@@ -35,28 +36,28 @@ public class ChannelService(
         if (shouldRecord)
             _ = twitchSubscription.AddChannelsAsync([channel], cancellationToken);
 
-        await channelRepository.AddAsync(channel);
+        db.Channels.Add(channel);
+        await db.SaveChangesAsync(cancellationToken);
         return channel;
     }
 
     public async Task<Result> DeleteChannelAsync(string channelId, CancellationToken cancellationToken = default)
     {
-        var channel = await channelRepository.GetByIdAsync(channelId);
+        var channel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
         if (channel is null)
             return Result.Failure(Error.NotFound($"Channel '{channelId}' was not found."));
 
-        var streams = await streamRepository.ListByChannelIdAsync(channelId);
+        var streams = await db.Streams.ForChannel(channelId).ToListAsync(cancellationToken);
         if (channel.IsLive)
         {
             var stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
             if (stream is not null)
             {
-                await recordingOrchestrator.ToggleStreamDeletionAsync(stream.TwitchStreamId, true);
-                await recordingOrchestrator.StopRecordingAsync(stream.TwitchStreamId);
+                await recordingOrchestrator.StopRecordingAsync(stream.Id);
             }
         }
 
-        await channelRepository.DeleteAsync(channelId);
+        await db.Channels.Where(c => c.Id == channelId).ExecuteDeleteAsync(cancellationToken);
         await IOUtils.DeleteDirectoryWithRetriesAsync(Path.Combine(pathsOptions.Value.Streams, channel.Name));
         _ = twitchSubscription.RemoveChannelAsync(channel, cancellationToken);
 
@@ -65,15 +66,15 @@ public class ChannelService(
 
     public async Task<Result> SetRecordingStatusAsync(string channelId, bool shouldRecord, CancellationToken cancellationToken = default)
     {
-        var channel = await channelRepository.GetByIdAsync(channelId);
+        var channel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
         if (channel is null)
             return Result.Failure(Error.NotFound($"Channel '{channelId}' was not found."));
 
-        if (channel.ShouldRecord == shouldRecord)
+        if (channel.IsArchived == shouldRecord)
             return Result.Failure(Error.Validation($"Recording status is already set to {shouldRecord}."));
 
-        channel.SetRecordingStatus(shouldRecord);
-        await channelRepository.UpdateAsync(channel);
+        channel.SetArchivingStatus(shouldRecord);
+        await db.SaveChangesAsync(cancellationToken);
 
         if (shouldRecord)
             _ = twitchSubscription.AddChannelsAsync([channel], cancellationToken);
@@ -83,14 +84,14 @@ public class ChannelService(
         return Result.Success;
     }
 
-    public async Task<Result<Channel>> UpdateChannelQualityAsync(string channelId, int qualityRank)
+    public async Task<Result<Channel>> UpdateChannelQualityAsync(string channelId, int qualityRank, CancellationToken cancellationToken = default)
     {
-        var channel = await channelRepository.GetByIdAsync(channelId);
+        var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channelId, cancellationToken);
         if (channel is null)
             return Result.Failure<Channel>(Error.NotFound($"Channel '{channelId}' was not found."));
 
         channel.UpdateQualityRank(qualityRank);
-        await channelRepository.UpdateAsync(channel);
+        await db.SaveChangesAsync(cancellationToken);
         return channel;
     }
 }

@@ -1,10 +1,25 @@
 namespace TwitchVault.Api.Domain;
 
-public sealed record UserChannel(Guid UserId, string ChannelId, DateTime AddedAt)
+public sealed class UserChannel
 {
+    public Guid UserId { get; init; }
+    public string ChannelId { get; init; } = null!;
+    public DateTime AddedAt { get; init; }
+
+    public Channel Channel { get; init; } = null!;
+    public User User { get; init; } = null!;
+
+    private UserChannel() { }
+
     public static UserChannel Create(Guid userId, string channelId, DateTime addedAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
-        return new UserChannel(userId, channelId.Trim(), addedAt);
+
+        return new UserChannel
+        {
+            UserId = userId,
+            ChannelId = channelId.Trim(),
+            AddedAt = addedAt
+        };
     }
 }

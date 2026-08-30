@@ -9,6 +9,7 @@ public interface IStreamRecorderRegistry
     bool TryGet(string channelId, out IStreamRecorder recorder);
     void Remove(string channelId);
     Task[] GetAllBackgroundTasks();
+    IReadOnlyCollection<string> GetActiveChannelIds();
 }
 
 public sealed class StreamRecorderRegistry : IStreamRecorderRegistry
@@ -43,4 +44,7 @@ public sealed class StreamRecorderRegistry : IStreamRecorderRegistry
 
     public Task[] GetAllBackgroundTasks() =>
         _activeRecorders.Values.Select(r => r.BackgroundTask).ToArray();
+
+    public IReadOnlyCollection<string> GetActiveChannelIds() =>
+        _activeRecorders.Keys.ToArray();
 }

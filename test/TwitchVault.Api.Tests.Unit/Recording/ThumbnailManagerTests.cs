@@ -17,12 +17,13 @@ public class ThumbnailManagerTests
 
     public ThumbnailManagerTests()
     {
-        _stream = new Domain.Stream
-        {
-            ChannelId = "channel-1",
-            TwitchStreamId = "test-stream",
-            Folder = StreamFolder.Create("streams_root", "Test Channel")
-        };
+        _stream = Domain.Stream.Create(
+            "test-stream",
+            "channel-1",
+            StreamFolder.Create("streams_root", "Test Channel"),
+            DateTime.Now,
+            "initialTitle",
+            "initialCategoryId");
 
         _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => new MemoryStream("dummy-image-bytes"u8.ToArray()));

@@ -1,67 +1,98 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using TwitchVault.Api.Configuration;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System.Reflection;
 using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Persistence.Database;
-
-public static class DbInitializer
+// Run this ONCE against a freshly-migrated (empty) database, then delete it
+// or move it somewhere it won't accidentally run again.
+//
+// Why Newtonsoft.Json here specifically: Channel, Stream, User and
+// UserChannel only expose PRIVATE parameterless constructors. Newtonsoft.Json
+// handles that out of the box (it can call non-public constructors).
+// System.Text.Json will NOT, by default, and will throw at deserialize time
+// unless you add [JsonConstructor]/[JsonInclude] attributes to these classes.
+//
+// IMPORTANT: constructors aren't the whole story. Properties like
+// Channel.Name / User.Username have PRIVATE setters with no [JsonProperty]
+// attribute. Newtonsoft's *default* resolver silently refuses to write to
+// those (it only writes public setters unless told otherwise) — it won't
+// throw, it just leaves the property at its default value. That's what
+// PrivateSetterContractResolver below fixes: it forces any property with a
+// private setter to be treated as writable during deserialization.
+public static class JsonDataMigrator
 {
-    public static async Task InitializeAsync(IServiceProvider serviceProvider)
+    private sealed class PrivateSetterContractResolver : DefaultContractResolver
     {
-        using var scope = serviceProvider.CreateScope();
-        var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
-        var pathsOptions = scope.ServiceProvider.GetService<IOptions<PathsOptions>>();
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+        {
+            var property = base.CreateProperty(member, memberSerialization);
+            if (!property.Writable && member is PropertyInfo propertyInfo)
+            {
+                property.Writable = propertyInfo.GetSetMethod(nonPublic: true) is not null;
+            }
+            return property;
+        }
+    }
 
-        await using var context = await contextFactory.CreateDbContextAsync();
+    public static async Task RunAsync(string jsonFilePath, AppDbContext db)
+    {
+        if (await db.Users.AnyAsync() || await db.Channels.AnyAsync() || await db.Streams.AnyAsync())
+        {
+            throw new InvalidOperationException(
+                "Target database already has data. Aborting to avoid duplicating/corrupting it.");
+        }
 
+        var json = await File.ReadAllTextAsync(jsonFilePath);
+
+        var settings = new JsonSerializerSettings
+        {
+            ContractResolver = new PrivateSetterContractResolver(),
+            // If you originally wrote the JSON with enums-as-strings
+            // (StringEnumConverter) or any custom converters, add them here
+            // too so the values round-trip identically.
+        };
+
+        var oldDb = JsonConvert.DeserializeObject<AppDatabase>(json, settings)
+            ?? throw new InvalidOperationException("Old database file was empty or could not be parsed.");
+
+        // Sanity check before touching the DB: catch a bad deserialization
+        // early instead of finding out via a constraint violation again.
+        var blankChannelNames = oldDb.Channels.Count(c => string.IsNullOrEmpty(c.Name));
+        var blankUsernames = oldDb.Users.Count(u => string.IsNullOrEmpty(u.Username));
+        if (blankChannelNames > 0 || blankUsernames > 0)
+        {
+            throw new InvalidOperationException(
+                $"Deserialization looks wrong: {blankChannelNames} channel(s) with blank Name, " +
+                $"{blankUsernames} user(s) with blank Username. Fix the mapping before inserting.");
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
-            await context.Database.EnsureCreatedAsync();
-            logger.LogInformation("Database ensured created successfully.");
+            // Users and Channels have no dependencies on other tables — insert first.
+            await db.Users.AddRangeAsync(oldDb.Users);
+            await db.Channels.AddRangeAsync(oldDb.Channels);
+            await db.SaveChangesAsync();
 
-            // Check if database is newly created and empty, and migrate data from Database.json if available
-            var hasChannels = await context.Channels.AnyAsync();
-            var jsonPath = pathsOptions?.Value?.Database ?? "Database.json";
+            // UserChannels needs both of the above to already exist.
+            // Streams needs Channels to exist, and brings its owned
+            // Folder/Chapters along automatically.
+            await db.UserChannels.AddRangeAsync(oldDb.UserChannels);
+            await db.Streams.AddRangeAsync(oldDb.Streams);
+            await db.SaveChangesAsync();
 
-            if (!hasChannels && File.Exists(jsonPath))
-            {
-                logger.LogInformation("Migrating legacy data from {JsonPath} into EF Core database...", jsonPath);
-                var json = await File.ReadAllTextAsync(jsonPath);
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter() }
-                };
-
-                var legacyData = JsonSerializer.Deserialize<AppDatabase>(json, options);
-                if (legacyData != null)
-                {
-                    if (legacyData.Users.Count > 0)
-                        await context.Users.AddRangeAsync(legacyData.Users);
-
-                    if (legacyData.Channels.Count > 0)
-                        await context.Channels.AddRangeAsync(legacyData.Channels);
-
-                    if (legacyData.Streams.Count > 0)
-                        await context.Streams.AddRangeAsync(legacyData.Streams);
-
-                    if (legacyData.UserChannels.Count > 0)
-                        await context.UserChannels.AddRangeAsync(legacyData.UserChannels);
-
-                    await context.SaveChangesAsync();
-                    logger.LogInformation("Successfully migrated {ChannelsCount} channels, {StreamsCount} streams, and {UsersCount} users from {JsonPath}.",
-                        legacyData.Channels.Count, legacyData.Streams.Count, legacyData.Users.Count, jsonPath);
-                }
-            }
+            await transaction.CommitAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            logger.LogError(ex, "An error occurred while initializing the database.");
+            await transaction.RollbackAsync();
             throw;
         }
+
+        Console.WriteLine(
+            $"Migrated {oldDb.Users.Count} users, {oldDb.Channels.Count} channels, " +
+            $"{oldDb.UserChannels.Count} user-channel links, {oldDb.Streams.Count} streams " +
+            $"({oldDb.Streams.Sum(s => s.Chapters.Count)} chapters total).");
     }
 }

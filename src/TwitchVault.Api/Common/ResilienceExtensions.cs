@@ -10,15 +10,15 @@ public class ClientResilienceOptions
 {
     public int MaxRetryAttempts { get; set; }
     public TimeSpan BaseDelay { get; set; }
-    public int PermitLimit { get; set; }
-    public TimeSpan Window { get; set; }
+    public int TotalRequests { get; set; }
+    public TimeSpan ResetWindow { get; set; }
     public int QueueLimit { get; set; }
     public TimeSpan RequestTimeout { get; set; }
 }
 
 public static class ResilienceExtensions
 {
-    public static IHttpClientBuilder AddThrottledResilience(
+    public static IHttpClientBuilder AddThrottle(
         this IHttpClientBuilder builder,
         Action<ClientResilienceOptions> configure)
     {
@@ -27,11 +27,9 @@ public static class ResilienceExtensions
 
         var localLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
-            TokenLimit = options.PermitLimit,
-            TokensPerPeriod = options.PermitLimit,
-            ReplenishmentPeriod = options.Window,
-            // TokensPerPeriod = 1,
-            // ReplenishmentPeriod = options.Window / options.PermitLimit, // e.g. 5s/5 = 1 token/sec
+            TokenLimit = options.TotalRequests,
+            TokensPerPeriod = 1,
+            ReplenishmentPeriod = options.ResetWindow / options.TotalRequests,
             QueueLimit = options.QueueLimit,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst
         });

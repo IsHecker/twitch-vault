@@ -1,13 +1,18 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace TwitchVault.Api.Endpoints.Admin;
 
 public class GetAllUsers : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/admin/users", async (IUserRepository userRepo) =>
+        app.MapGet("/api/admin/users", async (AppDbContext db) =>
         {
-            var users = await userRepo.GetAllAsync();
-            var response = users.Select(u => new UserSummary(u.Id, u.Username, u.IsAdmin, u.CreatedAt));
-            return Results.Ok(response);
+            var users = await db.Users
+                .AsNoTracking()
+                .Select(u => new UserSummary(u.Id, u.Username, u.IsAdmin, u.CreatedAt))
+                .ToListAsync();
+
+            return Results.Ok(users);
         })
         .RequireAuthorization("Admin")
         .WithName("AdminGetAllUsers")

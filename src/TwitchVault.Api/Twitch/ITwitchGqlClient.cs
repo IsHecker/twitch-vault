@@ -8,6 +8,5 @@ public interface ITwitchGqlClient
     Task<string> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken);
     Task<Stream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken);
     Task<string?> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken);
-    Task<string?> GetVODThumbnailUrlAsync(string vodId, CancellationToken cancellationToken);
     Task<string?> GetChannelIdAsync(string channel, CancellationToken cancellationToken);
 }

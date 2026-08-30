@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Persistence.Database;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using FluentAssertions;
@@ -14,17 +15,18 @@ public class ManifestPollerTests
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<ManifestPoller> _logger = Substitute.For<ILogger<ManifestPoller>>();
-    private readonly IChannelRepository _channelRepository = Substitute.For<IChannelRepository>();
+    private readonly TestDbContextFactory _factory = new();
 
-    private ManifestPoller CreateSut()
+    private ManifestPoller CreateSut(AppDbContext db)
     {
-        _channelRepository.GetAllAsync().Returns(
-        [
-            Channel.Create("54507525", ChannelName, 1)
-        ]);
+        if (!db.Channels.Any(c => c.Name == ChannelName))
+        {
+            db.Channels.Add(Channel.Create("54507525", ChannelName, 1));
+            db.SaveChanges();
+        }
 
         _twitchGqlClient.GetPlaylistContentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("some_manifest");
-        return new(_twitchGqlClient, _channelRepository, _dateTimeProvider, _logger);
+        return new(_twitchGqlClient, _factory, _dateTimeProvider, _logger);
     }
 
     [Fact]
@@ -33,7 +35,8 @@ public class ManifestPollerTests
         // Arrange
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
-        var sut = CreateSut();
+        using var db = _factory.CreateDbContext();
+        var sut = CreateSut(db);
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(string.Empty);
 
         // Act
@@ -49,7 +52,8 @@ public class ManifestPollerTests
         // Arrange
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
-        var sut = CreateSut();
+        using var db = _factory.CreateDbContext();
+        var sut = CreateSut(db);
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(CreatePlaylist(5));
 
         // Act
@@ -68,7 +72,8 @@ public class ManifestPollerTests
         // Arrange
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
-        var sut = CreateSut();
+        using var db = _factory.CreateDbContext();
+        var sut = CreateSut(db);
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(CreatePlaylist(5));
 
         // Act
@@ -88,7 +93,8 @@ public class ManifestPollerTests
         // Arrange
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
-        var sut = CreateSut();
+        using var db = _factory.CreateDbContext();
+        var sut = CreateSut(db);
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(string.Empty);
 
         // Act
@@ -107,7 +113,8 @@ public class ManifestPollerTests
         // Arrange
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
-        var sut = CreateSut();
+        using var db = _factory.CreateDbContext();
+        var sut = CreateSut(db);
 
         var playlist = CreatePlaylist(5);
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(playlist);
@@ -131,7 +138,8 @@ public class ManifestPollerTests
         // Arrange
         var startTime = new DateTime(2026, 1, 1, 12, 0, 0);
         _dateTimeProvider.DateTimeNow.Returns(startTime);
-        var sut = CreateSut();
+        using var db = _factory.CreateDbContext();
+        var sut = CreateSut(db);
 
         var playlist = CreatePlaylist(5);
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(playlist);

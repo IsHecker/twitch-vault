@@ -1,17 +1,18 @@
 namespace TwitchVault.Api.Domain;
 
-public class Channel
+public class Channel : Entity<string>
 {
-    public string Id { get; init; } = null!;
     public string Name { get; private set; } = string.Empty;
     public int QualityRank { get; private set; }
     public bool IsLive { get; private set; }
-    public bool ShouldRecord { get; private set; }
+    public bool IsArchived { get; private set; }
     public DateTime? LastStreamedAt { get; private set; }
 
-    public Channel() { }
+    public ICollection<User> Users { get; private set; } = [];
 
-    public static Channel Create(string id, string name, int qualityRank = 0, bool shouldRecord = true)
+    private Channel() { }
+
+    public static Channel Create(string id, string name, int qualityRank = 0, bool isArchived = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -22,7 +23,7 @@ public class Channel
             Id = id.Trim(),
             Name = name.Trim(),
             QualityRank = qualityRank,
-            ShouldRecord = shouldRecord,
+            IsArchived = isArchived,
             IsLive = false,
             LastStreamedAt = null
         };
@@ -36,13 +37,7 @@ public class Channel
         QualityRank = qualityRank;
     }
 
-    public void SetRecordingStatus(bool shouldRecord) => ShouldRecord = shouldRecord;
+    public void SetArchivingStatus(bool isArchived) => IsArchived = isArchived;
 
     public void UpdateLastStreamedAt(DateTime lastStreamedAt) => LastStreamedAt = lastStreamedAt;
-
-    public void Rename(string newName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
-        Name = newName.Trim();
-    }
 }

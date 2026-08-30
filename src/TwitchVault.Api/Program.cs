@@ -15,7 +15,7 @@ namespace TwitchVault.Api;
 
 public class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +77,11 @@ public class Program
         });
 
         app.MapEndpoints();
-        app.Run();
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // await JsonDataMigrator.RunAsync("Database.json", db);
+
+        await app.RunAsync();
     }
 }

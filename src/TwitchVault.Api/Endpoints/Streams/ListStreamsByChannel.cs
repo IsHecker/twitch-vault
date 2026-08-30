@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
+using TwitchVault.Api.Persistence.Extensions;
 
 namespace TwitchVault.Api.Endpoints.Streams;
 
@@ -8,18 +10,19 @@ public class ListStreamsByChannel : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/channels/{channelId}/streams", async (
             string channelId,
-            IStreamRepository repo,
-            IChannelRepository channelRepo,
+            AppDbContext db,
             IOptions<PathsOptions> options) =>
         {
-            var channel = await channelRepo.GetByIdAsync(channelId);
+            var channel = await db.Channels.AsNoTracking().GetByIdAsync(channelId);
             if (channel is null)
                 return Results.NotFound();
 
-            var streams = await repo.ListByChannelIdAsync(channelId);
-            var activeStreams = streams
-                .Where(s => !s.IsDeleted())
-                .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl));
+            var activeStreams = await db.Streams
+                .AsNoTracking()
+                .ForChannel(channelId)
+                .Where(s => !s.IsDeleted)
+                .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl))
+                .ToListAsync();
 
             return Results.Ok(activeStreams);
         })

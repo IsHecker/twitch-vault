@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace TwitchVault.Api.Domain;
 
 public enum StreamStatus
@@ -13,8 +11,7 @@ public enum StreamStatus
 public enum StorageLocation
 {
     Local,
-    Remote,
-    Both
+    Remote
 }
 
 public enum StorageOperationStatus
@@ -28,9 +25,8 @@ public enum StorageOperationStatus
     DeleteFailed
 }
 
-public sealed class Stream
+public sealed class Stream : Entity<string>
 {
-    public string TwitchStreamId { get; init; } = null!;
     public string ChannelId { get; init; } = null!;
 
     public StreamFolder Folder { get; init; } = null!;
@@ -46,10 +42,9 @@ public sealed class Stream
 
     public List<Chapter> Chapters { get; init; } = [];
 
-    [JsonIgnore]
     public Chapter CurrentChapter => Chapters.LastOrDefault()!;
 
-    public Stream() { }
+    private Stream() { }
 
     public static Stream Create(
         string twitchStreamId,
@@ -65,7 +60,7 @@ public sealed class Stream
 
         var stream = new Stream
         {
-            TwitchStreamId = twitchStreamId.Trim(),
+            Id = twitchStreamId.Trim(),
             ChannelId = channelId.Trim(),
             Folder = folder,
             Status = StreamStatus.Recording,
@@ -125,13 +120,9 @@ public sealed class Stream
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
 
     public void RequestDeletion() => StorageOperationStatus = StorageOperationStatus.DeleteRequest;
-    public void CancelDeletion() => StorageOperationStatus = StorageOperationStatus.None;
 
-    public bool IsDeleted() => StorageOperationStatus
+    public bool IsDeleted => StorageOperationStatus
         is StorageOperationStatus.DeleteRequest
         or StorageOperationStatus.Deleting
         or StorageOperationStatus.DeleteFailed;
-
-    [JsonIgnore]
-    public TimeSpan? TotalDuration => (FinishedAt ?? DateTime.UtcNow) - StartedAt;
 }

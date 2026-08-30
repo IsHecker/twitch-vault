@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Persistence.Database;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 
@@ -9,18 +10,25 @@ namespace TwitchVault.Api.Tests.Unit.Recording;
 
 public class StreamFinalizerTests
 {
-    private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
-    private readonly IChannelRepository _channelRepository = Substitute.For<IChannelRepository>();
     private readonly ITwitchGqlClient _twitchClient = Substitute.For<ITwitchGqlClient>();
     private readonly IStreamStorageService _storageService = Substitute.For<IStreamStorageService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly IRecordingOrchestrator _recordingOrchestrator = Substitute.For<IRecordingOrchestrator>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
+    private readonly TestDbContextFactory _factory = new();
 
     private readonly Channel _channel = Channel.Create("chan_1", "testchannel");
 
-    private StreamFinalizer CreateSut() =>
-        new(_streamRepository, _channelRepository, _storageService, _twitchClient, _dateTimeProvider, _recordingOrchestrator, _logger);
+    private StreamFinalizer CreateSut()
+    {
+        using var db = _factory.CreateDbContext();
+        if (!db.Channels.Any(c => c.Id == _channel.Id))
+        {
+            db.Channels.Add(_channel);
+            db.SaveChanges();
+        }
+        return new(_factory, _storageService, _twitchClient, _dateTimeProvider, _logger);
+    }
 
     private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null)
     {
@@ -43,10 +51,11 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, reason);
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, reason);
 
         // Assert
-        await _channelRepository.Received().SetLiveAsync(Arg.Any<string>(), Arg.Any<bool>());
+        using var dbCheck = _factory.CreateDbContext();
+        dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
     }
 
 
@@ -60,12 +69,13 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamStopped());
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamStopped());
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Stopped);
         stream.FinishedAt.Should().Be(stoppedAt);
-        await _channelRepository.Received().SetLiveAsync(Arg.Any<string>(), Arg.Any<bool>());
+        using var dbCheck = _factory.CreateDbContext();
+        dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
         await _storageService.Received(1).TryFinalizeStorageAsync(stream);
     }
 
@@ -80,7 +90,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("network blip")));
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("network blip")));
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
@@ -97,7 +107,7 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
 
         // Assert
         stream.Status.Should().NotBe(StreamStatus.Interrupted);
@@ -114,12 +124,13 @@ public class StreamFinalizerTests
         var sut = CreateSut();
 
         // Act
-        await sut.FinalizeAsync(_channel.Name, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Finished);
         stream.FinishedAt.Should().Be(finishedAt);
-        await _channelRepository.Received(1).SetLiveAsync(_channel.Id, false);
+        using var dbCheck = _factory.CreateDbContext();
+        dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
         await _storageService.Received(1).TryFinalizeStorageAsync(stream);
     }
 
@@ -130,11 +141,12 @@ public class StreamFinalizerTests
         var stream = CreateStream();
         _twitchClient.GetStreamMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException<StreamMetadata?>(new Exception("twitch api down")));
+
         var sut = CreateSut();
 
         // Act
         var act = async () => await sut.FinalizeAsync(
-            _channel.Name,
+            _channel,
             stream,
             sizeBytes: 0,
             new SessionEndReason.StreamError(new Exception("original error")));

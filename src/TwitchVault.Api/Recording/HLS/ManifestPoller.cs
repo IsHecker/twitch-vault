@@ -1,5 +1,7 @@
-using TwitchVault.Api.Twitch;
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Persistence.Extensions;
+using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording.HLS;
 
@@ -12,7 +14,7 @@ public interface IManifestPoller
 
 public sealed class ManifestPoller(
     ITwitchGqlClient twitchClient,
-    IChannelRepository channelRepository,
+    IDbContextFactory<AppDbContext> contextFactory,
     IDateTimeProvider dateTimeProvider,
     ILogger<ManifestPoller> logger) : IManifestPoller
 {
@@ -78,15 +80,12 @@ public sealed class ManifestPoller(
 
     private async Task<(int Rank, string Url)> ResolveQualityAsync(string channelName)
     {
-        var channels = await channelRepository.GetAllAsync();
-        var requestedRank = channels.First(c => c.Name == channelName).QualityRank - 1;
+        // TODO: Replace quality change with event instead for performance
+        await using var db = await contextFactory.CreateDbContextAsync();
+        var channel = await db.Channels.AsNoTracking().GetByNameAsync(channelName);
+
+        var requestedRank = channel!.QualityRank - 1;
         var clampedRank = Math.Clamp(requestedRank, 0, _variants.Length - 1);
-        if (requestedRank != clampedRank)
-        {
-            logger.LogInformation(
-                "Quality rank {Requested} unavailable; clamped to {Clamped} of {Total}.",
-                requestedRank + 1, clampedRank + 1, _variants.Length);
-        }
 
         return (clampedRank, _variants[clampedRank].Url);
     }

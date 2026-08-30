@@ -1,5 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Recording;
+
 namespace TwitchVault.Api.Endpoints.Streams;
 
 public class StopRecording : IEndpoint
@@ -7,10 +10,10 @@ public class StopRecording : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapPatch("/api/streams/{id}/stop", async (
             string id,
-            IStreamRepository repo,
+            AppDbContext db,
             IRecordingOrchestrator recordingOrchestrator) =>
         {
-            var stream = await repo.GetByIdAsync(id);
+            var stream = await db.Streams.AsNoTracking().GetByIdAsync(id);
             if (stream is null)
                 return Results.NotFound();
 

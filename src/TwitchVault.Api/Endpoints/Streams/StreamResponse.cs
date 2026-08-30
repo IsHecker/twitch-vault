@@ -28,7 +28,7 @@ public record StreamResponse(
 {
     public static StreamResponse FromDomain(Domain.Stream stream, string baseUrl) =>
         new(
-            stream.TwitchStreamId,
+            stream.Id,
             stream.ChannelId,
             stream.Folder.GetThumbnailUrl(baseUrl),
             stream.Status,

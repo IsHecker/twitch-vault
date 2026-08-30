@@ -1,6 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Quartz;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 
@@ -9,7 +11,7 @@ namespace TwitchVault.Api.ChannelMonitor;
 [DisallowConcurrentExecution]
 public sealed class ChannelMonitorJob(
     IRecordingOrchestrator recordingOrchestrator,
-    IChannelRepository channelRepository,
+    IDbContextFactory<AppDbContext> contextFactory,
     ITwitchGqlClient twitchGqlClient,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     ILogger<ChannelMonitorJob> logger) : IJob
@@ -21,9 +23,11 @@ public sealed class ChannelMonitorJob(
 
         try
         {
-            var channels = (await channelRepository.GetAllAsync())
-                .Where(channel => !channel.IsLive && channel.ShouldRecord)
-                .ToList();
+            await using var db = await contextFactory.CreateDbContextAsync(context.CancellationToken);
+            var channels = await db.Channels
+                .Offline()
+                .Monitored()
+                .ToListAsync(context.CancellationToken);
 
             await PollChannelsAsync(channels, context.CancellationToken);
         }
@@ -49,7 +53,7 @@ public sealed class ChannelMonitorJob(
             try
             {
                 logger.LogInformation("Monitor detected channel {Channel} is live", channel.Name);
-                await recordingOrchestrator.HandleStreamOnlineAsync(channel.Id, channel.Name);
+                await recordingOrchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
             }
             catch (Exception ex)
             {

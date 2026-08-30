@@ -6,9 +6,7 @@ public class DeleteStream : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapDelete("/api/streams/{id}", async (
             string id,
-            IStreamRepository repo,
-            IStreamService streamService,
-            IRecordingOrchestrator recordingOrchestrator) =>
+            IStreamService streamService) =>
         {
             await streamService.DeleteStreamAsync(id);
             return Results.NoContent();

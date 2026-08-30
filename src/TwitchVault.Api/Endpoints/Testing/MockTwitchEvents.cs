@@ -14,7 +14,7 @@ public class MockTwitchEvents : IEndpoint
             string channelName,
             IRecordingOrchestrator recordingOrchestrator) =>
         {
-            await recordingOrchestrator.HandleStreamOnlineAsync(channelId, channelName);
+            await recordingOrchestrator.TryStartRecordingAsync(channelId, channelName);
             return Results.Ok($"Sent StreamOnlineEvent for {channelName}");
         });
 
