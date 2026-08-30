@@ -17,7 +17,7 @@ public record ChannelResponse(
             channel.Name,
             channel.QualityRank,
             channel.IsLive,
-            channel.ShouldRecord,
+            channel.IsArchived,
             channel.LastStreamedAt
         );
 }

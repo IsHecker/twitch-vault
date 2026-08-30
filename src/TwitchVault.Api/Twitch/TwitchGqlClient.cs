@@ -84,7 +84,6 @@ public sealed class TwitchGqlClient(
 
         var masterPlaylistUrl = BuildMasterPlaylistUrl(channel, token!);
         var playlistResponse = await httpClient.GetAsync(masterPlaylistUrl, cancellationToken);
-        var shit = await playlistResponse.Content.ReadAsStringAsync();
         if (!playlistResponse.IsSuccessStatusCode)
             return string.Empty;
 
@@ -122,23 +121,6 @@ public sealed class TwitchGqlClient(
         var archiveVideo = stream.GetProperty("archiveVideo");
         var vodId = archiveVideo.ValueKind != JsonValueKind.Null ? archiveVideo.GetProperty("id").GetString() : null;
         return vodId;
-    }
-
-    public async Task<string?> GetVODThumbnailUrlAsync(string vodId, CancellationToken cancellationToken)
-    {
-        var payload = TwitchGqlPayloads.VideoMetadata(vodId);
-        using var response = await SendGqlRequestAsync(payload, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-            return null;
-        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-
-        var video = document!.RootElement.GetProperty("data").GetProperty("video");
-        if (video.ValueKind == JsonValueKind.Null)
-            return null;
-
-        var url = video.GetProperty("previewThumbnailURL").GetString();
-        return url is null || url.Contains("404_preview") ? null : url;
     }
 
     public async Task<string?> GetChannelIdAsync(string channel, CancellationToken cancellationToken)

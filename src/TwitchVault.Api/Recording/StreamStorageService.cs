@@ -1,7 +1,9 @@
-using TwitchVault.Api.CloudStorage;
+using CloudStorage.Core;
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Storage;
 
 namespace TwitchVault.Api.Recording;
 
@@ -27,7 +29,7 @@ public interface IStreamStorageService
 
 public sealed class StreamStorageService(
     ICloudStorageService cloudStorageService,
-    IStreamRepository streamRepository,
+    IDbContextFactory<AppDbContext> contextFactory,
     IWebHostEnvironment env,
     ILogger<StreamStorageService> logger) : IStreamStorageService
 {
@@ -60,15 +62,20 @@ public sealed class StreamStorageService(
             if (uploadResult.IsFailure)
             {
                 logger.LogError("Batch upload failed for stream '{StreamId}': {Error}",
-                    stream.TwitchStreamId, uploadResult.Error);
+                    stream.Id, uploadResult.Error);
                 return false;
             }
 
             var response = uploadResult.Value;
             if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
             {
+                await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+                db.Streams.Attach(stream);
+
+                stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
                 stream.SetStorageInstance(response.InstanceName);
-                await streamRepository.UpdateAsync(stream);
+
+                await db.SaveChangesAsync(cancellationToken);
             }
 
             foreach (var remoteUrl in response.RemoteUrls)
@@ -94,7 +101,7 @@ public sealed class StreamStorageService(
         if (!Directory.Exists(localDir))
         {
             logger.LogWarning("Cannot finalize storage for stream '{StreamId}': directory '{Dir}' not found.",
-                stream.TwitchStreamId, localDir);
+                stream.Id, localDir);
             return false;
         }
 
@@ -108,7 +115,7 @@ public sealed class StreamStorageService(
         {
             logger.LogInformation(
                 "Storage finalization deferred for stream '{StreamId}': {Count} segment(s) still on disk. Backup uploader will process them.",
-                stream.TwitchStreamId, remainingSegments.Count);
+                stream.Id, remainingSegments.Count);
             return false;
         }
 
@@ -117,7 +124,7 @@ public sealed class StreamStorageService(
         {
             logger.LogWarning(
                 "Cannot finalize storage for stream '{StreamId}': '{FileName}' not found.",
-                stream.TwitchStreamId, IStreamStorageService.RemoteUrlsFileName);
+                stream.Id, IStreamStorageService.RemoteUrlsFileName);
             return false;
         }
 
@@ -126,7 +133,7 @@ public sealed class StreamStorageService(
         {
             logger.LogWarning(
                 "Cannot finalize storage for stream '{StreamId}': playlist '{Path}' not found.",
-                stream.TwitchStreamId, playlistPath);
+                stream.Id, playlistPath);
             return false;
         }
 
@@ -134,13 +141,17 @@ public sealed class StreamStorageService(
         await HlsPlaylistRewriter.RewriteSegmentsAsync(playlistPath, tempPlaylistPath, remoteUrlsFilePath, cancellationToken);
         File.Move(tempPlaylistPath, playlistPath, overwrite: true);
 
-        stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
-        stream.SetStorageLocation(StorageLocation.Remote);
-        await streamRepository.UpdateAsync(stream);
+        await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            db.Attach(stream);
+            stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
+            stream.SetStorageLocation(StorageLocation.Remote);
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         logger.LogInformation(
             "Stream '{StreamId}' storage finalized on instance '{Instance}'.",
-            stream.TwitchStreamId, stream.StorageInstanceName);
+            stream.Id, stream.StorageInstanceName);
 
         return true;
     }
@@ -166,13 +177,19 @@ public sealed class StreamStorageService(
                 {
                     logger.LogError(
                         "Failed to delete remote segments for stream '{StreamId}' on instance '{Instance}': {Error}",
-                        stream.TwitchStreamId, stream.StorageInstanceName, result.Error);
+                        stream.Id, stream.StorageInstanceName, result.Error);
                     return false;
                 }
             }
         }
 
-        await streamRepository.DeleteAsync(stream.TwitchStreamId);
+        await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            db.Attach(stream);
+            db.Streams.Remove(stream);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         var localDir = stream.Folder.GetAbsolutePath(env.ContentRootPath);
         await IOUtils.DeleteDirectoryWithRetriesAsync(localDir);
         return true;

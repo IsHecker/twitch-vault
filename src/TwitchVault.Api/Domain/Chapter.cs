@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace TwitchVault.Api.Domain;
 
 public sealed class Chapter
@@ -9,10 +7,8 @@ public sealed class Chapter
     public DateTime StartedAt { get; private set; }
     public DateTime? FinishedAt { get; private set; }
 
-    // Parameterless constructor for EF Core & JSON deserialization
-    public Chapter() { }
+    private Chapter() { }
 
-    [JsonConstructor]
     public Chapter(string title, string categoryId, DateTime startedAt, DateTime? finishedAt = null)
     {
         Title = title ?? string.Empty;
@@ -31,7 +27,4 @@ public sealed class Chapter
     {
         FinishedAt = finishedAt;
     }
-
-    [JsonIgnore]
-    public TimeSpan? Duration => FinishedAt.HasValue ? FinishedAt.Value - StartedAt : null;
 }

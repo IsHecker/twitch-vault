@@ -26,7 +26,6 @@ public sealed class LiveSegmentUploader(
     public void Attach(Domain.Stream stream)
     {
         _stream = stream;
-        _stream.SetStorageOperationStatus(Domain.StorageOperationStatus.Uploading);
 
         _localDirectory = _stream.Folder.GetAbsolutePath(env.ContentRootPath);
         _remoteUrlsFilePath = Path.Combine(_localDirectory, IStreamStorageService.RemoteUrlsFileName);
@@ -86,7 +85,7 @@ public sealed class LiveSegmentUploader(
             logger.LogWarning(
                 "Batch upload failed for stream '{StreamId}'. " +
                 "{Count} segment(s) will be retried on the next flush.",
-                _stream.TwitchStreamId, batch.Count);
+                _stream.Id, batch.Count);
             return;
         }
 

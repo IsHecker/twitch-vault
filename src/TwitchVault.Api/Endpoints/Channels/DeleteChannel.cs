@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch.EventSub;
 
@@ -15,43 +17,43 @@ public class DeleteChannel : IEndpoint
             string channelId,
             ClaimsPrincipal principal,
             TwitchSubscriptionService twitchSubscription,
-            IChannelRepository channelRepo,
-            IUserChannelRepository userChannelRepo,
             IRecordingOrchestrator recordingOrchestrator,
-            IStreamRepository streamRepository,
+            AppDbContext db,
             IOptions<PathsOptions> pathsOptions,
             IWebHostEnvironment env) =>
         {
             var userId = principal.GetUserId();
 
-            if (!await userChannelRepo.ExistsAsync(userId, channelId))
+            var userChannel = await db.UserChannels.FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
+            if (userChannel is null)
                 return Results.NotFound();
 
-            var channel = await channelRepo.GetByIdAsync(channelId);
+            var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channelId);
             if (channel is null)
                 return Results.NotFound();
 
-            await userChannelRepo.RemoveAsync(userId, channelId);
+            db.UserChannels.Remove(userChannel);
+            await db.SaveChangesAsync();
 
-            var remainingUserCount = await userChannelRepo.GetUserCountForChannelAsync(channelId);
+            var remainingUserCount = await db.UserChannels.CountAsync(uc => uc.ChannelId == channelId);
 
             if (remainingUserCount > 0)
                 return Results.NoContent();
 
             if (channel.IsLive)
             {
-                var streams = await streamRepository.ListByChannelIdAsync(channelId);
-                var liveStream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
-                if (liveStream is not null)
-                {
-                    await recordingOrchestrator.ToggleStreamDeletionAsync(liveStream.TwitchStreamId, true);
-                    await recordingOrchestrator.StopRecordingAsync(liveStream.TwitchStreamId);
-                }
+                var liveStream = await db.Streams
+                    .ForChannel(channelId)
+                    .OrderByDescending(s => s.StartedAt)
+                    .FirstAsync();
+
+                await recordingOrchestrator.StopRecordingAsync(liveStream.Id);
             }
 
-            await channelRepo.DeleteAsync(channelId);
+            db.Channels.Remove(channel);
             await IOUtils.DeleteDirectoryWithRetriesAsync(Path.Combine(pathsOptions.Value.Streams, channel.Name));
             await twitchSubscription.RemoveChannelAsync(channel, default);
+            await db.SaveChangesAsync();
 
             return Results.NoContent();
         })

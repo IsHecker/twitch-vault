@@ -1,6 +1,9 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Auth;
+using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
@@ -16,10 +19,11 @@ public class AddChannel : IEndpoint
             ClaimsPrincipal principal,
             ITwitchGqlClient twitchGqlClient,
             TwitchSubscriptionService twitchSubscription,
-            IChannelRepository channelRepo,
             IRecordingOrchestrator recordingOrchestrator,
-            IUserChannelRepository userChannelRepo) =>
+            AppDbContext db,
+            IDateTimeProvider timeProvider) =>
         {
+            var dateTimeNow = timeProvider.DateTimeNow;
             var userId = principal.GetUserId();
             var isAdmin = principal.IsInRole("Admin");
 
@@ -27,31 +31,36 @@ public class AddChannel : IEndpoint
             if (string.IsNullOrWhiteSpace(channelId))
                 return Results.NotFound("Channel doesn't exist on Twitch.");
 
-            if (await userChannelRepo.ExistsAsync(userId, channelId))
-                return Results.Conflict("You are already monitoring this channel.");
+            var alreadyMonitoring = await db.UserChannels
+                .AnyAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
 
-            var existingChannel = await channelRepo.GetByIdAsync(channelId);
+            if (alreadyMonitoring)
+                return Results.Conflict("You are already subscribed to this channel.");
+
+            db.UserChannels.Add(UserChannel.Create(userId, channelId, dateTimeNow));
+
+            var existingChannel = await db.Channels.GetByIdAsync(channelId);
             if (existingChannel is not null)
             {
-                await userChannelRepo.AddAsync(new UserChannel(userId, channelId, DateTime.UtcNow));
+                await db.SaveChangesAsync();
                 return Results.Created($"/api/channels/{existingChannel.Id}", ChannelResponse.FromDomain(existingChannel));
             }
 
-            var qualityRank = isAdmin ? (request.QualityRank ?? 2) : 2;
+            var qualityRank = isAdmin ? request.QualityRank!.Value : 2;
             var shouldRecord = !isAdmin || (request.ShouldRecord ?? true);
 
             var channel = Channel.Create(channelId, request.ChannelName, qualityRank, shouldRecord);
 
-            await channelRepo.AddAsync(channel);
+            db.Channels.Add(channel);
+            await db.SaveChangesAsync();
+
             if (shouldRecord)
             {
                 await twitchSubscription.AddChannelsAsync([channel], default);
 
                 // TODO: delete
-                await recordingOrchestrator.HandleStreamOnlineAsync(channel.Id, channel.Name);
+                await recordingOrchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
             }
-
-            await userChannelRepo.AddAsync(new UserChannel(userId, channelId, DateTime.UtcNow));
 
             return Results.Created($"/api/channels/{channel.Id}", ChannelResponse.FromDomain(channel));
         })

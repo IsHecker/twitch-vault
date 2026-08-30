@@ -1,13 +1,15 @@
 using System.Collections.Concurrent;
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 
 namespace TwitchVault.Api.Twitch.EventSub;
 
 public sealed class TwitchSubscriptionService(
     TwitchHelixClient twitchHelixClient,
-    IChannelRepository channelRepository,
+    IDbContextFactory<AppDbContext> contextFactory,
     ILogger<TwitchSubscriptionService> logger)
 {
     private const int MaxTotalCost = 10_000;
@@ -21,9 +23,14 @@ public sealed class TwitchSubscriptionService(
     {
         await LoadExistingSubscriptionsAsync(cancellationToken);
 
-        var channels = (await channelRepository.GetAllAsync())
-            .Where(c => c.ShouldRecord
-                && (!_channelSubscriptions.TryGetValue(c.Id, out var subs) || subs.Count <= TotalEventsPerChannel))
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var monitoredChannels = await db.Channels
+            .AsNoTracking()
+            .Monitored()
+            .ToListAsync(cancellationToken);
+
+        var channels = monitoredChannels
+            .Where(c => !_channelSubscriptions.TryGetValue(c.Id, out var subs) || subs.Count <= TotalEventsPerChannel)
             .ToList();
 
         await AddChannelsAsync(channels, cancellationToken);

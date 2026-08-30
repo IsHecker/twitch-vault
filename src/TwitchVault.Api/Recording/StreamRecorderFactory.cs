@@ -23,8 +23,6 @@ public class StreamRecorderFactory(
         Channel channel,
         CancellationToken cancellationToken)
     {
-        const int MaxConsecutiveNetworkErrors = 5;
-        var networkErrorDelay = TimeSpan.FromSeconds(2);
 
         stream.Folder.EnsureDirectoryExists(env.ContentRootPath);
 
@@ -34,15 +32,9 @@ public class StreamRecorderFactory(
             fileSystem,
             cancellationToken);
 
-        var retryPolicy = ActivatorUtilities.CreateInstance<TransientErrorRetryPolicy>(
-            serviceProvider,
-            MaxConsecutiveNetworkErrors,
-            networkErrorDelay);
-
         var recorder = ActivatorUtilities.CreateInstance<StreamRecorder>(
             serviceProvider,
             playlist,
-            retryPolicy,
             cancellationToken);
 
         return recorder;

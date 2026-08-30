@@ -1,3 +1,4 @@
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Endpoints.Channels;
@@ -8,18 +9,18 @@ public class SetRecordingStatus : IEndpoint
         app.MapPut("/api/channels/{channelId}/recording", async (
             string channelId,
             Request request,
-            IChannelRepository repo,
+            AppDbContext db,
             TwitchSubscriptionService twitchSubscription) =>
         {
-            var channel = await repo.GetByIdAsync(channelId);
+            var channel = await db.Channels.GetByIdAsync(channelId);
             if (channel is null)
                 return Results.NotFound();
 
-            if (channel.ShouldRecord == request.ShouldRecord)
+            if (channel.IsArchived == request.ShouldRecord)
                 return Results.BadRequest();
 
-            channel.SetRecordingStatus(request.ShouldRecord);
-            await repo.UpdateAsync(channel);
+            channel.SetArchivingStatus(request.ShouldRecord);
+            await db.SaveChangesAsync();
 
             if (request.ShouldRecord)
                 _ = twitchSubscription.AddChannelsAsync([channel], default);

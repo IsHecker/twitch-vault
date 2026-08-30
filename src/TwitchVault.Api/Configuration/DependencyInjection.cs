@@ -5,15 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Quartz;
-using Telegram.Bot;
 using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.ChannelMonitor;
-using TwitchVault.Api.CloudStorage;
-using TwitchVault.Api.CloudStorage.Catbox;
-using TwitchVault.Api.CloudStorage.Discord;
-using TwitchVault.Api.CloudStorage.Jobs;
+using CloudStorage.Core;
+using CloudStorage.Core.Discord;
+using CloudStorage.Core.Telegram;
+using TwitchVault.Api.Storage.Jobs;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Endpoints;
@@ -22,6 +21,7 @@ using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
+using CloudStorage.Core.Catbox;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -38,8 +38,9 @@ public static class DependencyInjection
             .AddAuthenticationInternal(configuration)
             .AddTwitchAndEventSub()
             .AddRecording()
-            .AddCloudStorage(configuration)
             .AddBackgroundJobs();
+
+        services.AddCloudStorageSystem(configuration);
 
         services.AddSingleton<Endpoints.Testing.LiveTestSession>();
         services.AddEndpoints(Assembly.GetExecutingAssembly());
@@ -75,30 +76,39 @@ public static class DependencyInjection
     {
         services.AddPooledDbContextFactory<AppDbContext>(options =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                .LogTo(_ => { }, LogLevel.None);
         });
 
-        services.AddScoped<IAppDbContext>(sp =>
-            sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
-
-        services.AddSingleton<IChannelRepository, ChannelRepository>();
-        services.AddSingleton<IStreamRepository, StreamRepository>();
-        services.AddSingleton<IUserRepository, UserRepository>();
-        services.AddSingleton<IUserChannelRepository, UserChannelRepository>();
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                .UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll)
+                .LogTo(_ => { }, LogLevel.None);
+        });
 
         return services;
     }
 
     private static IServiceCollection AddTwitchAndEventSub(this IServiceCollection services)
     {
-        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
-        services.AddSingleton<TwitchHelixClient>();
-
-        services.AddHttpClient(nameof(TwitchHelixClient))
-            .AddThrottledResilience(opts =>
+        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>().AddThrottle(
+            opts =>
             {
-                opts.PermitLimit = 700;
-                opts.Window = TimeSpan.FromMinutes(1);
+                opts.TotalRequests = 100;
+                opts.ResetWindow = TimeSpan.FromMinutes(1);
+                opts.QueueLimit = 5;
+                opts.MaxRetryAttempts = 3;
+                opts.BaseDelay = TimeSpan.FromSeconds(3);
+                opts.RequestTimeout = TimeSpan.FromSeconds(30);
+            });
+
+        services.AddSingleton<TwitchHelixClient>();
+        services.AddHttpClient(nameof(TwitchHelixClient)).AddThrottle(
+            opts =>
+            {
+                opts.TotalRequests = 100;
+                opts.ResetWindow = TimeSpan.FromMinutes(1);
                 opts.QueueLimit = 5;
                 opts.MaxRetryAttempts = 3;
                 opts.BaseDelay = TimeSpan.FromSeconds(3);
@@ -114,20 +124,22 @@ public static class DependencyInjection
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        services.AddHostedService<TwitchWebhookStartupService>();
+        // services.AddHostedService<TwitchWebhookStartupService>();
 
         return services;
     }
 
     private static IServiceCollection AddRecording(this IServiceCollection services)
     {
+        services.AddScoped<IChannelService, ChannelService>();
+
         services.AddSingleton<IStreamService, StreamService>();
         services.AddSingleton<IRecordingOrchestrator, RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
 
         services.AddTransient<SegmentStateTracker>();
-        services.AddTransient<ChapterTracker>();
+        services.AddTransient<IChapterTracker, ChapterTracker>();
         services.AddTransient<IStreamFinalizer, StreamFinalizer>();
         services.AddTransient<ISegmentStore, SegmentStore>();
         services.AddTransient<IManifestPoller, ManifestPoller>();
@@ -174,49 +186,17 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddCloudStorage(
+    private static IServiceCollection AddCloudStorageSystem(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
+        services.ConfigureOptions<StorageUploadJobConfiguration>();
 
-        services.AddSingleton<StreamJobCoordinator>();
-        services.AddSingleton<ProgressTracker>();
-        services.AddSingleton<StorageRouter>();
-        services.AddSingleton<StorageProviderRegistry>();
-        services.AddSingleton<ICloudStorageService, CloudStorageService>();
-        services.AddSingleton<CatboxApiClient>();
-
-        var storageOptions = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()!;
-        foreach (var instance in storageOptions.Instances)
-        {
-            if (instance.RateLimit is null)
-                continue;
-
-            services.AddHttpClient(instance.Name)
-                .AddThrottledResilience(opts =>
-                {
-                    opts.PermitLimit = instance.RateLimit.PermitLimit;
-                    opts.Window = TimeSpan.FromSeconds(instance.RateLimit.WindowSeconds);
-                    opts.QueueLimit = instance.RateLimit.QueueLimit;
-                    opts.MaxRetryAttempts = instance.RateLimit.MaxRetryAttempts;
-                    opts.BaseDelay = TimeSpan.FromSeconds(instance.RateLimit.BaseDelaySeconds);
-                    opts.RequestTimeout = TimeSpan.FromSeconds(instance.RateLimit.RequestTimeoutSeconds);
-                });
-
-            if (instance.Provider == CloudProviderType.Telegram)
-                services.AddSingleton<ITelegramBotClient>((sp) =>
-                {
-                    var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient(instance.Name);
-                    var clientOptions = new TelegramBotClientOptions(instance.Credentials.AccessToken!)
-                    {
-                        RetryThreshold = 60,
-                        RetryCount = instance.RateLimit?.MaxRetryAttempts ?? 3
-                    };
-                    return new TelegramBotClient(clientOptions, http);
-                });
-        }
+        services.AddCloudStorage(configuration)
+            .AddDiscordStorage()
+            .AddCatboxStorage()
+            .AddTelegramStorage();
 
         return services;
     }

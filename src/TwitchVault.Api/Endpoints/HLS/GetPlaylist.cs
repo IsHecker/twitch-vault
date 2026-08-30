@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 
 namespace TwitchVault.Api.Endpoints.HLS;
 
@@ -7,11 +9,11 @@ public class GetPlaylist : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/hls/{streamId}/playlist.m3u8", async (
             string streamId,
-            IStreamRepository streamRepo,
+            AppDbContext db,
             IWebHostEnvironment env) =>
         {
-            var stream = await streamRepo.GetByIdAsync(streamId);
-            if (stream is null || stream.Status != StreamStatus.Finished || stream.IsDeleted())
+            var stream = await db.Streams.AsNoTracking().GetByIdAsync(streamId);
+            if (stream is null || stream.Status != StreamStatus.Finished || stream.IsDeleted)
                 return Results.NotFound();
 
             var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);

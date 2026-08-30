@@ -1,8 +1,9 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Auth;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch;
 
@@ -21,12 +22,11 @@ public class LiveTestEndpoints : IEndpoint
             StartRequest request,
             ClaimsPrincipal principal,
             TwitchHelixClient twitchHelixClient,
-            IChannelRepository channelRepo,
-            IUserChannelRepository userChannelRepo,
+            AppDbContext db,
             IRecordingOrchestrator recordingOrchestrator,
             LiveTestSession session) =>
         {
-            var userId = principal.GetUserId();
+            var userId = Guid.NewGuid();
 
             var liveStreams = await twitchHelixClient.GetLiveStreamsAsync(
                 count: request.Count,
@@ -48,19 +48,24 @@ public class LiveTestEndpoints : IEndpoint
             foreach (var (twitchUserId, userLogin, viewerCount) in liveStreams)
             {
                 // Skip if already being monitored by this user — exact AddChannel behaviour
-                if (await userChannelRepo.ExistsAsync(userId, twitchUserId))
+                var alreadyMonitored = await db.UserChannels
+                    .AsNoTracking()
+                    .AnyAsync(uc => uc.UserId == userId && uc.ChannelId == twitchUserId);
+
+                if (alreadyMonitored)
                 {
                     skipped.Add($"{userLogin} (already monitored by you)");
                     await Task.Delay(TimeSpan.FromSeconds(request.DelaySeconds));
                     continue;
                 }
 
-                var existingChannel = await channelRepo.GetByIdAsync(twitchUserId);
+                var existingChannel = await db.Channels.FirstOrDefaultAsync(c => c.Id == twitchUserId);
                 if (existingChannel is not null)
                 {
                     // Channel already tracked by another user — just link this user
-                    await userChannelRepo.AddAsync(new UserChannel(userId, twitchUserId, DateTime.UtcNow));
-                    session.Track(twitchUserId, userLogin);
+                    db.UserChannels.Add(UserChannel.Create(userId, twitchUserId, DateTime.UtcNow));
+                    await db.SaveChangesAsync();
+                    session.Track(twitchUserId, userLogin, isNewChannel: false);
                     skipped.Add($"{userLogin} (already tracked, linked user)");
                     await Task.Delay(TimeSpan.FromSeconds(request.DelaySeconds));
                     continue;
@@ -71,16 +76,16 @@ public class LiveTestEndpoints : IEndpoint
 
                 try
                 {
-                    await channelRepo.AddAsync(channel);
+                    db.Channels.Add(channel);
+                    db.UserChannels.Add(UserChannel.Create(userId, twitchUserId, DateTime.UtcNow));
+                    await db.SaveChangesAsync();
 
                     if (request.ShouldRecord)
                     {
-                        await recordingOrchestrator.HandleStreamOnlineAsync(channel.Id, channel.Name);
+                        await recordingOrchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
                     }
 
-                    await userChannelRepo.AddAsync(new UserChannel(userId, twitchUserId, DateTime.UtcNow));
-
-                    session.Track(twitchUserId, userLogin);
+                    session.Track(twitchUserId, userLogin, isNewChannel: true);
                     added.Add(new { Channel = userLogin, Viewers = viewerCount, ChannelId = twitchUserId });
                 }
                 catch (Exception ex)
@@ -104,100 +109,141 @@ public class LiveTestEndpoints : IEndpoint
         .Accepts<StartRequest>("application/json");
 
         // ------------------------------------------------------------------ //
-        // POST /testing/live/stop-all                                          //
-        // Stops active recordings for all channels tracked by this session.   //
-        // Marks streams for deletion and calls StopRecordingAsync — the same  //
-        // sequence DeleteChannel uses when a live channel is removed.          //
-        // Does NOT delete channels from the DB; use delete-all for that.       //
+        // POST /testing/live/finish-all                                       //
+        // Stops and finalizes ALL active recordings as Finished across the   //
+        // system (both session-tracked and standalone channels).             //
         // ------------------------------------------------------------------ //
-        group.MapPost("/stop-all", async (
-            IStreamRepository streamRepository,
+        group.MapPost("/finish-all", async (
             IRecordingOrchestrator recordingOrchestrator,
+            AppDbContext db,
             LiveTestSession session) =>
         {
-            if (!session.HasActiveSession)
-                return Results.BadRequest("No active live-test session. Call /start first.");
+            var finishedChannelIds = await recordingOrchestrator.FinishAllRecordingsAsync();
 
-            var snapshot = session.GetSnapshot();
-            var stopped = new List<string>();
-            var skipped = new List<string>();
-
-            foreach (var (channelId, channelName) in snapshot)
+            var finishedNames = new List<string>();
+            foreach (var id in finishedChannelIds)
             {
-                await recordingOrchestrator.ToggleStreamDeletionAsync(channelId, true);
-                await recordingOrchestrator.StopRecordingAsync(channelId);
-                stopped.Add(channelName);
+                var name = session.GetName(id);
+                if (name == null)
+                {
+                    var channel = await db.Channels.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
+                    name = channel?.Name ?? id;
+                }
+                finishedNames.Add(name);
             }
 
-            return Results.Ok(new { Stopped = stopped, Skipped = skipped });
+            return Results.Ok(new
+            {
+                Finished = finishedNames,
+                Count = finishedNames.Count
+            });
         })
-        .WithName("LiveTestStopAll")
-        .WithSummary("[Admin] Stop all active recordings started by the current live-test session.");
+        .WithName("LiveTestFinishAll")
+        .WithSummary("[Admin] Stop all active recordings across the system and finalize them with Finished status.");
 
         // ------------------------------------------------------------------ //
-        // DELETE /testing/live/delete-all                                      //
-        // Full teardown: for every channel tracked by this session, runs the  //
-        // exact DeleteChannel logic (stop recording if live, delete from DB,  //
-        // UserChannel link). Clears the session state when done.              //
+        // DELETE /testing/live/streams                                        //
+        // Deletes cloud segments, local stream files, and DB stream records   //
+        // ONLY for streams belonging to test-created channels.               //
         // ------------------------------------------------------------------ //
-        group.MapDelete("/delete-all", async (
-            ClaimsPrincipal principal,
-            IChannelRepository channelRepo,
-            IUserChannelRepository userChannelRepo,
-            IStreamRepository streamRepository,
-            IRecordingOrchestrator recordingOrchestrator,
-            IOptions<PathsOptions> pathsOptions,
-            LiveTestSession session) =>
+        group.MapDelete("/streams", async (
+            AppDbContext db,
+            IStreamService streamService,
+            LiveTestSession session,
+            ILogger<LiveTestEndpoints> logger) =>
         {
             if (!session.HasActiveSession)
                 return Results.BadRequest("No active live-test session. Call /start first.");
 
-            // Use the userId stored at session start, not the current caller's id,
-            // so delete-all is idempotent even if called by a different admin token.
-            var sessionUserId = session.SessionUserId;
-            var snapshot = session.GetSnapshot();
-            var deleted = new List<string>();
-            var failed = new List<string>();
+            var createdChannels = session.GetCreatedChannels();
+            var deletedStreams = new List<string>();
+            var failedStreams = new List<string>();
 
-            foreach (var (channelId, channelName) in snapshot)
+            foreach (var (channelId, channelName) in createdChannels)
+            {
+                var streams = await db.Streams.AsNoTracking().ForChannel(channelId).ToListAsync();
+                foreach (var stream in streams)
+                {
+                    try
+                    {
+                        var result = await streamService.DeleteStreamAsync(stream.Id);
+                        if (result.IsSuccess)
+                            deletedStreams.Add($"{channelName} (Stream {stream.Id})");
+                        else
+                            failedStreams.Add($"{channelName} (Stream {stream.Id}): DeleteStreamAsync returned false");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to delete test stream {StreamId} for channel {Channel}", stream.Id, channelName);
+                        failedStreams.Add($"{channelName} (Stream {stream.Id}): {ex.Message}");
+                    }
+                }
+            }
+
+            return Results.Ok(new
+            {
+                DeletedStreams = deletedStreams,
+                FailedStreams = failedStreams,
+                deletedStreams.Count
+            });
+        })
+        .WithName("LiveTestDeleteStreams")
+        .WithSummary("[Admin] Delete cloud segments and local stream folders ONLY for test-created channels.");
+
+        // ------------------------------------------------------------------ //
+        // DELETE /testing/live/channels                                       //
+        // Deletes test-created channels from DB & disk, and unlinks           //
+        // pre-existing authentic channels without touching their data.       //
+        // ------------------------------------------------------------------ //
+        group.MapDelete("/channels", async (
+            AppDbContext db,
+            IStreamService streamService,
+            IRecordingOrchestrator recordingOrchestrator,
+            IOptions<PathsOptions> pathsOptions,
+            LiveTestSession session,
+            ILogger<LiveTestEndpoints> logger) =>
+        {
+            if (!session.HasActiveSession)
+                return Results.BadRequest("No active live-test session. Call /start first.");
+
+            var sessionUserId = session.SessionUserId;
+            var unlinkedChannels = new List<string>();
+            var deletedChannels = new List<string>();
+            var failedChannels = new List<string>();
+
+            // 2. Handle brand-new test-created channels
+            foreach (var (channelId, channelName) in session.GetCreatedChannels())
             {
                 try
                 {
-                    var channel = await channelRepo.GetByIdAsync(channelId);
+                    var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channelId);
                     if (channel is null)
                     {
-                        // Might have been partially cleaned already; still remove the UserChannel link if it exists
-                        await userChannelRepo.RemoveAsync(sessionUserId, channelId);
-                        deleted.Add($"{channelName} (channel row missing, cleaned link only)");
+                        await db.UserChannels.Where(uc => uc.UserId == sessionUserId && uc.ChannelId == channelId).ExecuteDeleteAsync();
+                        deletedChannels.Add($"{channelName} (already removed from DB)");
                         continue;
                     }
 
-                    // 1. Remove UserChannel link for this session's user
-                    await userChannelRepo.RemoveAsync(sessionUserId, channelId);
+                    await db.UserChannels.Where(uc => uc.UserId == sessionUserId && uc.ChannelId == channelId).ExecuteDeleteAsync();
 
-                    // 2. Check how many other users still watch this channel
-                    var remainingUsers = await userChannelRepo.GetUserCountForChannelAsync(channelId);
+                    var remainingUsers = await db.UserChannels.CountAsync(uc => uc.ChannelId == channelId);
                     if (remainingUsers > 0)
                     {
-                        // Other users still watching — do not touch the channel itself
-                        deleted.Add($"{channelName} (user link removed; {remainingUsers} other watcher(s) remain)");
+                        unlinkedChannels.Add($"{channelName} (user link removed; {remainingUsers} watcher(s) remain)");
                         continue;
                     }
 
-                    // 3. If live, stop recording first — exact DeleteChannel sequence
-                    if (channel.IsLive)
-                    {
-                        await recordingOrchestrator.ToggleStreamDeletionAsync(channel.Id, true);
-                        await recordingOrchestrator.StopRecordingAsync(channel.Id);
-                    }
+                    await db.Channels.Where(c => c.Id == channelId).ExecuteDeleteAsync();
 
-                    await channelRepo.DeleteAsync(channelId);
+                    var rootChannelDir = Path.Combine(pathsOptions.Value.Streams, channel.Name);
+                    await Common.IOUtils.DeleteDirectoryWithRetriesAsync(rootChannelDir);
 
-                    deleted.Add(channelName);
+                    deletedChannels.Add(channelName);
                 }
                 catch (Exception ex)
                 {
-                    failed.Add($"{channelName}: {ex.Message}");
+                    logger.LogError(ex, "Failed to delete test channel {Channel}", channelName);
+                    failedChannels.Add($"{channelName}: {ex.Message}");
                 }
             }
 
@@ -205,13 +251,14 @@ public class LiveTestEndpoints : IEndpoint
 
             return Results.Ok(new
             {
-                Deleted = deleted,
-                Failed = failed,
+                DeletedChannels = deletedChannels,
+                UnlinkedChannels = unlinkedChannels,
+                FailedChannels = failedChannels,
                 SessionCleared = true
             });
         })
-        .WithName("LiveTestDeleteAll")
-        .WithSummary("[Admin] Full teardown of all channels added by the current live-test session.");
+        .WithName("LiveTestDeleteChannels")
+        .WithSummary("[Admin] Delete test-created channels (DB and root folders) and unlink authentic channels.");
     }
 
     /// <summary>Options for the /start endpoint — all have sensible defaults so the UI can omit any field.</summary>

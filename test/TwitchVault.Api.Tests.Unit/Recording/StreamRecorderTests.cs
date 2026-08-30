@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Events;
 using TwitchVault.Api.Recording;
@@ -25,14 +24,12 @@ public class StreamRecorderTests
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly ISegmentStore _segmentStore = Substitute.For<ISegmentStore>();
     private readonly IHlsPlaylistWriter _hlsPlaylist = Substitute.For<IHlsPlaylistWriter>();
-    private readonly IStreamRepository _streamRepository = Substitute.For<IStreamRepository>();
     private readonly ISegmentUploader _uploader = Substitute.For<ISegmentUploader>();
     private readonly IStreamFinalizer _finalizer = Substitute.For<IStreamFinalizer>();
     private readonly EventBus _eventBus;
-    private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<StreamRecorder> _logger = Substitute.For<ILogger<StreamRecorder>>();
     private readonly IOptionsMonitor<VaultOptions> _vaultOptions = Substitute.For<IOptionsMonitor<VaultOptions>>();
-    private readonly ChapterTracker _chapterTracker;
+    private readonly IChapterTracker _chapterTracker = Substitute.For<IChapterTracker>();
 
     private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1);
     private readonly Domain.Stream _stream;
@@ -42,7 +39,6 @@ public class StreamRecorderTests
         _vaultOptions.CurrentValue.Returns(new VaultOptions { MaxConsecutiveEmptyPolls = 3 });
 
         _eventBus = new EventBus(Substitute.For<ILogger<EventBus>>());
-        _chapterTracker = new ChapterTracker(_eventBus, _streamRepository, _dateTimeProvider, Substitute.For<ILogger<ChapterTracker>>());
 
         _stream = Domain.Stream.Create(
             "ts_1",
@@ -56,14 +52,13 @@ public class StreamRecorderTests
         _hlsPlaylist.HasInitSegment.Returns(true);
 
         _finalizer.FinalizeAsync(
-            Arg.Any<string>(),
+            Arg.Any<Channel>(),
             Arg.Any<Domain.Stream>(),
             Arg.Any<long>(),
             Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
     }
 
     private StreamRecorder CreateSut(
-        TransientErrorRetryPolicy? retryPolicy = null,
         CancellationToken parentToken = default) =>
         new(_thumbnailManager,
             _manifestPoller,
@@ -71,7 +66,6 @@ public class StreamRecorderTests
             _hlsPlaylist,
             _segmentStore,
             _chapterTracker,
-            _streamRepository,
             _uploader,
             _finalizer,
             _vaultOptions,
@@ -137,7 +131,7 @@ public class StreamRecorderTests
 
         // Assert
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
+            _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
     }
 
     [Fact]
@@ -157,7 +151,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamStopped()));
+            _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamStopped()));
     }
 
     [Fact]
@@ -177,7 +171,7 @@ public class StreamRecorderTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _finalizer.DidNotReceive()
             .FinalizeAsync(
-                _channel.Name,
+                _channel,
                 _stream,
                 0,
                 Arg.Is(new SessionEndReason.StreamEnded()));
@@ -197,7 +191,7 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         await _manifestPoller.Received(3).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
+            _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
     }
 
     [Fact]
@@ -301,30 +295,27 @@ public class StreamRecorderTests
     }
 
     [Fact]
-    public async Task StartAsync_ShouldProduceStreamError_WhenNetworkErrorsExceedRetryLimit()
+    public async Task StartAsync_ShouldProduceStreamError_WhenManifestPollerThrows()
     {
         // Arrange
-        const int maxAttempts = 3;
-        var retryPolicy = new TransientErrorRetryPolicy(
-            maxAttempts,
-            TimeSpan.FromMilliseconds(1),
-            Substitute.For<ILogger<TransientErrorRetryPolicy>>());
-
         var exception = new HttpRequestException("simulated network blip");
         _manifestPoller
             .GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>())
             .ThrowsAsync(exception);
 
-        await using var sut = CreateSut(retryPolicy: retryPolicy);
+        await using var sut = CreateSut();
 
         // Act
         var act = async () => await sut.StartAsync(_stream, _channel);
 
         // Assert
         await act.Should().NotThrowAsync();
-        await _manifestPoller.Received(maxAttempts).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
+        // Polly retries happen inside ITwitchGqlClient/HttpClient, below IManifestPoller — 
+        // mocking IManifestPoller bypasses that pipeline entirely, so only 1 call reaches here.
+        await _manifestPoller.Received(1).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
+
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));
+            _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));
     }
 
     [Fact]
@@ -343,28 +334,7 @@ public class StreamRecorderTests
         // Assert
         await act.Should().NotThrowAsync();
         await _finalizer.Received(1).FinalizeAsync(
-            _channel.Name, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));
-    }
-
-    [Fact]
-    public async Task MetadataChanged_ShouldAddNewChapter_WhileSessionIsStillActive()
-    {
-        // Arrange
-        BlockPollIndefinitely();
-        await using var sut = CreateSut();
-        var startTask = sut.StartAsync(_stream, _channel);
-
-        var chapterCountBefore = _stream.Chapters.Count;
-
-        // Act
-        await _eventBus.PublishAsync(new ChannelUpdateEvent(ChannelId, "New Title", "New Category"));
-        await sut.StopAsync();
-        var act = async () => await startTask;
-
-        // Assert
-        await act.Should().ThrowAsync();
-        _stream.Chapters.Count.Should().Be(chapterCountBefore + 1);
-        _stream.CurrentChapter.Title.Should().Be("New Title");
+            _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));
     }
 
     [Fact]
@@ -382,7 +352,6 @@ public class StreamRecorderTests
 
         // Assert
         await act.Should().ThrowAsync();
-        await _streamRepository.Received(1).UpdateAsync(_stream);
     }
 
     [Fact]
@@ -427,27 +396,6 @@ public class StreamRecorderTests
         // Assert
         await act.Should().ThrowAsync();
         _stream.Chapters.Count.Should().Be(chapterCountBefore);
-    }
-
-    [Fact]
-    public async Task MetadataChanged_ShouldIgnoreEvent_WhenTitleOrCategoryDiffers()
-    {
-        // Arrange
-        BlockPollIndefinitely();
-        await using var sut = CreateSut();
-        var startTask = sut.StartAsync(_stream, _channel);
-
-        var chapterCountBefore = _stream.Chapters.Count;
-        var currentCategory = _stream.CurrentChapter.CategoryId;
-
-        // Act
-        await _eventBus.PublishAsync(new ChannelUpdateEvent(ChannelId, "Different Title", currentCategory));
-        await sut.StopAsync();
-        var act = async () => await startTask;
-
-        // Assert
-        await act.Should().ThrowAsync();
-        _stream.Chapters.Count.Should().Be(chapterCountBefore + 1);
     }
 
     [Fact]

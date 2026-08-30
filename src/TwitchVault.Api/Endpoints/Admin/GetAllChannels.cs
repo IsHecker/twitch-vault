@@ -1,12 +1,19 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace TwitchVault.Api.Endpoints.Admin;
 
 public class GetAllChannels : IEndpoint
 {
+    // TODO: Use pagination
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/admin/channels", async (IChannelRepository channelRepo) =>
+        app.MapGet("/api/admin/channels", async (AppDbContext db) =>
         {
-            var channels = await channelRepo.GetAllAsync();
-            return Results.Ok(channels.Select(Channels.ChannelResponse.FromDomain).ToList());
+            var channels = await db.Channels
+                .AsNoTracking()
+                .Select(c => Channels.ChannelResponse.FromDomain(c))
+                .ToListAsync();
+                
+            return Results.Ok(channels);
         })
         .RequireAuthorization("Admin")
         .WithName("AdminGetAllChannels")

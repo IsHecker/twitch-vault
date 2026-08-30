@@ -1,98 +1,80 @@
+using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Domain;
+using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Twitch;
 using Serilog.Context;
 
 namespace TwitchVault.Api.Recording;
 
-public sealed class RecordingOrchestrator : IRecordingOrchestrator
+public sealed class RecordingOrchestrator(
+    IStreamRecorderRegistry streamRecorderRegistry,
+    IStreamRecorderFactory streamRecorderFactory,
+    IDbContextFactory<AppDbContext> contextFactory,
+    IStreamService streamService,
+    ITwitchGqlClient twitchGqlClient,
+    ILogger<RecordingOrchestrator> logger,
+    IHostApplicationLifetime appLifetime) : IRecordingOrchestrator
 {
-    private readonly IStreamRecorderRegistry _streamRecorderRegistry;
-    private readonly IStreamRecorderFactory _streamRecorderFactory;
-    private readonly SemaphoreSlim _sessionsLock = new(1, 1);
-    private readonly IChannelRepository _channelRepository;
-    private readonly IStreamRepository _streamRepository;
-    private readonly IStreamService _streamService;
-    private readonly ITwitchGqlClient _twitchGqlClient;
-    private readonly ILogger<RecordingOrchestrator> _logger;
-    private readonly IHostApplicationLifetime _appLifetime;
+    private static readonly SemaphoreSlim _sessionsLock = new(1, 1);
 
-    public RecordingOrchestrator(
-        IStreamRecorderRegistry streamRecorderRegistry,
-        IStreamRecorderFactory streamRecorderFactory,
-        IChannelRepository channelRepository,
-        IStreamRepository streamRepository,
-        IStreamService streamService,
-        ITwitchGqlClient twitchGqlClient,
-        ILogger<RecordingOrchestrator> logger,
-        IHostApplicationLifetime appLifetime)
+    public async Task TryStartRecordingAsync(string channelId, string channelName)
     {
-        _streamRecorderRegistry = streamRecorderRegistry;
-        _streamRecorderFactory = streamRecorderFactory;
-        _channelRepository = channelRepository;
-        _streamRepository = streamRepository;
-        _streamService = streamService;
-        _twitchGqlClient = twitchGqlClient;
-        _appLifetime = appLifetime;
-        _logger = logger;
-
-        _ = ResetStaleChannelsAsync();
-        appLifetime.ApplicationStopping.Register(OnApplicationStopping);
-    }
-
-    public async Task HandleStreamOnlineAsync(string channelId, string channelName)
-    {
-        if (!_streamRecorderRegistry.TryRegister(channelId))
+        if (!streamRecorderRegistry.TryRegister(channelId))
         {
-            _logger.LogDebug("{Channel} live stream is already being recorded.", channelName);
+            logger.LogDebug("{Channel} live stream is already being recorded.", channelName);
             return;
         }
 
         try
         {
-            _logger.LogInformation("{Channel} went live.", channelName);
-            var channel = await _channelRepository.GetByIdAsync(channelId);
+            logger.LogInformation("{Channel} went live.", channelName);
+
+            await using var db = await contextFactory.CreateDbContextAsync();
+            var channel = await db.Channels.GetByIdAsync(channelId);
             if (channel is null)
             {
-                _logger.LogWarning("Channel {Channel} not found in database.", channelName);
-                _streamRecorderRegistry.Remove(channelId);
+                logger.LogWarning("Channel {Channel} not found in database.", channelName);
+                streamRecorderRegistry.Remove(channelId);
                 return;
             }
 
-            var metadata = await _twitchGqlClient.GetStreamMetadataAsync(channelName, default);
+            var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, default);
             if (!metadata.HasValue)
             {
-                _logger.LogWarning("Failed to fetch stream metadata for {Channel}.", channelName);
-                _streamRecorderRegistry.Remove(channelId);
+                logger.LogWarning("Failed to fetch stream metadata for {Channel}.", channelName);
+                streamRecorderRegistry.Remove(channelId);
                 return;
             }
 
-            await StartAsync(channel, metadata.Value);
+            await RecordStreamAsync(db, channel, metadata.Value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _streamRecorderRegistry.Remove(channelId);
-            _logger.LogError(ex, "Failed to initialize recording for {Channel}.", channelName);
+            streamRecorderRegistry.Remove(channelId);
+            logger.LogError(ex, "Failed to initialize recording for {Channel}.", channelName);
         }
     }
 
-    public async Task StartAsync(Channel channel, StreamMetadata metadata)
+    private async Task RecordStreamAsync(AppDbContext db, Channel channel, StreamMetadata metadata)
     {
         await _sessionsLock.WaitAsync();
         try
         {
-            var existing = (await _streamRepository.ListByChannelIdAsync(channel.Id))
-                .FirstOrDefault(s => s.TwitchStreamId == metadata.TwitchStreamId);
+            channel.SetLive(true);
 
-            await _channelRepository.SetLiveAsync(channel.Id, true);
-
-            if (existing is null)
+            var existing = await db.Streams.GetByIdAsync(metadata.TwitchStreamId);
+            var stream = existing switch
             {
-                await StartNewStreamAsync(channel, metadata);
-                return;
-            }
+                null => await CreateStreamAsync(db, channel, metadata),
+                { Status: StreamStatus.Interrupted } => MarkAsResuming(existing),
+                _ => null
+            };
 
-            if (existing.Status is StreamStatus.Interrupted or StreamStatus.Recording)
-                await ResumeStreamAsync(existing, channel);
+            if (stream is null)
+                return;
+
+            await db.SaveChangesAsync();
+            await LaunchRecordingSessionAsync(stream, channel);
         }
         finally
         {
@@ -102,48 +84,71 @@ public sealed class RecordingOrchestrator : IRecordingOrchestrator
 
     public async Task StopRecordingAsync(string channelId)
     {
-        if (!_streamRecorderRegistry.TryGet(channelId, out var recorder))
+        if (!streamRecorderRegistry.TryGet(channelId, out var recorder))
         {
-            _logger.LogWarning("StopRecording: no active session for stream {StreamId}.", channelId);
+            logger.LogWarning("StopRecording: no active session for stream {StreamId}.", channelId);
             return;
         }
 
         await recorder.StopAsync();
     }
 
-    public async Task ToggleStreamDeletionAsync(string channelId, bool markForDeletion)
+    public async Task<IReadOnlyList<string>> FinishAllRecordingsAsync()
     {
-        if (!_streamRecorderRegistry.TryGet(channelId, out var recorder))
+        var activeChannelIds = streamRecorderRegistry.GetActiveChannelIds();
+        if (activeChannelIds.Count == 0)
+            return [];
+
+        logger.LogInformation("Stopping and finalizing all {Count} active recording session(s)...", activeChannelIds.Count);
+
+        var finishedChannels = new List<string>();
+        foreach (var channelId in activeChannelIds)
         {
-            _logger.LogWarning("ToggleDeletion: no active session for stream {StreamId}.", channelId);
-            return;
+            if (streamRecorderRegistry.TryGet(channelId, out var recorder))
+            {
+                await recorder.FinishAsync();
+                finishedChannels.Add(channelId);
+            }
         }
 
-        await recorder.ToggleStreamDeletionAsync(markForDeletion);
+        var backgroundTasks = streamRecorderRegistry.GetAllBackgroundTasks();
+        if (backgroundTasks.Length > 0)
+        {
+            try
+            {
+                await Task.WhenAll(backgroundTasks);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Timeout or error waiting for recording sessions to finish.");
+            }
+        }
+
+        return finishedChannels;
     }
 
-    public async Task ResumeStreamAsync(Domain.Stream stream, Channel channel)
+    private async Task<Domain.Stream> CreateStreamAsync(AppDbContext db, Channel channel, StreamMetadata metadata)
+    {
+        var stream = streamService.CreateStream(channel, metadata);
+        await db.Streams.AddAsync(stream);
+        channel.UpdateLastStreamedAt(stream.StartedAt);
+        return stream;
+    }
+
+    private static Domain.Stream MarkAsResuming(Domain.Stream stream)
     {
         stream.MarkAsRecording();
-        await StartRecordingAsync(stream, channel);
+        return stream;
     }
 
-    private async Task StartNewStreamAsync(Channel channel, StreamMetadata metadata)
+    private async Task LaunchRecordingSessionAsync(Domain.Stream stream, Channel channel)
     {
-        var stream = await _streamService.CreateAsync(channel, metadata);
-        await _channelRepository.UpdateLastStreamedAtAsync(channel.Id, stream.StartedAt);
-        await StartRecordingAsync(stream, channel);
-    }
+        var session = await streamRecorderFactory.CreateAsync(stream, channel, appLifetime.ApplicationStopping);
 
-    private async Task StartRecordingAsync(Domain.Stream stream, Channel channel)
-    {
-        await _streamRepository.UpdateAsync(stream);
-
-        var session = await _streamRecorderFactory.CreateAsync(stream, channel, _appLifetime.ApplicationStopping);
         var backgroundTask = Task.Run(async () =>
         {
             using var channelContext = LogContext.PushProperty("Channel", channel.Name);
-            using var streamContext = LogContext.PushProperty("StreamId", stream.TwitchStreamId);
+            using var streamContext = LogContext.PushProperty("StreamId", stream.Id);
             using var titleContext = LogContext.PushProperty("Title", stream.CurrentChapter.Title);
 
             try
@@ -152,53 +157,180 @@ public sealed class RecordingOrchestrator : IRecordingOrchestrator
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogError(ex, "Unhandled error in recording session.");
+                logger.LogError(ex, "Unhandled error in recording session.");
             }
             finally
             {
-                _streamRecorderRegistry.Remove(channel.Id);
+                streamRecorderRegistry.Remove(channel.Id);
             }
         });
 
-        _streamRecorderRegistry.Register(channel.Id, session, backgroundTask);
-    }
-
-    private void OnApplicationStopping()
-    {
-        Task[] tasks = _streamRecorderRegistry.GetAllBackgroundTasks();
-        if (tasks.Length == 0)
-            return;
-
-        _logger.LogDebug("Waiting for {Count} recording session(s) to shut down...", tasks.Length);
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(30));
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("Session shutdown completed via cancellation (expected).");
-            }
-            catch (TimeoutException)
-            {
-                _logger.LogWarning("Timed out waiting for recording sessions to finish.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during session shutdown.");
-            }
-
-        }).GetAwaiter().GetResult();
-    }
-
-    private async Task ResetStaleChannelsAsync()
-    {
-        var channels = await _channelRepository.GetAllAsync();
-        foreach (var channel in channels.Where(c => c.IsLive))
-        {
-            await _channelRepository.SetLiveAsync(channel.Id, false);
-        }
+        streamRecorderRegistry.Register(channel.Id, session, backgroundTask);
     }
 }
+
+
+// public sealed class RecordingOrchestrator(
+//     IStreamRecorderRegistry streamRecorderRegistry,
+//     IStreamRecorderFactory streamRecorderFactory,
+//     IDbContextFactory<AppDbContext> contextFactory,
+//     IStreamService streamService,
+//     ITwitchGqlClient twitchGqlClient,
+//     ILogger<RecordingOrchestrator> logger,
+//     IHostApplicationLifetime appLifetime) : IRecordingOrchestrator
+// {
+//     private static readonly SemaphoreSlim _sessionsLock = new(1, 1);
+
+//     private AppDbContext _dbContext = null!;
+
+//     public async Task TryStartRecordingAsync(string channelId, string channelName)
+//     {
+//         if (!streamRecorderRegistry.TryRegister(channelId))
+//         {
+//             logger.LogDebug("{Channel} live stream is already being recorded.", channelName);
+//             return;
+//         }
+
+//         try
+//         {
+//             logger.LogInformation("{Channel} went live.", channelName);
+
+//             using var db = await contextFactory.CreateDbContextAsync();
+//             _dbContext = db;
+
+//             var channel = await _dbContext.Channels.GetByIdAsync(channelId);
+//             if (channel is null)
+//             {
+//                 logger.LogWarning("Channel {Channel} not found in database.", channelName);
+//                 streamRecorderRegistry.Remove(channelId);
+//                 return;
+//             }
+
+//             var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, default);
+//             if (!metadata.HasValue)
+//             {
+//                 logger.LogWarning("Failed to fetch stream metadata for {Channel}.", channelName);
+//                 streamRecorderRegistry.Remove(channelId);
+//                 return;
+//             }
+
+//             await RecordStreamAsync(channel, metadata.Value);
+//         }
+//         catch (Exception ex) when (ex is not OperationCanceledException)
+//         {
+//             streamRecorderRegistry.Remove(channelId);
+//             logger.LogError(ex, "Failed to initialize recording for {Channel}.", channelName);
+//         }
+//     }
+
+//     private async Task RecordStreamAsync(Channel channel, StreamMetadata metadata)
+//     {
+//         await _sessionsLock.WaitAsync();
+//         try
+//         {
+//             channel.SetLive(true);
+
+//             var existing = await _dbContext.Streams.GetByIdAsync(metadata.TwitchStreamId);
+//             var stream = existing switch
+//             {
+//                 null => await CreateStreamAsync(channel, metadata),
+//                 { Status: StreamStatus.Interrupted } => MarkAsResuming(existing),
+//                 _ => null
+//             };
+
+//             if (stream is null)
+//                 return;
+
+//             await _dbContext.SaveChangesAsync();
+//             await LaunchRecordingSessionAsync(stream, channel);
+//         }
+//         finally
+//         {
+//             _sessionsLock.Release();
+//         }
+//     }
+
+//     public async Task StopRecordingAsync(string channelId)
+//     {
+//         if (!streamRecorderRegistry.TryGet(channelId, out var recorder))
+//         {
+//             logger.LogWarning("StopRecording: no active session for stream {StreamId}.", channelId);
+//             return;
+//         }
+
+//         await recorder.StopAsync();
+//     }
+
+//     public async Task<IReadOnlyList<string>> FinishAllRecordingsAsync()
+//     {
+//         var activeChannelIds = streamRecorderRegistry.GetActiveChannelIds();
+//         if (activeChannelIds.Count == 0)
+//             return [];
+
+//         logger.LogInformation("Stopping and finalizing all {Count} active recording session(s)...", activeChannelIds.Count);
+
+//         var finishedChannels = new List<string>();
+//         foreach (var channelId in activeChannelIds)
+//         {
+//             if (streamRecorderRegistry.TryGet(channelId, out var recorder))
+//             {
+//                 await recorder.FinishAsync();
+//                 finishedChannels.Add(channelId);
+//             }
+//         }
+
+//         var backgroundTasks = streamRecorderRegistry.GetAllBackgroundTasks();
+//         if (backgroundTasks.Length > 0)
+//         {
+//             try
+//             {
+//                 await Task.WhenAll(backgroundTasks);
+//             }
+//             catch (Exception ex) when (ex is not OperationCanceledException)
+//             {
+//                 logger.LogWarning(ex, "Timeout or error waiting for recording sessions to finish.");
+//             }
+//         }
+
+//         return finishedChannels;
+//     }
+
+//     private async Task<Domain.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
+//     {
+//         var stream = await streamService.CreateStreamAsync(channel, metadata);
+//         channel.UpdateLastStreamedAt(stream.StartedAt);
+//         return stream;
+//     }
+//     private static Domain.Stream MarkAsResuming(Domain.Stream stream)
+//     {
+//         stream.MarkAsRecording();
+//         return stream;
+//     }
+
+//     private async Task LaunchRecordingSessionAsync(Domain.Stream stream, Channel channel)
+//     {
+//         var session = await streamRecorderFactory.CreateAsync(stream, channel, appLifetime.ApplicationStopping);
+
+//         var backgroundTask = Task.Run(async () =>
+//         {
+//             using var channelContext = LogContext.PushProperty("Channel", channel.Name);
+//             using var streamContext = LogContext.PushProperty("StreamId", stream.Id);
+//             using var titleContext = LogContext.PushProperty("Title", stream.CurrentChapter.Title);
+
+//             try
+//             {
+//                 await session.StartAsync(stream, channel);
+//             }
+//             catch (Exception ex) when (ex is not OperationCanceledException)
+//             {
+//                 logger.LogError(ex, "Unhandled error in recording session.");
+//             }
+//             finally
+//             {
+//                 streamRecorderRegistry.Remove(channel.Id);
+//             }
+//         });
+
+//         streamRecorderRegistry.Register(channel.Id, session, backgroundTask);
+//     }
+// }

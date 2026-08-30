@@ -3,7 +3,6 @@ using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using System.Runtime.CompilerServices;
-using TwitchVault.Api.Common;
 
 using Microsoft.Extensions.Options;
 
@@ -13,7 +12,7 @@ public interface IStreamRecorder : IAsyncDisposable
 {
     Task StartAsync(Domain.Stream stream, Channel channel);
     Task StopAsync();
-    Task ToggleStreamDeletionAsync(bool markForDeletion);
+    Task FinishAsync();
 }
 
 public sealed class StreamRecorder(
@@ -22,21 +21,23 @@ public sealed class StreamRecorder(
     ITwitchGqlClient twitchGqlClient,
     IHlsPlaylistWriter playlistWriter,
     ISegmentStore segmentStore,
-    ChapterTracker chapterTracker,
-    IStreamRepository streamRepository,
+    IChapterTracker chapterTracker,
     ISegmentUploader segmentUploader,
     IStreamFinalizer finalizer,
     IOptionsMonitor<VaultOptions> vaultOptions,
     ILogger<StreamRecorder> logger,
     CancellationToken parentCancellationToken) : IStreamRecorder
 {
+    private const int EmptyPollsDelay = 1;
+
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
     private long _streamSizeBytes = 0;
-    private VaultOptions VaultOptions => vaultOptions.CurrentValue;
     private readonly CancellationTokenSource _cts
         = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
     private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
+
+    private VaultOptions VaultOptions => vaultOptions.CurrentValue;
 
     public async Task StartAsync(Domain.Stream stream, Channel channel)
     {
@@ -60,7 +61,7 @@ public sealed class StreamRecorder(
             await CloseCurrentSegmentAsync(CancellationToken.None);
             await segmentUploader.FlushRemainingAsync();
             await DisposeAsync();
-            await finalizer.FinalizeAsync(_channel.Name, _stream, _streamSizeBytes, _endReason);
+            await finalizer.FinalizeAsync(_channel, _stream, _streamSizeBytes, _endReason);
         }
     }
 
@@ -70,14 +71,10 @@ public sealed class StreamRecorder(
         await _cts.CancelAsync();
     }
 
-    public async Task ToggleStreamDeletionAsync(bool markForDeletion)
+    public async Task FinishAsync()
     {
-        var status = markForDeletion ?
-            StorageOperationStatus.DeleteRequest
-            : StorageOperationStatus.None;
-
-        _stream.SetStorageOperationStatus(status);
-        await streamRepository.UpdateAsync(_stream);
+        SetEndReason(new SessionEndReason.StreamEnded());
+        await _cts.CancelAsync();
     }
 
     private async Task RecordStreamAsync(CancellationToken cancellationToken)
@@ -93,7 +90,7 @@ public sealed class StreamRecorder(
             if (string.IsNullOrWhiteSpace(manifest))
             {
                 logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
-                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(EmptyPollsDelay), cancellationToken);
                 continue;
             }
 
@@ -110,6 +107,12 @@ public sealed class StreamRecorder(
 
             if (manifestResult.IsStreamEnded)
             {
+                if (await IsChannelStillLiveAsync(cancellationToken))
+                {
+                    logger.LogWarning("ENDLIST tag seen but channel still live on Twitch. Ignoring and continuing to poll.");
+                    continue;
+                }
+
                 SetEndReason(new SessionEndReason.StreamEnded());
                 return;
             }
@@ -179,6 +182,12 @@ public sealed class StreamRecorder(
 
     private void SetEndReason(SessionEndReason reason) =>
         Interlocked.Exchange(ref _endReason, reason);
+
+    private async Task<bool> IsChannelStillLiveAsync(CancellationToken cancellationToken)
+    {
+        var liveInfo = await twitchGqlClient.GetStreamMetadataAsync(_channel.Name, cancellationToken);
+        return liveInfo?.TwitchStreamId == _stream.Id;
+    }
 
     public async ValueTask DisposeAsync()
     {
