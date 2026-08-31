@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Twitch;
 
@@ -8,13 +8,13 @@ namespace TwitchVault.Api.Recording.HLS;
 public interface IManifestPoller
 {
     Task<(string? Manifest, bool HasQualityChanged)> GetNextManifestAsync(
-        string channelName,
+        Channel channel,
         CancellationToken cancellationToken);
 }
 
 public sealed class ManifestPoller(
     ITwitchGqlClient twitchClient,
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     IDateTimeProvider dateTimeProvider,
     ILogger<ManifestPoller> logger) : IManifestPoller
 {
@@ -39,16 +39,16 @@ public sealed class ManifestPoller(
         (_variants.Length >= EarlyStabilityVariantCount || _consecutiveUnchangedPolls >= MaxUnchangedPollsThreshold);
 
     public async Task<(string? Manifest, bool HasQualityChanged)> GetNextManifestAsync(
-        string channelName,
+        Channel channel,
         CancellationToken cancellationToken)
     {
         if (!IsStable)
-            await RefreshVariantsAsync(channelName, cancellationToken);
+            await RefreshVariantsAsync(channel.Name, cancellationToken);
 
         if (_variants.Length == 0)
             return (null, false);
 
-        var (rank, url) = await ResolveQualityAsync(channelName);
+        var (rank, url) = ResolveQuality(channel);
 
         var hasQualityChanged = rank != _activeQualityRank || url != _activeVariantUrl;
         (_activeQualityRank, _activeVariantUrl) = (rank, url);
@@ -78,12 +78,20 @@ public sealed class ManifestPoller(
             _variants.Length, _variants[^1].Bandwidth);
     }
 
-    private async Task<(int Rank, string Url)> ResolveQualityAsync(string channelName)
-    {
-        // TODO: Replace quality change with event instead for performance
-        await using var db = await contextFactory.CreateDbContextAsync();
-        var channel = await db.Channels.AsNoTracking().GetByNameAsync(channelName);
+    // private async Task<(int Rank, string Url)> ResolveQualityAsync(string channelName)
+    // {
+    //     // TODO: Replace quality change with event instead for performance
+    //     var channel = await dataStore.QueryAsync(
+    //         context => context.Channels.GetByNameAsync(channelName));
 
+    //     var requestedRank = channel!.QualityRank - 1;
+    //     var clampedRank = Math.Clamp(requestedRank, 0, _variants.Length - 1);
+
+    //     return (clampedRank, _variants[clampedRank].Url);
+    // }
+
+    private (int Rank, string Url) ResolveQuality(Channel channel)
+    {
         var requestedRank = channel!.QualityRank - 1;
         var clampedRank = Math.Clamp(requestedRank, 0, _variants.Length - 1);
 

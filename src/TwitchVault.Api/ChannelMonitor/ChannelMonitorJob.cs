@@ -11,7 +11,7 @@ namespace TwitchVault.Api.ChannelMonitor;
 [DisallowConcurrentExecution]
 public sealed class ChannelMonitorJob(
     IRecordingOrchestrator recordingOrchestrator,
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     ITwitchGqlClient twitchGqlClient,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     ILogger<ChannelMonitorJob> logger) : IJob
@@ -23,11 +23,10 @@ public sealed class ChannelMonitorJob(
 
         try
         {
-            await using var db = await contextFactory.CreateDbContextAsync(context.CancellationToken);
-            var channels = await db.Channels
-                .Offline()
-                .Monitored()
-                .ToListAsync(context.CancellationToken);
+            var channels = await dataStore.QueryAsync(db =>
+                db.Channels.Offline()
+                    .Monitored()
+                    .ToListAsync(context.CancellationToken));
 
             await PollChannelsAsync(channels, context.CancellationToken);
         }

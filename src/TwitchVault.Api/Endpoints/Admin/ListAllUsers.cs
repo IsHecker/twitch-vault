@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TwitchVault.Api.Endpoints.Admin;
 
-public class GetAllUsers : IEndpoint
+public class ListAllUsers : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/admin/users", async (AppDbContext db) =>

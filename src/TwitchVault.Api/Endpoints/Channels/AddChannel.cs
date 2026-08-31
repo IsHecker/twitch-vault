@@ -47,14 +47,14 @@ public class AddChannel : IEndpoint
             }
 
             var qualityRank = isAdmin ? request.QualityRank!.Value : 2;
-            var shouldRecord = !isAdmin || (request.ShouldRecord ?? true);
+            var isArchived = isAdmin && request.IsArchived!.Value;
 
-            var channel = Channel.Create(channelId, request.ChannelName, qualityRank, shouldRecord);
+            var channel = Channel.Create(channelId, request.ChannelName, qualityRank, isArchived);
 
             db.Channels.Add(channel);
             await db.SaveChangesAsync();
 
-            if (shouldRecord)
+            if (!isArchived)
             {
                 await twitchSubscription.AddChannelsAsync([channel], default);
 
@@ -67,12 +67,12 @@ public class AddChannel : IEndpoint
         .RequireAuthorization()
         .WithName(nameof(AddChannel))
         .WithTags("Channels")
-        .WithSummary("Add a channel to monitor. Non-admin requests default to QualityRank=2 and ShouldRecord=true.")
+        .WithSummary("Add a channel to monitor.")
         .Accepts<Request>("application/json")
         .Produces<ChannelResponse>(StatusCodes.Status201Created)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status409Conflict);
     }
 
-    internal record struct Request(string ChannelName, int? QualityRank = null, bool? ShouldRecord = null);
+    internal record struct Request(string ChannelName, int? QualityRank = null, bool? IsArchived = null);
 }

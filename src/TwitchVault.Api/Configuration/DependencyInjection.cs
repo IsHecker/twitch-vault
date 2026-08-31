@@ -76,7 +76,7 @@ public static class DependencyInjection
     {
         services.AddPooledDbContextFactory<AppDbContext>(options =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), sql => sql.EnableRetryOnFailure())
                 .LogTo(_ => { }, LogLevel.None);
         });
 
@@ -87,6 +87,7 @@ public static class DependencyInjection
                 .LogTo(_ => { }, LogLevel.None);
         });
 
+        services.AddSingleton<IDataStore, EfDataStore>();
         return services;
     }
 
@@ -124,7 +125,7 @@ public static class DependencyInjection
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        // services.AddHostedService<TwitchWebhookStartupService>();
+        services.AddHostedService<TwitchWebhookStartupService>();
 
         return services;
     }

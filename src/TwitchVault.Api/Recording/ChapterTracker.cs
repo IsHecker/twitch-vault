@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Events;
@@ -14,7 +13,7 @@ public interface IChapterTracker
 
 public sealed class ChapterTracker(
     EventBus eventBus,
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     IDateTimeProvider dateTimeProvider,
     ILogger<ChapterTracker> logger) : IDisposable, IChapterTracker
 {
@@ -44,13 +43,14 @@ public sealed class ChapterTracker(
             return;
         }
 
-        await using var db = await contextFactory.CreateDbContextAsync();
-        db.Attach(_stream);
-
         logger.LogInformation("Metadata split triggered.");
-        _stream.AddChapter(e.Title, e.CategoryId, dateTimeProvider.DateTimeNow);
 
-        await db.SaveChangesAsync();
+        await dataStore.ExecuteAsync(() =>
+        {
+            dataStore.Save(_stream); // came from outside any flow — attach it
+            _stream.AddChapter(e.Title, e.CategoryId, dateTimeProvider.DateTimeNow);
+            return Task.CompletedTask;
+        });
     }
 
     public void Dispose()

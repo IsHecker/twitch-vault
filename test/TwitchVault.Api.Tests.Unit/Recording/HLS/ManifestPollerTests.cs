@@ -10,23 +10,31 @@ namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
 public class ManifestPollerTests
 {
+    private const string ChannelId = "54507525";
     private const string ChannelName = "testchannel";
 
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<ManifestPoller> _logger = Substitute.For<ILogger<ManifestPoller>>();
     private readonly TestDbContextFactory _factory = new();
+    private readonly IDataStore _dataStore;
+    private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
+
+    public ManifestPollerTests()
+    {
+        _dataStore = new EfDataStore(_factory);
+    }
 
     private ManifestPoller CreateSut(AppDbContext db)
     {
         if (!db.Channels.Any(c => c.Name == ChannelName))
         {
-            db.Channels.Add(Channel.Create("54507525", ChannelName, 1));
+            db.Channels.Add(Channel.Create("54507525", ChannelName, 1, isArchived: false));
             db.SaveChanges();
         }
 
         _twitchGqlClient.GetPlaylistContentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("some_manifest");
-        return new(_twitchGqlClient, _factory, _dateTimeProvider, _logger);
+        return new(_twitchGqlClient, _dataStore, _dateTimeProvider, _logger);
     }
 
     [Fact]
@@ -40,7 +48,7 @@ public class ManifestPollerTests
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(string.Empty);
 
         // Act
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
 
         // Assert
         await _twitchGqlClient.Received(1).GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>());
@@ -57,10 +65,10 @@ public class ManifestPollerTests
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(CreatePlaylist(5));
 
         // Act
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
         _twitchGqlClient.ClearReceivedCalls();
 
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
 
         // Assert
         await _twitchGqlClient.DidNotReceive().GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>());
@@ -77,11 +85,11 @@ public class ManifestPollerTests
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(CreatePlaylist(5));
 
         // Act
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
         _twitchGqlClient.ClearReceivedCalls();
 
         _dateTimeProvider.DateTimeNow.Returns(startTime.AddSeconds(30));
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
 
         // Assert
         await _twitchGqlClient.Received(1).GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>());
@@ -98,7 +106,7 @@ public class ManifestPollerTests
         _twitchGqlClient.GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(string.Empty);
 
         // Act
-        var (Manifest, HasQualityChanged) = await sut.GetNextManifestAsync(ChannelName, default);
+        var (Manifest, HasQualityChanged) = await sut.GetNextManifestAsync(_channel, default);
 
         // Assert
         Manifest.Should().BeNull();
@@ -122,11 +130,11 @@ public class ManifestPollerTests
         // Act
         for (int i = 0; i < 4; i++)
         {
-            await sut.GetNextManifestAsync(ChannelName, default);
+            await sut.GetNextManifestAsync(_channel, default);
             _dateTimeProvider.DateTimeNow.Returns(startTime.AddSeconds((i + 1) * 30));
         }
         _twitchGqlClient.ClearReceivedCalls();
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
 
         // Assert
         await _twitchGqlClient.Received(1).GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>());
@@ -147,11 +155,11 @@ public class ManifestPollerTests
         // Act
         for (int i = 0; i < 5; i++)
         {
-            await sut.GetNextManifestAsync(ChannelName, default);
+            await sut.GetNextManifestAsync(_channel, default);
             _dateTimeProvider.DateTimeNow.Returns(startTime.AddSeconds((i + 1) * 30));
         }
         _twitchGqlClient.ClearReceivedCalls();
-        await sut.GetNextManifestAsync(ChannelName, default);
+        await sut.GetNextManifestAsync(_channel, default);
 
         // Assert
         await _twitchGqlClient.DidNotReceive().GetMasterPlaylistAsync(ChannelName, Arg.Any<CancellationToken>());

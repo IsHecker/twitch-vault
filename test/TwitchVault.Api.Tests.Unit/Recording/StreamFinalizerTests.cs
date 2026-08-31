@@ -16,8 +16,14 @@ public class StreamFinalizerTests
     private readonly IRecordingOrchestrator _recordingOrchestrator = Substitute.For<IRecordingOrchestrator>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
     private readonly TestDbContextFactory _factory = new();
+    private readonly IDataStore _dataStore;
 
-    private readonly Channel _channel = Channel.Create("chan_1", "testchannel");
+    private readonly Channel _channel = Channel.Create("chan_1", "testchannel", 1, isArchived: false);
+
+    public StreamFinalizerTests()
+    {
+        _dataStore = new EfDataStore(_factory);
+    }
 
     private StreamFinalizer CreateSut()
     {
@@ -27,7 +33,7 @@ public class StreamFinalizerTests
             db.Channels.Add(_channel);
             db.SaveChanges();
         }
-        return new(_factory, _storageService, _twitchClient, _dateTimeProvider, _logger);
+        return new(_dataStore, _storageService, _twitchClient, _dateTimeProvider, _logger);
     }
 
     private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null)

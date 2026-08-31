@@ -1,5 +1,4 @@
 using CloudStorage.Core;
-using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording.HLS;
@@ -29,7 +28,7 @@ public interface IStreamStorageService
 
 public sealed class StreamStorageService(
     ICloudStorageService cloudStorageService,
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     IWebHostEnvironment env,
     ILogger<StreamStorageService> logger) : IStreamStorageService
 {
@@ -69,13 +68,13 @@ public sealed class StreamStorageService(
             var response = uploadResult.Value;
             if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
             {
-                await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-                db.Streams.Attach(stream);
-
-                stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
-                stream.SetStorageInstance(response.InstanceName);
-
-                await db.SaveChangesAsync(cancellationToken);
+                await dataStore.ExecuteAsync(() =>
+                {
+                    stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
+                    stream.SetStorageInstance(response.InstanceName);
+                    dataStore.Save(stream);
+                    return Task.CompletedTask;
+                });
             }
 
             foreach (var remoteUrl in response.RemoteUrls)
@@ -141,13 +140,13 @@ public sealed class StreamStorageService(
         await HlsPlaylistRewriter.RewriteSegmentsAsync(playlistPath, tempPlaylistPath, remoteUrlsFilePath, cancellationToken);
         File.Move(tempPlaylistPath, playlistPath, overwrite: true);
 
-        await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken))
+        await dataStore.ExecuteAsync(() =>
         {
-            db.Attach(stream);
             stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
             stream.SetStorageLocation(StorageLocation.Remote);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+            dataStore.Save(stream);
+            return Task.CompletedTask;
+        });
 
         logger.LogInformation(
             "Stream '{StreamId}' storage finalized on instance '{Instance}'.",
@@ -183,12 +182,11 @@ public sealed class StreamStorageService(
             }
         }
 
-        await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken))
+        await dataStore.ExecuteAsync(async () =>
         {
-            db.Attach(stream);
-            db.Streams.Remove(stream);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+            await dataStore.DeleteAsync<Domain.Stream, string>(stream.Id);
+            return Task.CompletedTask;
+        });
 
         var localDir = stream.Folder.GetAbsolutePath(env.ContentRootPath);
         await IOUtils.DeleteDirectoryWithRetriesAsync(localDir);

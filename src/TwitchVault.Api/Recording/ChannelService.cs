@@ -20,7 +20,7 @@ public class ChannelService(
     public async Task<Result<Channel>> AddChannelAsync(
         string channelName,
         int qualityRank,
-        bool shouldRecord,
+        bool isArchived,
         CancellationToken cancellationToken = default)
     {
         var existingChannel = await db.Channels.GetByNameAsync(channelName, cancellationToken);
@@ -31,9 +31,9 @@ public class ChannelService(
         if (string.IsNullOrWhiteSpace(channelId))
             return Error.NotFound($"Channel '{channelName}' was not found on Twitch.");
 
-        var channel = Channel.Create(channelId, channelName, qualityRank, shouldRecord);
+        var channel = Channel.Create(channelId, channelName, qualityRank, isArchived);
 
-        if (shouldRecord)
+        if (isArchived)
             _ = twitchSubscription.AddChannelsAsync([channel], cancellationToken);
 
         db.Channels.Add(channel);
@@ -64,19 +64,19 @@ public class ChannelService(
         return Result.Success;
     }
 
-    public async Task<Result> SetRecordingStatusAsync(string channelId, bool shouldRecord, CancellationToken cancellationToken = default)
+    public async Task<Result> SetRecordingStatusAsync(string channelId, bool isArchived, CancellationToken cancellationToken = default)
     {
         var channel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
         if (channel is null)
             return Result.Failure(Error.NotFound($"Channel '{channelId}' was not found."));
 
-        if (channel.IsArchived == shouldRecord)
-            return Result.Failure(Error.Validation($"Recording status is already set to {shouldRecord}."));
+        if (channel.IsArchived == isArchived)
+            return Result.Failure(Error.Validation($"Recording status is already set to {isArchived}."));
 
-        channel.SetArchivingStatus(shouldRecord);
+        channel.SetArchivingStatus(isArchived);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (shouldRecord)
+        if (isArchived)
             _ = twitchSubscription.AddChannelsAsync([channel], cancellationToken);
         else
             _ = twitchSubscription.RemoveChannelAsync(channel, cancellationToken);

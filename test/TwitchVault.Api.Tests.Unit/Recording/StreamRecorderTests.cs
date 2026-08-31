@@ -31,7 +31,7 @@ public class StreamRecorderTests
     private readonly IOptionsMonitor<VaultOptions> _vaultOptions = Substitute.For<IOptionsMonitor<VaultOptions>>();
     private readonly IChapterTracker _chapterTracker = Substitute.For<IChapterTracker>();
 
-    private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1);
+    private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
     private readonly Domain.Stream _stream;
 
     public StreamRecorderTests()
@@ -75,7 +75,7 @@ public class StreamRecorderTests
     private void StubManifestOnce(string manifest, bool hasQualityChanged = false)
     {
         var called = false;
-        _manifestPoller.GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>())
+        _manifestPoller.GetNextManifestAsync(_channel, Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 if (called)
@@ -93,13 +93,13 @@ public class StreamRecorderTests
 
         if (items.Length == 0)
         {
-            _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<DownloadedSegment>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<SegmentContent>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                 .Returns((LocalSegment?)null);
             return;
         }
 
         var queue = new Queue<(string FileName, float Duration, bool IsInit)>(items);
-        _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<DownloadedSegment>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<SegmentContent>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 if (queue.TryDequeue(out var item))
@@ -110,7 +110,7 @@ public class StreamRecorderTests
 
     private void BlockPollIndefinitely() =>
         _manifestPoller
-            .GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>())
+            .GetNextManifestAsync(_channel, Arg.Any<CancellationToken>())
             .Returns(async callInfo =>
             {
                 var token = callInfo.Arg<CancellationToken>();
@@ -189,7 +189,7 @@ public class StreamRecorderTests
 
         // Assert
         await act.Should().NotThrowAsync();
-        await _manifestPoller.Received(3).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
+        await _manifestPoller.Received(3).GetNextManifestAsync(_channel, Arg.Any<CancellationToken>());
         await _finalizer.Received(1).FinalizeAsync(
             _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamEnded()));
     }
@@ -291,7 +291,7 @@ public class StreamRecorderTests
         await sut.StartAsync(_stream, _channel);
 
         // Assert
-        await _thumbnailManager.Received(1).TryCaptureSnapshotAsync(ChannelName, _stream, Arg.Any<CancellationToken>());
+        await _thumbnailManager.Received().TryCaptureSnapshotAsync(ChannelName, _stream, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class StreamRecorderTests
         // Arrange
         var exception = new HttpRequestException("simulated network blip");
         _manifestPoller
-            .GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>())
+            .GetNextManifestAsync(_channel, Arg.Any<CancellationToken>())
             .ThrowsAsync(exception);
 
         await using var sut = CreateSut();
@@ -312,7 +312,7 @@ public class StreamRecorderTests
         await act.Should().NotThrowAsync();
         // Polly retries happen inside ITwitchGqlClient/HttpClient, below IManifestPoller — 
         // mocking IManifestPoller bypasses that pipeline entirely, so only 1 call reaches here.
-        await _manifestPoller.Received(1).GetNextManifestAsync(ChannelName, Arg.Any<CancellationToken>());
+        await _manifestPoller.Received(1).GetNextManifestAsync(_channel, Arg.Any<CancellationToken>());
 
         await _finalizer.Received(1).FinalizeAsync(
             _channel, _stream, sizeBytes: 0, Arg.Is(new SessionEndReason.StreamError(exception)));

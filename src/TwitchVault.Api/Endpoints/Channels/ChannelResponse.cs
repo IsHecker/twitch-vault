@@ -7,7 +7,7 @@ public record ChannelResponse(
     string Name,
     int QualityRank,
     bool IsLive,
-    bool ShouldRecord,
+    bool IsArchived,
     DateTime? LastStreamedAt
 )
 {

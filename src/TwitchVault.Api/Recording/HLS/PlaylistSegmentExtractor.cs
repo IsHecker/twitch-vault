@@ -47,10 +47,10 @@ public static class PlaylistSegmentExtractor
             if (++currentSequence <= lastMediaSequence)
                 continue;
 
-            var duration = float.Parse(HlsTagReader.ReadTagValue(line, HlsTags.ExtInfPrefix, ','));
             if (i + 1 >= lineCount)
                 continue;
 
+            var duration = float.Parse(HlsTagReader.ReadTagValue(line, HlsTags.ExtInfPrefix, ','));
             segments.Add(new RemoteSegment(playlistContent[lineRanges[++i]].Trim('\r').ToString(), duration));
         }
 

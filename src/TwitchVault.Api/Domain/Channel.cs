@@ -12,7 +12,7 @@ public class Channel : Entity<string>
 
     private Channel() { }
 
-    public static Channel Create(string id, string name, int qualityRank = 0, bool isArchived = true)
+    public static Channel Create(string id, string name, int qualityRank, bool isArchived)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

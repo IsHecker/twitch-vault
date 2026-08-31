@@ -18,7 +18,7 @@ public interface IStreamService
 }
 
 public class StreamService(
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     IDateTimeProvider dateTimeProvider,
     IOptions<PathsOptions> pathsOptions,
     ILogger<StreamService> logger) : IStreamService
@@ -27,7 +27,7 @@ public class StreamService(
     {
         var folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name);
         return Domain.Stream.Create(
-            metadata.TwitchStreamId,
+            metadata.Id,
             channel.Id,
             folder,
             metadata.StartedAt,
@@ -35,39 +35,44 @@ public class StreamService(
             metadata.CategoryId);
     }
 
-    public async Task<Result> DeleteStreamAsync(string twitchStreamId)
-    {
-        await using var db = await contextFactory.CreateDbContextAsync();
-        var stream = await db.Streams.GetByIdAsync(twitchStreamId);
-        return await DeleteStreamAsync(db, stream);
-    }
-
-    public async Task<Result> DeleteStreamAsync(Domain.Stream? stream)
-    {
-        await using var db = await contextFactory.CreateDbContextAsync();
-        return await DeleteStreamAsync(db, stream);
-    }
-
-    public async Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null)
-    {
-        await using var db = await contextFactory.CreateDbContextAsync();
-        var stale = await db.Streams
-            .StaleActive(channelId, currentTwitchStreamId)
-            .ToListAsync();
-
-        if (stale.Count == 0)
-            return;
-
-        foreach (var stream in stale)
+    public Task<Result> DeleteStreamAsync(string twitchStreamId) =>
+        dataStore.ExecuteAsync(async () =>
         {
-            stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
-            logger.LogInformation("Stream {StreamId} marked as finished (stale).", stream.Id);
-        }
+            var stream = await dataStore.QueryAsync<Domain.Stream, Domain.Stream?>(
+                streams => streams.GetByIdAsync(twitchStreamId));
 
-        await db.SaveChangesAsync();
-    }
+            return await DeleteStreamAsync(stream);
+        });
 
-    private static async Task<Result> DeleteStreamAsync(AppDbContext db, Domain.Stream? stream)
+    public Task<Result> DeleteStreamAsync(Domain.Stream? stream) =>
+        dataStore.ExecuteAsync(() =>
+        {
+            if (stream == null || stream.IsDeleted)
+                return Task.FromResult((Result)Error.NotFound());
+
+            if (stream.Status == StreamStatus.Recording)
+                return Task.FromResult((Result)Error.Validation("Cannot delete a stream that is still recording or finishing. Stop it first."));
+
+            stream.RequestDeletion();
+            dataStore.Save(stream);
+
+            return Task.FromResult(Result.Success);
+        });
+
+    public Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null) =>
+        dataStore.ExecuteAsync(async () =>
+        {
+            var stale = await dataStore.QueryAsync<Domain.Stream, List<Domain.Stream>>(
+                streams => streams.StaleActive(channelId, currentTwitchStreamId).ToListAsync());
+
+            foreach (var stream in stale)
+            {
+                stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
+                logger.LogInformation("Stream {StreamId} marked as finished (stale).", stream.Id);
+            }
+        });
+
+    private Result RequestDeletion(Domain.Stream? stream)
     {
         if (stream == null || stream.IsDeleted)
             return Error.NotFound();
@@ -75,9 +80,8 @@ public class StreamService(
         if (stream.Status == StreamStatus.Recording)
             return Error.Validation("Cannot delete a stream that is still recording or finishing. Stop it first.");
 
-        db.Attach(stream);
         stream.RequestDeletion();
-        await db.SaveChangesAsync();
+        dataStore.Save(stream);
 
         return Result.Success;
     }

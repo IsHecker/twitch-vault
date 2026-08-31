@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Twitch;
@@ -22,7 +21,7 @@ public abstract record SessionEndReason
 }
 
 public sealed class StreamFinalizer(
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     IStreamStorageService storageService,
     ITwitchGqlClient twitchClient,
     IDateTimeProvider dateTimeProvider,
@@ -36,29 +35,29 @@ public sealed class StreamFinalizer(
     {
         try
         {
-            await using var db = await contextFactory.CreateDbContextAsync();
-            db.Attach(channel);
-            db.Attach(stream);
-
-            channel.SetLive(false);
-
-            switch (reason)
+            await dataStore.ExecuteAsync(async () =>
             {
-                case SessionEndReason.StreamStopped:
-                    await MarkStoppedAsync(stream, sizeBytes);
-                    break;
+                dataStore.Save(channel);
+                dataStore.Save(stream);
 
-                case SessionEndReason.StreamError(var ex):
-                    await HandleErrorAsync(stream, channel.Name, ex, sizeBytes);
-                    break;
+                channel.SetLive(false);
 
-                case SessionEndReason.StreamEnded:
-                default:
-                    await HandleStreamEndedAsync(stream, sizeBytes);
-                    break;
-            }
+                switch (reason)
+                {
+                    case SessionEndReason.StreamStopped:
+                        await MarkStoppedAsync(stream, sizeBytes);
+                        break;
 
-            await db.SaveChangesAsync();
+                    case SessionEndReason.StreamError(var ex):
+                        await HandleErrorAsync(stream, channel.Name, ex, sizeBytes);
+                        break;
+
+                    case SessionEndReason.StreamEnded:
+                    default:
+                        await HandleStreamEndedAsync(stream, sizeBytes);
+                        break;
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -102,6 +101,6 @@ public sealed class StreamFinalizer(
     private async Task<bool> IsChannelLiveAsync(Domain.Stream stream, string channelName)
     {
         var metadata = await twitchClient.GetStreamMetadataAsync(channelName, CancellationToken.None);
-        return metadata?.TwitchStreamId == stream.Id;
+        return metadata?.Id == stream.Id;
     }
 }

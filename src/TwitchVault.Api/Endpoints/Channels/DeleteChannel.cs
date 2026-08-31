@@ -24,23 +24,21 @@ public class DeleteChannel : IEndpoint
         {
             var userId = principal.GetUserId();
 
-            var userChannel = await db.UserChannels.FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
+            var userChannel = await db.UserChannels.Include(uc => uc.Channel)
+                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
             if (userChannel is null)
                 return Results.NotFound();
 
-            var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channelId);
-            if (channel is null)
-                return Results.NotFound();
-
             db.UserChannels.Remove(userChannel);
-            await db.SaveChangesAsync();
-
             var remainingUserCount = await db.UserChannels.CountAsync(uc => uc.ChannelId == channelId);
 
-            if (remainingUserCount > 0)
+            if (remainingUserCount - 1 > 0)
+            {
+                await db.SaveChangesAsync();
                 return Results.NoContent();
+            }
 
-            if (channel.IsLive)
+            if (userChannel.Channel.IsLive)
             {
                 var liveStream = await db.Streams
                     .ForChannel(channelId)
@@ -50,9 +48,9 @@ public class DeleteChannel : IEndpoint
                 await recordingOrchestrator.StopRecordingAsync(liveStream.Id);
             }
 
-            db.Channels.Remove(channel);
-            await IOUtils.DeleteDirectoryWithRetriesAsync(Path.Combine(pathsOptions.Value.Streams, channel.Name));
-            await twitchSubscription.RemoveChannelAsync(channel, default);
+            db.Channels.Remove(userChannel.Channel);
+            await IOUtils.DeleteDirectoryWithRetriesAsync(Path.Combine(pathsOptions.Value.Streams, userChannel.Channel.Name));
+            await twitchSubscription.RemoveChannelAsync(userChannel.Channel, default);
             await db.SaveChangesAsync();
 
             return Results.NoContent();

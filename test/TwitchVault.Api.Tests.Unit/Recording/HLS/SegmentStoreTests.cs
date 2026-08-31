@@ -31,7 +31,7 @@ public class SegmentStoreTests
         _fileSystem.OpenWrite(Arg.Is<string>(s => s.EndsWith("init.mp4")), FileMode.Create)
             .Returns(mockFileStream);
 
-        var segment = new DownloadedSegment(new RemoteSegment("https://example.com/init.mp4", 0, IsInitSegment: true), initStream);
+        var segment = new SegmentContent(new RemoteSegment("https://example.com/init.mp4", 0, IsInitSegment: true), initStream);
 
         // Act
         var result = await _sut.SaveAsync(StreamFolderPath, segment, null, CancellationToken.None);
@@ -54,7 +54,7 @@ public class SegmentStoreTests
         _fileSystem.OpenWrite(Arg.Is<string>(s => s.EndsWith("seg_1.ts")), FileMode.Append)
             .Returns(mockFileStream);
 
-        var segment = new DownloadedSegment(new RemoteSegment("https://example.com/index-0.ts", 5.0f), segmentStream);
+        var segment = new SegmentContent(new RemoteSegment("https://example.com/index-0.ts", 5.0f), segmentStream);
 
         // Act
         var result = await _sut.SaveAsync(StreamFolderPath, segment, null, CancellationToken.None);
@@ -75,7 +75,7 @@ public class SegmentStoreTests
         _fileSystem.OpenWrite(Arg.Is<string>(s => s.EndsWith("seg_1.ts")), FileMode.Append)
             .Returns(mockFileStream);
 
-        var segment = new DownloadedSegment(new RemoteSegment("https://example.com/index-0.ts", 12.0f), segmentStream);
+        var segment = new SegmentContent(new RemoteSegment("https://example.com/index-0.ts", 12.0f), segmentStream);
 
         // Act
         var result = await _sut.SaveAsync(StreamFolderPath, segment, null, CancellationToken.None);

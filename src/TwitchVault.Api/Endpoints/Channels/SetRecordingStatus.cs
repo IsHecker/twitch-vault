@@ -3,10 +3,10 @@ using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
-public class SetRecordingStatus : IEndpoint
+public class SetArchiveStatus : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPut("/api/channels/{channelId}/recording", async (
+        app.MapPut("/api/channels/{channelId}/archive", async (
             string channelId,
             Request request,
             AppDbContext db,
@@ -16,13 +16,13 @@ public class SetRecordingStatus : IEndpoint
             if (channel is null)
                 return Results.NotFound();
 
-            if (channel.IsArchived == request.ShouldRecord)
+            if (channel.IsArchived == request.Archive)
                 return Results.BadRequest();
 
-            channel.SetArchivingStatus(request.ShouldRecord);
+            channel.SetArchivingStatus(request.Archive);
             await db.SaveChangesAsync();
 
-            if (request.ShouldRecord)
+            if (request.Archive)
                 _ = twitchSubscription.AddChannelsAsync([channel], default);
             else
                 _ = twitchSubscription.RemoveChannelAsync(channel, default);
@@ -30,9 +30,9 @@ public class SetRecordingStatus : IEndpoint
             return Results.NoContent();
         })
         .RequireAuthorization("Admin")
-        .WithName(nameof(SetRecordingStatus))
+        .WithName(nameof(SetArchiveStatus))
         .WithTags("Channels")
         .WithSummary("[Admin] Enable or disable recording for a channel");
 
-    internal record struct Request(bool ShouldRecord);
+    internal record struct Request(bool Archive);
 }

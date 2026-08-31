@@ -5,25 +5,27 @@ using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Recording;
 using FluentAssertions;
 using TwitchVault.Api.Common;
-using TwitchVault.Api.Persistence.Database;
 using DomainStream = TwitchVault.Api.Domain.Stream;
+using TwitchVault.Api.Persistence.Database;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
 public class StreamServiceTests
 {
     private readonly TestDbContextFactory _factory = new();
+    private readonly IDataStore _dataStore;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly IOptions<PathsOptions> _pathsOptions = Substitute.For<IOptions<PathsOptions>>();
     private readonly ILogger<StreamService> _logger = Substitute.For<ILogger<StreamService>>();
 
     public StreamServiceTests()
     {
+        _dataStore = new EfDataStore(_factory);
         _pathsOptions.Value.Returns(new PathsOptions { Streams = "Streams" });
     }
 
     private StreamService CreateSut() =>
-        new(_factory, _dateTimeProvider, _pathsOptions, _logger);
+        new(_dataStore, _dateTimeProvider, _pathsOptions, _logger);
 
     [Fact]
     public async Task DeleteStreamAsync_ShouldNotDelete_WhenStreamDoesNotExist()
@@ -45,7 +47,7 @@ public class StreamServiceTests
         // Arrange
         var channelId = "channel-1";
         var streamId = "stream-123";
-        var channel = Channel.Create(channelId, "testchannel");
+        var channel = Channel.Create(channelId, "testchannel", 1, isArchived: false);
         var stream = DomainStream.Create(streamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
         stream.SetStorageOperationStatus(status);
 
@@ -71,7 +73,7 @@ public class StreamServiceTests
         // Arrange
         var channelId = "channel-1";
         var streamId = "stream-123";
-        var channel = Channel.Create(channelId, "testchannel");
+        var channel = Channel.Create(channelId, "testchannel", 1, isArchived: false);
         var stream = DomainStream.Create(streamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
         stream.MarkAsFinished(DateTime.UtcNow);
 
@@ -100,7 +102,7 @@ public class StreamServiceTests
     {
         // Arrange
         var channelId = "channel-1";
-        var channel = Channel.Create(channelId, "testchannel");
+        var channel = Channel.Create(channelId, "testchannel",1, isArchived: false);
         var staleStream = DomainStream.Create("stale-1", channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
         var activeStreamId = "active-1";
         var activeStream = DomainStream.Create(activeStreamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");

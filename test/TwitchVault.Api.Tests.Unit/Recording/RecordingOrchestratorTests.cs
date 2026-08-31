@@ -20,27 +20,29 @@ public class RecordingOrchestratorTests
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly ILogger<RecordingOrchestrator> _logger = Substitute.For<ILogger<RecordingOrchestrator>>();
     private readonly TestDbContextFactory _factory = new();
+    private readonly IDataStore _dataStore;
     private readonly CancellationTokenSource _appStoppingCts = new();
     private readonly IHostApplicationLifetime _appLifetime = Substitute.For<IHostApplicationLifetime>();
 
     public RecordingOrchestratorTests()
     {
+        _dataStore = new EfDataStore(_factory);
         _appLifetime.ApplicationStopping.Returns(_appStoppingCts.Token);
     }
 
-    // The orchestrator now owns its own AppDbContext lifecycle via IDbContextFactory,
-    // so the sut no longer needs a context handed to it — TestDbContextFactory *is* that factory.
+    // The orchestrator now owns its DB access via IDataStore, so the sut
+    // just needs the same store wrapping the test factory.
     private RecordingOrchestrator CreateSut() =>
         new(_streamRecorderRegistry,
             _streamRecorderFactory,
-            _factory,
+            _dataStore,
             _streamService,
             _twitchGqlClient,
             _logger,
             _appLifetime);
 
     private static Channel CreateChannel(string id = ChannelId, string name = ChannelName) =>
-        Channel.Create(id, name, 1);
+        Channel.Create(id, name, 1, isArchived: false);
 
     private static StreamMetadata CreateMetadata(string twitchStreamId = "ts_1") =>
         new(twitchStreamId, "Some Title", "Some Game", DateTime.Now);
@@ -79,7 +81,7 @@ public class RecordingOrchestratorTests
     public async Task TryStartRecordingAsync_ShouldSwallowAndLogException_WhenUnhandledExceptionOccurs()
     {
         // Arrange — channel exists (so we get past the null-channel branch), gql client throws instead.
-        // Seeded via a throwaway context; the orchestrator creates its own via IDbContextFactory.
+        // Seeded via a throwaway context; the orchestrator goes through IDataStore.
         using (var db = _factory.CreateDbContext())
         {
             db.Channels.Add(CreateChannel());
@@ -134,7 +136,7 @@ public class RecordingOrchestratorTests
         await db.SaveChangesAsync();
 
         var metadata = CreateMetadata();
-        var createdStream = CreateStream(metadata.TwitchStreamId, channel.Id);
+        var createdStream = CreateStream(metadata.Id, channel.Id);
         var recorder = Substitute.For<IStreamRecorder>();
 
         Channel? capturedChannel = null;

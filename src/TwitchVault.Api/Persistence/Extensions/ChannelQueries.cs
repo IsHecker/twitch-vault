@@ -15,7 +15,7 @@ public static class ChannelQueries
         query.Where(c => c.Id == id);
 
     public static IQueryable<Channel> Monitored(this IQueryable<Channel> query) =>
-        query.Where(c => c.IsArchived);
+        query.Where(c => !c.IsArchived);
 
     public static IQueryable<Channel> Live(this IQueryable<Channel> query) =>
         query.Where(c => c.IsLive);

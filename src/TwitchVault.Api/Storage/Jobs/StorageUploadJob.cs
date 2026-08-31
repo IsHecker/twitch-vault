@@ -9,7 +9,7 @@ using TwitchVault.Api.Recording.HLS;
 namespace TwitchVault.Api.Storage.Jobs;
 
 public sealed class StorageUploadJob(
-    IDbContextFactory<AppDbContext> contextFactory,
+    IDataStore dataStore,
     IStreamStorageService storageService,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     IWebHostEnvironment env,
@@ -20,11 +20,8 @@ public sealed class StorageUploadJob(
         if (!jobsOptions.CurrentValue.GetJob(JobOptions.StorageUpload).Enabled)
             return;
 
-        await using var db = await contextFactory.CreateDbContextAsync(context.CancellationToken);
-        var stream = await db.Streams
-            .PendingUpload()
-            .OrderBy(s => s.StartedAt)
-            .FirstOrDefaultAsync(context.CancellationToken);
+        var stream = await dataStore.QueryAsync<Domain.Stream, Domain.Stream?>(
+            streams => streams.PendingUpload().OrderBy(s => s.StartedAt).FirstOrDefaultAsync(context.CancellationToken));
 
         if (stream is null)
             return;
@@ -59,12 +56,12 @@ public sealed class StorageUploadJob(
                 "Backup upload for '{Title}': {Count} segment(s) left on disk.",
                 streamTitle, remainingSegments.Count);
 
-            await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken))
+            await dataStore.ExecuteAsync(() =>
             {
-                db.Attach(stream);
                 stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
-                await db.SaveChangesAsync(cancellationToken);
-            }
+                dataStore.Save(stream);
+                return Task.CompletedTask;
+            });
 
             await UploadRemainingSegmentsAsync(
                 remainingSegments,
@@ -103,12 +100,12 @@ public sealed class StorageUploadJob(
                 if (succeeded)
                     continue;
 
-                await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken))
+                await dataStore.ExecuteAsync(() =>
                 {
-                    db.Attach(stream);
                     stream.SetStorageOperationStatus(StorageOperationStatus.UploadFailed);
-                    await db.SaveChangesAsync(cancellationToken);
-                }
+                    dataStore.Save(stream);
+                    return Task.CompletedTask;
+                });
 
                 logger.LogError("Backup upload batch failed for '{StreamId}'. Aborting.",
                     stream.Id);

@@ -6,7 +6,7 @@
       "QualityRank": 2,
       "IsLive": false,
       "IsArchived": true,
-      "LastStreamedAt": "2026-08-29T22:22:01"
+      "LastStreamedAt": "2026-08-30T22:29:12"
     },
     {
       "Id": "153423171",
@@ -62,7 +62,7 @@
       "QualityRank": 3,
       "IsLive": false,
       "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T04:42:04"
+      "LastStreamedAt": "2026-08-30T20:06:31"
     },
     {
       "Id": "198758158",
@@ -70,7 +70,7 @@
       "QualityRank": 1,
       "IsLive": false,
       "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T02:03:06"
+      "LastStreamedAt": "2026-08-31T03:04:54"
     },
     {
       "Id": "1303435602",
@@ -78,7 +78,7 @@
       "QualityRank": 1,
       "IsLive": false,
       "IsArchived": true,
-      "LastStreamedAt": "2026-08-21T23:26:33"
+      "LastStreamedAt": "2026-08-30T23:18:28"
     },
     {
       "Id": "90222378",
@@ -86,7 +86,7 @@
       "QualityRank": 3,
       "IsLive": false,
       "IsArchived": true,
-      "LastStreamedAt": "2026-08-28T23:39:03"
+      "LastStreamedAt": "2026-08-30T23:03:15"
     },
     {
       "Id": "37427818",
@@ -110,7 +110,7 @@
       "QualityRank": 1,
       "IsLive": false,
       "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T01:44:19"
+      "LastStreamedAt": "2026-08-31T01:33:26"
     }
   ],
   "Streams": [
@@ -1562,6 +1562,256 @@
           "CategoryId": "27127",
           "StartedAt": "2026-08-30T06:29:07",
           "FinishedAt": "2026-08-30T08:29:56.1614452"
+        }
+      ]
+    },
+    {
+      "Id": "321191375322",
+      "ChannelId": "54507525",
+      "Folder": {
+        "RelativePath": "Streams\\pisty\\2026-08-30 17-44-45",
+        "ThumbnailPath": "Streams/pisty/2026-08-30 17-44-45/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 943471031,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-30T18:44:29",
+      "FinishedAt": "2026-08-30T19:49:42.5909917",
+      "Chapters": [
+        {
+          "Title": "الكابتن بيستي ⚽ نجم الملعب 🥅 | CAPTAIN TSUBASA 2",
+          "CategoryId": "1804441102",
+          "StartedAt": "2026-08-30T18:44:29",
+          "FinishedAt": "2026-08-30T19:49:38.4481856"
+        },
+        {
+          "Title": "احرف واحد في اللعبة دي ❌ USE CODE BYSTY | FORTNITE",
+          "CategoryId": "33214",
+          "StartedAt": "2026-08-30T19:49:38.4481856",
+          "FinishedAt": "2026-08-30T19:49:42.5909917"
+        }
+      ]
+    },
+    {
+      "Id": "321192222426",
+      "ChannelId": "54507525",
+      "Folder": {
+        "RelativePath": "Streams\\pisty\\2026-08-30 18-49-57",
+        "ThumbnailPath": "Streams/pisty/2026-08-30 18-49-57/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 2327257736,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-30T19:49:41",
+      "FinishedAt": "2026-08-30T22:29:22.0749192",
+      "Chapters": [
+        {
+          "Title": "احرف واحد في اللعبة دي ❌ USE CODE BYSTY | FORTNITE",
+          "CategoryId": "33214",
+          "StartedAt": "2026-08-30T19:49:41",
+          "FinishedAt": "2026-08-30T22:25:19.3028974"
+        },
+        {
+          "Title": "بيو بيو مع الصحاب",
+          "CategoryId": "33214",
+          "StartedAt": "2026-08-30T22:25:19.3028974",
+          "FinishedAt": "2026-08-30T22:26:13.0789337"
+        },
+        {
+          "Title": "بيو بيو مع الصحاب",
+          "CategoryId": "7228",
+          "StartedAt": "2026-08-30T22:26:13.0789337",
+          "FinishedAt": "2026-08-30T22:26:36.5691179"
+        },
+        {
+          "Title": "بيو بيو مع الصحاب",
+          "CategoryId": "460630",
+          "StartedAt": "2026-08-30T22:26:36.5691179",
+          "FinishedAt": "2026-08-30T22:28:45.5966138"
+        },
+        {
+          "Title": "بيو بيو مع الصحاب و خبر جامد جداً! Rainbow Six Siege",
+          "CategoryId": "460630",
+          "StartedAt": "2026-08-30T22:28:45.5966138",
+          "FinishedAt": "2026-08-30T22:29:22.0749192"
+        }
+      ]
+    },
+    {
+      "Id": "321297847771",
+      "ChannelId": "440608207",
+      "Folder": {
+        "RelativePath": "Streams\\snapsizzle\\2026-08-30 19-06-44",
+        "ThumbnailPath": "Streams/snapsizzle/2026-08-30 19-06-44/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 10266737340,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-30T20:06:31",
+      "FinishedAt": "2026-08-31T01:23:53.6749106",
+      "Chapters": [
+        {
+          "Title": "Jesus loves you & so do I!",
+          "CategoryId": "460630",
+          "StartedAt": "2026-08-30T20:06:31",
+          "FinishedAt": "2026-08-30T20:14:21.469778"
+        },
+        {
+          "Title": "Jesus loves you & so do I!",
+          "CategoryId": "1953774734",
+          "StartedAt": "2026-08-30T20:14:21.469778",
+          "FinishedAt": "2026-08-31T01:23:53.6749106"
+        }
+      ]
+    },
+    {
+      "Id": "321195058010",
+      "ChannelId": "54507525",
+      "Folder": {
+        "RelativePath": "Streams\\pisty\\2026-08-30 21-29-28",
+        "ThumbnailPath": "Streams/pisty/2026-08-30 21-29-28/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 1838066602,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-30T22:29:12",
+      "FinishedAt": "2026-08-31T00:35:29.360179",
+      "Chapters": [
+        {
+          "Title": "بيو بيو مع الصحاب و خبر جامد جداً! Rainbow Six Siege",
+          "CategoryId": "460630",
+          "StartedAt": "2026-08-30T22:29:12",
+          "FinishedAt": "2026-08-31T00:35:29.360179"
+        }
+      ]
+    },
+    {
+      "Id": "321132441945",
+      "ChannelId": "90222378",
+      "Folder": {
+        "RelativePath": "Streams\\kruzadar\\2026-08-30 22-03-29",
+        "ThumbnailPath": "Streams/kruzadar/2026-08-30 22-03-29/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 21120136012,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-30T23:03:15",
+      "FinishedAt": "2026-08-31T09:10:21.4991584",
+      "Chapters": [
+        {
+          "Title": "🟡10hr🟡finish Far Cry 4 + legos + DBD! -- 🐉YouTube vids daily: @Kruzadar",
+          "CategoryId": "509658",
+          "StartedAt": "2026-08-30T23:03:15",
+          "FinishedAt": "2026-08-30T23:33:58.461532"
+        },
+        {
+          "Title": "🟡10hr🟡finish Far Cry 4 + legos + DBD! -- 🐉YouTube vids daily: @Kruzadar",
+          "CategoryId": "460384",
+          "StartedAt": "2026-08-30T23:33:58.461532",
+          "FinishedAt": "2026-08-31T01:36:51.1862441"
+        },
+        {
+          "Title": "🟡10hr🟡finish Far Cry 4 + legos + DBD! -- 🐉YouTube vids daily: @Kruzadar",
+          "CategoryId": "509658",
+          "StartedAt": "2026-08-31T01:36:51.1862441",
+          "FinishedAt": "2026-08-31T04:37:58.2148872"
+        },
+        {
+          "Title": "🟡10hr🟡DROPS🟡 finished Far Cry 4 + legos + now DBD! -- 🐉YouTube vids daily: @Kruzadar",
+          "CategoryId": "491487",
+          "StartedAt": "2026-08-31T04:37:58.2148872",
+          "FinishedAt": "2026-08-31T09:10:21.4991584"
+        }
+      ]
+    },
+    {
+      "Id": "315991666899",
+      "ChannelId": "1303435602",
+      "Folder": {
+        "RelativePath": "Streams\\laurenandersx\\2026-08-30 22-18-46",
+        "ThumbnailPath": "Streams/laurenandersx/2026-08-30 22-18-46/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 884772556,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-30T23:18:28",
+      "FinishedAt": "2026-08-31T01:33:27.5260069",
+      "Chapters": [
+        {
+          "Title": "🟣 Laurenandersx 🟣 Visage First Playthrough 🟣 Chat and Chill🟣",
+          "CategoryId": "494082",
+          "StartedAt": "2026-08-30T23:18:28",
+          "FinishedAt": "2026-08-31T01:33:27.5260069"
+        }
+      ]
+    },
+    {
+      "Id": "317350305655",
+      "ChannelId": "1093541726",
+      "Folder": {
+        "RelativePath": "Streams\\onlylizards\\2026-08-31 00-33-41",
+        "ThumbnailPath": "Streams/onlylizards/2026-08-31 00-33-41/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 2982170061,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-31T01:33:26",
+      "FinishedAt": "2026-08-31T10:18:10.1708709",
+      "Chapters": [
+        {
+          "Title": "LAST DAY TO DONATE! supporting our vets :D | !campweek !donate !merch !throne",
+          "CategoryId": "509658",
+          "StartedAt": "2026-08-31T01:33:26",
+          "FinishedAt": "2026-08-31T10:18:10.1708709"
+        }
+      ]
+    },
+    {
+      "Id": "320171359968",
+      "ChannelId": "198758158",
+      "Folder": {
+        "RelativePath": "Streams\\parkenharbor\\2026-08-31 02-05-12",
+        "ThumbnailPath": "Streams/parkenharbor/2026-08-31 02-05-12/thumbnail.jpg"
+      },
+      "Status": "Finished",
+      "StorageLocation": "Remote",
+      "StorageOperationStatus": "Uploaded",
+      "SizeBytes": 1669574044,
+      "StorageInstanceName": "discord-second",
+      "StartedAt": "2026-08-31T03:04:54",
+      "FinishedAt": "2026-08-31T07:19:00.9833667",
+      "Chapters": [
+        {
+          "Title": "⭐MORTAL SHELL 2 BETTER IMPRESS ME OR ELSE",
+          "CategoryId": "1832841853",
+          "StartedAt": "2026-08-31T03:04:54",
+          "FinishedAt": "2026-08-31T05:05:48.8917233"
+        },
+        {
+          "Title": "⭐SO EXCITED FOR THIS GAME | PLAGUE TALE !RESONANCE #AD",
+          "CategoryId": "570615518",
+          "StartedAt": "2026-08-31T05:05:48.8917233",
+          "FinishedAt": "2026-08-31T05:25:47.2796641"
+        },
+        {
+          "Title": "⭐[DROPS ON] SO EXCITED FOR THIS GAME | PLAGUE TALE !RESONANCE #AD",
+          "CategoryId": "570615518",
+          "StartedAt": "2026-08-31T05:25:47.2796641",
+          "FinishedAt": "2026-08-31T07:19:00.9833667"
         }
       ]
     }

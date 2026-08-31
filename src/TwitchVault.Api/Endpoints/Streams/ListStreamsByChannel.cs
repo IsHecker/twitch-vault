@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
+using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence.Extensions;
 
 namespace TwitchVault.Api.Endpoints.Streams;
@@ -20,7 +21,9 @@ public class ListStreamsByChannel : IEndpoint
             var activeStreams = await db.Streams
                 .AsNoTracking()
                 .ForChannel(channelId)
-                .Where(s => !s.IsDeleted)
+                .Where(s => s.StorageOperationStatus != StorageOperationStatus.DeleteRequest
+                    || s.StorageOperationStatus != StorageOperationStatus.Deleting
+                    || s.StorageOperationStatus != StorageOperationStatus.DeleteFailed)
                 .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl))
                 .ToListAsync();
 

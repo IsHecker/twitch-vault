@@ -7,7 +7,7 @@ namespace TwitchVault.Api.Endpoints.HLS;
 public class GetPlaylist : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/hls/{streamId}/playlist.m3u8", async (
+        app.MapGet("/api/{streamId}/playlist.m3u8", async (
             string streamId,
             AppDbContext db,
             IWebHostEnvironment env) =>

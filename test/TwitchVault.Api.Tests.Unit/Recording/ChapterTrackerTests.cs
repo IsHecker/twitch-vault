@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Events;
+using TwitchVault.Api.Persistence.Database;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Twitch.EventSub;
 
@@ -17,12 +18,15 @@ public class ChapterTrackerTests
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<ChapterTracker> _logger = Substitute.For<ILogger<ChapterTracker>>();
     private readonly TestDbContextFactory _factory = new();
+    private readonly IDataStore _dataStore;
 
-    private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1);
+    private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
     private readonly Domain.Stream _stream;
 
     public ChapterTrackerTests()
     {
+        _dataStore = new EfDataStore(_factory);
+
         _stream = Domain.Stream.Create(
             "ts_1", ChannelId, StreamFolder.Create("streams_root", ChannelName),
             new DateTime(2026, 1, 1), "Some Title", "Some Category");
@@ -30,7 +34,7 @@ public class ChapterTrackerTests
         _dateTimeProvider.DateTimeNow.Returns(new DateTime(2026, 1, 1, 1, 0, 0));
     }
 
-    private ChapterTracker CreateSut() => new(_eventBus, _factory, _dateTimeProvider, _logger);
+    private ChapterTracker CreateSut() => new(_eventBus, _dataStore, _dateTimeProvider, _logger);
 
     private async Task SeedStreamAsync()
     {

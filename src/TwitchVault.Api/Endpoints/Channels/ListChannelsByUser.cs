@@ -1,19 +1,17 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Auth;
 using TwitchVault.Api.Persistence.Extensions;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
-public class ListUserChannels : IEndpoint
+public class ListChannelsByUser : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/users/me/channels", async (
+        app.MapGet("/api/users/{userId:guid}/channels", async (
+            Guid userId,
             ClaimsPrincipal principal,
             AppDbContext db) =>
         {
-            var userId = principal.GetUserId();
-
             var userExists = await db.Users.AsNoTracking().AnyAsync(u => u.Id == userId);
             if (!userExists)
                 return Results.NotFound($"User '{userId}' not found.");
@@ -27,8 +25,8 @@ public class ListUserChannels : IEndpoint
 
             return Results.Ok(channels);
         })
-        .RequireAuthorization()
-        .WithName(nameof(ListUserChannels))
+        .RequireAuthorization("Admin")
+        .WithName(nameof(ListChannelsByUser))
         .WithTags("Channels")
         .WithSummary("List all channels belonging to a specific user")
         .Produces<List<ChannelResponse>>()

@@ -28,7 +28,7 @@ public sealed class StreamRecorder(
     ILogger<StreamRecorder> logger,
     CancellationToken parentCancellationToken) : IStreamRecorder
 {
-    private const int EmptyPollsDelay = 1;
+    private const int EmptyPollsDelay = 2;
 
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
@@ -85,7 +85,7 @@ public sealed class StreamRecorder(
         {
             await thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream, cancellationToken);
 
-            var (manifest, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel.Name, cancellationToken);
+            var (manifest, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(manifest))
             {
@@ -102,12 +102,12 @@ public sealed class StreamRecorder(
             var manifestResult = PlaylistSegmentExtractor.ExtractNewSegments(manifest, playlistWriter.LastTwitchMediaSequence);
             playlistWriter.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
 
-            var downloadedSegments = DownloadSegmentsAsync(manifestResult, cancellationToken);
-            await StoreSegmentsAsync(downloadedSegments, cancellationToken);
+            var fetchedSegments = FetchSegmentsAsync(manifestResult, cancellationToken);
+            await StoreSegmentsAsync(fetchedSegments, cancellationToken);
 
             if (manifestResult.IsStreamEnded)
             {
-                if (await IsChannelStillLiveAsync(cancellationToken))
+                if (manifestResult.Segments.Count != 0)
                 {
                     logger.LogWarning("ENDLIST tag seen but channel still live on Twitch. Ignoring and continuing to poll.");
                     continue;
@@ -117,7 +117,7 @@ public sealed class StreamRecorder(
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
         }
     }
 
@@ -128,7 +128,7 @@ public sealed class StreamRecorder(
         logger.LogDebug("Quality switch detected.");
     }
 
-    private async IAsyncEnumerable<DownloadedSegment> DownloadSegmentsAsync(
+    private async IAsyncEnumerable<SegmentContent> FetchSegmentsAsync(
         PlaylistExtractionResult manifestResult,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -136,15 +136,15 @@ public sealed class StreamRecorder(
         {
             var segmentStream = await twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken);
 
-            yield return new DownloadedSegment(segment, segmentStream);
+            yield return new SegmentContent(segment, segmentStream);
         }
     }
 
     private async Task StoreSegmentsAsync(
-        IAsyncEnumerable<DownloadedSegment> downloadedSegments,
+        IAsyncEnumerable<SegmentContent> fetchedSegments,
         CancellationToken cancellationToken)
     {
-        await foreach (var segment in downloadedSegments)
+        await foreach (var segment in fetchedSegments)
         {
             if (segment.Source.IsInitSegment && playlistWriter.HasInitSegment)
                 continue;
@@ -186,7 +186,7 @@ public sealed class StreamRecorder(
     private async Task<bool> IsChannelStillLiveAsync(CancellationToken cancellationToken)
     {
         var liveInfo = await twitchGqlClient.GetStreamMetadataAsync(_channel.Name, cancellationToken);
-        return liveInfo?.TwitchStreamId == _stream.Id;
+        return liveInfo?.Id == _stream.Id;
     }
 
     public async ValueTask DisposeAsync()

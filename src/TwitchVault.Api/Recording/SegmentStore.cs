@@ -11,7 +11,7 @@ public interface ISegmentStore
 {
     Task<LocalSegment?> SaveAsync(
         string streamFolderRelativePath,
-        DownloadedSegment segment,
+        SegmentContent segment,
         string? lastSegmentFileName,
         CancellationToken cancellationToken);
 
@@ -29,7 +29,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
 
     public async Task<LocalSegment?> SaveAsync(
         string streamFolderPath,
-        DownloadedSegment segment,
+        SegmentContent segment,
         string? lastSegmentFileName,
         CancellationToken cancellationToken)
     {
@@ -41,7 +41,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
 
     private async Task<LocalSegment?> SaveSegmentAsync(
         string streamFolderPath,
-        DownloadedSegment segment,
+        SegmentContent segment,
         string? lastSegmentFileName,
         CancellationToken cancellationToken)
     {
@@ -73,7 +73,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
 
     private async Task<LocalSegment> SaveInitSegmentAsync(
         string streamFolderPath,
-        DownloadedSegment segment,
+        SegmentContent segment,
         CancellationToken cancellationToken)
     {
         var initFileName = $"init{GetUrlExtension(segment.Source.Url)}";

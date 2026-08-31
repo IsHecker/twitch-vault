@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TwitchVault.Api.Endpoints.Admin;
 
-public class GetAllChannels : IEndpoint
+public class ListAllChannels : IEndpoint
 {
     // TODO: Use pagination
     public void MapEndpoint(IEndpointRouteBuilder app) =>
@@ -12,7 +12,7 @@ public class GetAllChannels : IEndpoint
                 .AsNoTracking()
                 .Select(c => Channels.ChannelResponse.FromDomain(c))
                 .ToListAsync();
-                
+
             return Results.Ok(channels);
         })
         .RequireAuthorization("Admin")
