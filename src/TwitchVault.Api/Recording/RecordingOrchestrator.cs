@@ -96,32 +96,38 @@ public sealed class RecordingOrchestrator(
         await recorder.StopAsync();
     }
 
-    public async Task<IReadOnlyList<string>> FinishAllRecordingsAsync()
+    public async Task<IReadOnlyList<string>> FinishAllRecordingsAsync(IReadOnlyCollection<string>? channelIds = null)
     {
-        var activeChannelIds = streamRecorderRegistry.GetActiveChannelIds();
-        if (activeChannelIds.Count == 0)
+        var targetChannelIds = channelIds ?? streamRecorderRegistry.GetActiveChannelIds();
+        if (targetChannelIds.Count == 0)
             return [];
 
-        logger.LogInformation("Stopping and finalizing all {Count} active recording session(s)...", activeChannelIds.Count);
+        logger.LogInformation("Stopping and finalizing {Count} active recording session(s)...", targetChannelIds.Count);
 
         var finishedChannels = new List<string>();
-        foreach (var channelId in activeChannelIds)
+        var backgroundTasks = new List<Task>();
+
+        foreach (var channelId in targetChannelIds)
         {
             if (streamRecorderRegistry.TryGet(channelId, out var recorder))
             {
+                if (streamRecorderRegistry.TryGetBackgroundTask(channelId, out var bgTask))
+                    backgroundTasks.Add(bgTask);
+
                 await recorder.FinishAsync();
                 finishedChannels.Add(channelId);
             }
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
         }
 
-        var backgroundTasks = streamRecorderRegistry.GetAllBackgroundTasks();
-        if (backgroundTasks.Length > 0)
+        if (backgroundTasks.Count > 0)
         {
             try
             {
                 await Task.WhenAll(backgroundTasks);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex)
             {
                 logger.LogWarning(ex, "Timeout or error waiting for recording sessions to finish.");
             }

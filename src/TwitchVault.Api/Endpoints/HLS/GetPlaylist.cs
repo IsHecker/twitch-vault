@@ -13,8 +13,12 @@ public class GetPlaylist : IEndpoint
             IWebHostEnvironment env) =>
         {
             var stream = await db.Streams.AsNoTracking().GetByIdAsync(streamId);
-            if (stream is null || stream.Status != StreamStatus.Finished || stream.IsDeleted)
+            if (stream is null
+                || stream.StorageLocation != StorageLocation.Remote
+                || stream.StorageOperationStatus != StorageOperationStatus.Uploaded)
+            {
                 return Results.NotFound();
+            }
 
             var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
 

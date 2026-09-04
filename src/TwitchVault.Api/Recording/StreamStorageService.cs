@@ -9,15 +9,12 @@ namespace TwitchVault.Api.Recording;
 // TODO: Refactor and improve implementation when it's working.
 public interface IStreamStorageService
 {
-    const string RemoteUrlsFileName = "remoteUrls.txt";
-
     Task<bool> UploadBatchAsync(
         IEnumerable<string> localFilePaths,
         Domain.Stream stream,
-        StreamWriter remoteUrlsWriter,
         CancellationToken cancellationToken = default);
 
-    Task<bool> TryFinalizeStorageAsync(
+    Task<bool> FinalizeStorageAsync(
         Domain.Stream stream,
         CancellationToken cancellationToken = default);
 
@@ -32,26 +29,19 @@ public sealed class StreamStorageService(
     IWebHostEnvironment env,
     ILogger<StreamStorageService> logger) : IStreamStorageService
 {
-    // TODO: Why a streamwriter is being passed?
     public async Task<bool> UploadBatchAsync(
         IEnumerable<string> localFilePaths,
         Domain.Stream stream,
-        StreamWriter remoteUrlsWriter,
         CancellationToken cancellationToken = default)
     {
-        _ = localFilePaths.TryGetNonEnumeratedCount(out var filePathsCount);
-        var storageFiles = new List<StorageFile>(filePathsCount);
-        var localPathByFileName = new Dictionary<string, string>(filePathsCount, StringComparer.OrdinalIgnoreCase);
+        var (storageFiles, localPathByFileName) = OpenSourceFiles(localFilePaths);
 
         try
         {
-            foreach (var path in localFilePaths)
-            {
-                var fs = File.OpenRead(path);
-                var storageFile = new StorageFile(path, ResolveContentType(path), fs);
-                storageFiles.Add(storageFile);
-                localPathByFileName[storageFile.FileName] = path;
-            }
+            var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+            var remoteUrlsFilePath = Path.Combine(localDirectory, StreamFolder.RemoteUrlsFile);
+            await using var remoteUrlsWriter = new StreamWriter(
+                new FileStream(remoteUrlsFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite));
 
             var uploadResult = await cloudStorageService.UploadAsync(
                 storageFiles,
@@ -79,32 +69,50 @@ public sealed class StreamStorageService(
 
             foreach (var remoteUrl in response.RemoteUrls)
             {
-                await remoteUrlsWriter.WriteLineAsync(remoteUrl.Url);
-                if (localPathByFileName.TryGetValue(remoteUrl.FileName, out var localPath))
-                    File.Delete(localPath);
+                await remoteUrlsWriter.WriteLineAsync($"{remoteUrl.FileName}\t{remoteUrl.Url}");
             }
 
             await remoteUrlsWriter.FlushAsync(cancellationToken);
+
+            foreach (var remoteUrl in response.RemoteUrls)
+            {
+                if (!localPathByFileName.TryGetValue(remoteUrl.FileName, out var localPath))
+                    continue;
+
+                try
+                {
+                    File.Delete(localPath);
+                }
+                catch (IOException ex)
+                {
+                    logger.LogWarning(ex,
+                        "Uploaded '{FileName}' for stream '{StreamId}' but failed to delete local copy '{Path}'.",
+                        remoteUrl.FileName, stream.Id, localPath);
+                }
+            }
+
             return true;
         }
         finally
         {
             foreach (var file in storageFiles)
+            {
                 await file.Content.DisposeAsync();
+            }
         }
     }
 
-    public async Task<bool> TryFinalizeStorageAsync(Domain.Stream stream, CancellationToken cancellationToken)
+    public async Task<bool> FinalizeStorageAsync(Domain.Stream stream, CancellationToken cancellationToken)
     {
-        var localDir = stream.Folder.GetAbsolutePath(env.ContentRootPath);
-        if (!Directory.Exists(localDir))
+        var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        if (!Directory.Exists(localDirectory))
         {
             logger.LogWarning("Cannot finalize storage for stream '{StreamId}': directory '{Dir}' not found.",
-                stream.Id, localDir);
+                stream.Id, localDirectory);
             return false;
         }
 
-        var remainingSegments = new DirectoryInfo(localDir)
+        var remainingSegments = new DirectoryInfo(localDirectory)
             .EnumerateFiles()
             .Where(f => HlsSegmentNaming.IsSegmentFile(f.FullName))
             .OrderBy(f => HlsSegmentNaming.GetSegmentIndex(f.FullName))
@@ -118,12 +126,12 @@ public sealed class StreamStorageService(
             return false;
         }
 
-        var remoteUrlsFilePath = Path.Combine(localDir, IStreamStorageService.RemoteUrlsFileName);
+        var remoteUrlsFilePath = Path.Combine(localDirectory, StreamFolder.RemoteUrlsFile);
         if (!File.Exists(remoteUrlsFilePath))
         {
             logger.LogWarning(
                 "Cannot finalize storage for stream '{StreamId}': '{FileName}' not found.",
-                stream.Id, IStreamStorageService.RemoteUrlsFileName);
+                stream.Id, StreamFolder.RemoteUrlsFile);
             return false;
         }
 
@@ -159,41 +167,51 @@ public sealed class StreamStorageService(
         Domain.Stream stream,
         CancellationToken cancellationToken = default)
     {
-        if (stream.StorageLocation == StorageLocation.Remote)
+        var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
+        if (stream.StorageLocation == StorageLocation.Remote && File.Exists(playlistPath))
         {
-            var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
-            if (File.Exists(playlistPath))
+            // TODO: use the urls from the remoteurls file!
+            var remoteUrls = PlaylistSegmentExtractor
+                .EnumerateSegments(File.ReadLines(playlistPath))
+                .Select(seg => seg.Url);
+
+            var result = await cloudStorageService.DeleteBatchAsync(
+                stream.StorageInstanceName!, remoteUrls, cancellationToken);
+
+            if (result.IsFailure)
             {
-                // TODO: use the urls from the remoteurls file!
-                var remoteUrls = PlaylistSegmentExtractor
-                    .EnumerateSegments(File.ReadLines(playlistPath))
-                    .Select(seg => seg.Url);
-
-                var result = await cloudStorageService.DeleteBatchAsync(
-                    stream.StorageInstanceName!, remoteUrls, cancellationToken);
-
-                if (result.IsFailure)
-                {
-                    logger.LogError(
-                        "Failed to delete remote segments for stream '{StreamId}' on instance '{Instance}': {Error}",
-                        stream.Id, stream.StorageInstanceName, result.Error);
-                    return false;
-                }
+                logger.LogError(
+                    "Failed to delete remote segments for stream '{StreamId}' on instance '{Instance}': {Error}",
+                    stream.Id, stream.StorageInstanceName, result.Error);
+                return false;
             }
         }
 
-        await dataStore.ExecuteAsync(async () =>
-        {
-            await dataStore.DeleteAsync<Domain.Stream, string>(stream.Id);
-            return Task.CompletedTask;
-        });
+        await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<Domain.Stream, string>(stream.Id));
 
-        var localDir = stream.Folder.GetAbsolutePath(env.ContentRootPath);
-        await IOUtils.DeleteDirectoryWithRetriesAsync(localDir);
+        var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        await IOUtils.DeleteDirectoryWithRetriesAsync(localDirectory);
         return true;
     }
 
-    public static string ResolveContentType(string filePath) =>
+    private static (List<StorageFile> Files, Dictionary<string, string> LocalPathByFileName) OpenSourceFiles(
+        IEnumerable<string> localFilePaths)
+    {
+        _ = localFilePaths.TryGetNonEnumeratedCount(out var count);
+        var storageFiles = new List<StorageFile>(count);
+        var localPathByFileName = new Dictionary<string, string>(count, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in localFilePaths)
+        {
+            var storageFile = new StorageFile(path, ResolveContentType(path), File.OpenRead(path));
+            storageFiles.Add(storageFile);
+            localPathByFileName[storageFile.FileName] = path;
+        }
+
+        return (storageFiles, localPathByFileName);
+    }
+
+    private static string ResolveContentType(string filePath) =>
         Path.GetExtension(filePath).ToLowerInvariant() switch
         {
             ".ts" => "video/mp2t",

@@ -17,13 +17,7 @@ public class ManifestPollerTests
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<ManifestPoller> _logger = Substitute.For<ILogger<ManifestPoller>>();
     private readonly TestDbContextFactory _factory = new();
-    private readonly IDataStore _dataStore;
     private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
-
-    public ManifestPollerTests()
-    {
-        _dataStore = new EfDataStore(_factory);
-    }
 
     private ManifestPoller CreateSut(AppDbContext db)
     {
@@ -34,7 +28,7 @@ public class ManifestPollerTests
         }
 
         _twitchGqlClient.GetPlaylistContentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("some_manifest");
-        return new(_twitchGqlClient, _dataStore, _dateTimeProvider, _logger);
+        return new(_twitchGqlClient, _dateTimeProvider, _logger);
     }
 
     [Fact]

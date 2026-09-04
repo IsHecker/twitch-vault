@@ -5,6 +5,7 @@ namespace TwitchVault.Api.Domain;
 public sealed class StreamFolder
 {
     public const string PlaylistFile = "playlist.m3u8";
+    public const string RemoteUrlsFile = "remoteUrls.txt";
     private const string ThumbnailFile = "thumbnail.jpg";
     private const string TimestampFormat = "yyyy-MM-dd HH-mm-ss";
 

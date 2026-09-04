@@ -69,7 +69,7 @@ public sealed class StreamFinalizer(
     {
         stream.MarkAsStopped(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
-        await storageService.TryFinalizeStorageAsync(stream);
+        await storageService.FinalizeStorageAsync(stream);
         logger.LogDebug("Recording manually stopped.");
     }
 
@@ -92,7 +92,7 @@ public sealed class StreamFinalizer(
     {
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
-        await storageService.TryFinalizeStorageAsync(stream);
+        await storageService.FinalizeStorageAsync(stream);
 
         var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
         logger.LogInformation("Stream finished. Total duration: {Duration}.", duration);

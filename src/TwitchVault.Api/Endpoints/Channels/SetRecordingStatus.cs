@@ -23,9 +23,9 @@ public class SetArchiveStatus : IEndpoint
             await db.SaveChangesAsync();
 
             if (request.Archive)
-                _ = twitchSubscription.AddChannelsAsync([channel], default);
-            else
                 _ = twitchSubscription.RemoveChannelAsync(channel, default);
+            else
+                _ = twitchSubscription.AddChannelsAsync([channel], default);
 
             return Results.NoContent();
         })

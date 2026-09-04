@@ -48,8 +48,6 @@ public sealed class StorageUploadJob(
             .Select(f => f.FullName)
             .ToList();
 
-        var remoteUrlsFilePath = Path.Combine(localDirectory, IStreamStorageService.RemoteUrlsFileName);
-
         if (remainingSegments.Count > 0)
         {
             logger.LogInformation(
@@ -66,7 +64,6 @@ public sealed class StorageUploadJob(
             await UploadRemainingSegmentsAsync(
                 remainingSegments,
                 stream,
-                remoteUrlsFilePath,
                 cancellationToken);
         }
         else
@@ -76,17 +73,14 @@ public sealed class StorageUploadJob(
                 streamTitle);
         }
 
-        await storageService.TryFinalizeStorageAsync(stream, cancellationToken);
+        await storageService.FinalizeStorageAsync(stream, cancellationToken);
     }
 
     private async Task UploadRemainingSegmentsAsync(
         List<string> remainingSegments,
         Domain.Stream stream,
-        string remoteUrlsFilePath,
         CancellationToken cancellationToken)
     {
-        await using var remoteUrlsWriter = new StreamWriter(remoteUrlsFilePath, append: true);
-
         try
         {
             const int BatchSize = 5;
@@ -95,7 +89,7 @@ public sealed class StorageUploadJob(
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var succeeded = await storageService.UploadBatchAsync(
-                    batch, stream, remoteUrlsWriter, cancellationToken);
+                    batch, stream, cancellationToken);
 
                 if (succeeded)
                     continue;

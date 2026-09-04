@@ -82,7 +82,7 @@ public class StreamFinalizerTests
         stream.FinishedAt.Should().Be(stoppedAt);
         using var dbCheck = _factory.CreateDbContext();
         dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
-        await _storageService.Received(1).TryFinalizeStorageAsync(stream);
+        await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
 
@@ -137,7 +137,7 @@ public class StreamFinalizerTests
         stream.FinishedAt.Should().Be(finishedAt);
         using var dbCheck = _factory.CreateDbContext();
         dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
-        await _storageService.Received(1).TryFinalizeStorageAsync(stream);
+        await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
     [Fact]

@@ -80,14 +80,6 @@ public sealed class TwitchHelixClient(
         return SendRequestAsync(HttpMethod.Delete, url, null, cancellationToken);
     }
 
-    /// <summary>
-    /// Fetches up to <paramref name="count"/> currently live streams from the Twitch Helix API,
-    /// optionally filtered to a viewer count range. Because Helix has no native viewer range filter,
-    /// results are paginated (max <paramref name="maxPages"/> pages × 100 per page) and filtered
-    /// client-side until <paramref name="count"/> matching streams are collected.
-    /// Streams are returned in descending viewer order by the API, so high-viewer targets are fast;
-    /// low-viewer targets may require more pages.
-    /// </summary>
     public async Task<List<(string UserId, string UserLogin, int ViewerCount)>> GetLiveStreamsAsync(
         int count,
         string language = "",

@@ -107,9 +107,9 @@ public sealed class StreamRecorder(
 
             if (manifestResult.IsStreamEnded)
             {
-                if (manifestResult.Segments.Count != 0)
+                if (manifestResult.Segments.Where(s => !s.IsInitSegment).Any())
                 {
-                    logger.LogWarning("ENDLIST tag seen but channel still live on Twitch. Ignoring and continuing to poll.");
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     continue;
                 }
 
@@ -165,7 +165,7 @@ public sealed class StreamRecorder(
             else
                 await playlistWriter.AddSegmentAsync(localSegment.FilePath, localSegment.Duration, cancellationToken);
 
-            segmentUploader.Add(localSegment);
+            await segmentUploader.AddAsync(localSegment);
         }
     }
 
@@ -177,17 +177,11 @@ public sealed class StreamRecorder(
 
         _streamSizeBytes += segment.SizeBytes;
         await playlistWriter.AddSegmentAsync(segment.FilePath, segment.Duration, cancellationToken);
-        segmentUploader.Add(segment);
+        await segmentUploader.AddAsync(segment);
     }
 
     private void SetEndReason(SessionEndReason reason) =>
         Interlocked.Exchange(ref _endReason, reason);
-
-    private async Task<bool> IsChannelStillLiveAsync(CancellationToken cancellationToken)
-    {
-        var liveInfo = await twitchGqlClient.GetStreamMetadataAsync(_channel.Name, cancellationToken);
-        return liveInfo?.Id == _stream.Id;
-    }
 
     public async ValueTask DisposeAsync()
     {

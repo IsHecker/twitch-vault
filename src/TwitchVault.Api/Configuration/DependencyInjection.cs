@@ -93,16 +93,7 @@ public static class DependencyInjection
 
     private static IServiceCollection AddTwitchAndEventSub(this IServiceCollection services)
     {
-        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>().AddThrottle(
-            opts =>
-            {
-                opts.TotalRequests = 100;
-                opts.ResetWindow = TimeSpan.FromMinutes(1);
-                opts.QueueLimit = 5;
-                opts.MaxRetryAttempts = 3;
-                opts.BaseDelay = TimeSpan.FromSeconds(3);
-                opts.RequestTimeout = TimeSpan.FromSeconds(30);
-            });
+        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
 
         services.AddSingleton<TwitchHelixClient>();
         services.AddHttpClient(nameof(TwitchHelixClient)).AddThrottle(
@@ -110,7 +101,7 @@ public static class DependencyInjection
             {
                 opts.TotalRequests = 100;
                 opts.ResetWindow = TimeSpan.FromMinutes(1);
-                opts.QueueLimit = 5;
+                opts.QueueLimit = 50;
                 opts.MaxRetryAttempts = 3;
                 opts.BaseDelay = TimeSpan.FromSeconds(3);
                 opts.RequestTimeout = TimeSpan.FromSeconds(30);
@@ -138,6 +129,7 @@ public static class DependencyInjection
         services.AddSingleton<IRecordingOrchestrator, RecordingOrchestrator>();
         services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
         services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
+        services.AddSingleton<IStreamStorageService, StreamStorageService>();
 
         services.AddTransient<SegmentStateTracker>();
         services.AddTransient<IChapterTracker, ChapterTracker>();
@@ -145,8 +137,10 @@ public static class DependencyInjection
         services.AddTransient<ISegmentStore, SegmentStore>();
         services.AddTransient<IManifestPoller, ManifestPoller>();
         services.AddTransient<IThumbnailManager, ThumbnailManager>();
-        services.AddTransient<IStreamStorageService, StreamStorageService>();
         services.AddTransient<ISegmentUploader, LiveSegmentUploader>();
+
+        services.AddSingleton<IUploadQueue, UploadQueue>();
+        services.AddHostedService<UploadQueueBackgroundService>();
 
         return services;
     }

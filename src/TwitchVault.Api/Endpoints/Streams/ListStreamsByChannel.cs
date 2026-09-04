@@ -21,9 +21,8 @@ public class ListStreamsByChannel : IEndpoint
             var activeStreams = await db.Streams
                 .AsNoTracking()
                 .ForChannel(channelId)
-                .Where(s => s.StorageOperationStatus != StorageOperationStatus.DeleteRequest
-                    || s.StorageOperationStatus != StorageOperationStatus.Deleting
-                    || s.StorageOperationStatus != StorageOperationStatus.DeleteFailed)
+                .Where(s => s.StorageLocation == StorageLocation.Remote
+                    && s.StorageOperationStatus == StorageOperationStatus.Uploaded)
                 .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl))
                 .ToListAsync();
 

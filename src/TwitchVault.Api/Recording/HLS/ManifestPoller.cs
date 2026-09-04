@@ -1,6 +1,5 @@
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording.HLS;
@@ -14,7 +13,6 @@ public interface IManifestPoller
 
 public sealed class ManifestPoller(
     ITwitchGqlClient twitchClient,
-    IDataStore dataStore,
     IDateTimeProvider dateTimeProvider,
     ILogger<ManifestPoller> logger) : IManifestPoller
 {
