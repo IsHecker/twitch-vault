@@ -134,9 +134,22 @@ public sealed class StreamRecorder(
     {
         foreach (var segment in manifestResult.Segments)
         {
-            var segmentStream = await twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken);
+            System.IO.Stream? segmentStream;
+            try
+            {
+                segmentStream = await twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                if (ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound })
+                    logger.LogInformation("Segment unavailable on CDN (404) for channel '{Channel}'. Skipping segment.", _channel.Name);
+                else
+                    logger.LogWarning(ex, "Failed to download a segment for channel '{Channel}'. Skipping segment.", _channel.Name);
+                continue;
+            }
 
-            yield return new SegmentContent(segment, segmentStream);
+            if (segmentStream is not null)
+                yield return new SegmentContent(segment, segmentStream);
         }
     }
 
@@ -146,26 +159,36 @@ public sealed class StreamRecorder(
     {
         await foreach (var segment in fetchedSegments)
         {
-            if (segment.Source.IsInitSegment && playlistWriter.HasInitSegment)
-                continue;
+            try
+            {
+                if (segment.Source.IsInitSegment && playlistWriter.HasInitSegment)
+                {
+                    await segment.Content.DisposeAsync();
+                    continue;
+                }
 
-            var localSegment = await segmentStore.SaveAsync(
-                _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory),
-                segment,
-                playlistWriter.LastSegmentFileName,
-                cancellationToken);
+                var localSegment = await segmentStore.SaveAsync(
+                    _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory),
+                    segment,
+                    playlistWriter.LastSegmentFileName,
+                    cancellationToken);
 
-            if (localSegment is null)
-                continue;
+                if (localSegment is null)
+                    continue;
 
-            _streamSizeBytes += localSegment.SizeBytes;
+                _streamSizeBytes += localSegment.SizeBytes;
 
-            if (segment.Source.IsInitSegment)
-                await playlistWriter.SetInitSegmentAsync(localSegment.FilePath, cancellationToken);
-            else
-                await playlistWriter.AddSegmentAsync(localSegment.FilePath, localSegment.Duration, cancellationToken);
+                if (segment.Source.IsInitSegment)
+                    await playlistWriter.SetInitSegmentAsync(localSegment.FilePath, cancellationToken);
+                else
+                    await playlistWriter.AddSegmentAsync(localSegment.FilePath, localSegment.Duration, cancellationToken);
 
-            await segmentUploader.AddAsync(localSegment);
+                await segmentUploader.AddAsync(localSegment);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Error storing segment for channel '{Channel}'. Skipping segment.", _channel.Name);
+            }
         }
     }
 

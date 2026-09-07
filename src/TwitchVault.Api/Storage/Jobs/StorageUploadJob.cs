@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Quartz;
+using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence.Extensions;
 using TwitchVault.Api.Recording;
@@ -12,6 +13,7 @@ public sealed class StorageUploadJob(
     IDataStore dataStore,
     IStreamStorageService storageService,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
+    IOptionsMonitor<VaultOptions> vaultOptions,
     IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
@@ -20,13 +22,21 @@ public sealed class StorageUploadJob(
         if (!jobsOptions.CurrentValue.GetJob(JobOptions.StorageUpload).Enabled)
             return;
 
-        var stream = await dataStore.QueryAsync<Domain.Stream, Domain.Stream?>(
-            streams => streams.PendingUpload().OrderBy(s => s.StartedAt).FirstOrDefaultAsync(context.CancellationToken));
+        var pendingStreams = await dataStore.QueryAsync(
+            ctx => ctx.Streams.PendingUpload().OrderBy(s => s.StartedAt).Take(10).ToListAsync(context.CancellationToken));
 
-        if (stream is null)
+        if (pendingStreams.Count == 0)
             return;
 
-        await UploadStreamAsync(stream, context.CancellationToken);
+        logger.LogInformation("StorageUploadJob found {Count} stream(s) pending upload recovery.", pendingStreams.Count);
+
+        foreach (var stream in pendingStreams)
+        {
+            if (context.CancellationToken.IsCancellationRequested)
+                break;
+
+            await UploadStreamAsync(stream, context.CancellationToken);
+        }
     }
 
     private async Task UploadStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
@@ -83,8 +93,8 @@ public sealed class StorageUploadJob(
     {
         try
         {
-            const int BatchSize = 5;
-            foreach (var batch in remainingSegments.Chunk(BatchSize))
+            var batchSize = Math.Max(5, vaultOptions.CurrentValue.UploadBatchSize);
+            foreach (var batch in remainingSegments.Chunk(batchSize))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

@@ -118,7 +118,7 @@ public sealed class RecordingOrchestrator(
                 finishedChannels.Add(channelId);
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
         }
 
         if (backgroundTasks.Count > 0)

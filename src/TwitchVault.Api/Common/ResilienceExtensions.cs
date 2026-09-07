@@ -36,13 +36,11 @@ public static class ResilienceExtensions
 
         builder.AddResilienceHandler($"{builder.Name}-ThrottledPipeline", pipelineBuilder =>
         {
-            // Rate limiter MUST be outermost so every attempt (including retries) acquires a token.
-            // If placed inside the retry, retry attempts bypass the local limiter entirely.
             pipelineBuilder.AddRateLimiter(localLimiter);
             pipelineBuilder.AddRetry(new HttpRetryStrategyOptions
             {
                 MaxRetryAttempts = options.MaxRetryAttempts,
-                BackoffType = DelayBackoffType.Linear,
+                BackoffType = DelayBackoffType.Exponential,
                 UseJitter = true,
                 Delay = options.BaseDelay,
                 DelayGenerator = args =>

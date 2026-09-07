@@ -85,7 +85,6 @@ public sealed class StreamFinalizer(
 
         stream.MarkAsInterrupted();
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
-        // await recording.TryStartRecordingAsync(stream.ChannelId, channelName);
     }
 
     private async Task HandleStreamEndedAsync(Domain.Stream stream, long sizeBytes)
@@ -95,7 +94,7 @@ public sealed class StreamFinalizer(
         await storageService.FinalizeStorageAsync(stream);
 
         var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
-        logger.LogInformation("Stream finished. Total duration: {Duration}.", duration);
+        logger.LogInformation("Stream finished. Total duration: {Duration} ({Instance}).", duration, stream.StorageInstanceName);
     }
 
     private async Task<bool> IsChannelLiveAsync(Domain.Stream stream, string channelName)

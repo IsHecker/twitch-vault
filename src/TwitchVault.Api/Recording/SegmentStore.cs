@@ -39,25 +39,6 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         return await SaveSegmentAsync(streamFolderPath, segment, lastSegmentFileName, cancellationToken);
     }
 
-    private async Task<LocalSegment?> SaveSegmentAsync(
-        string streamFolderPath,
-        SegmentContent segment,
-        string? lastSegmentFileName,
-        CancellationToken cancellationToken)
-    {
-        string fileName = GetSegmentFilePath(lastSegmentFileName, GetUrlExtension(segment.Source.Url));
-        _currentFilePath = Path.Combine(streamFolderPath, fileName);
-
-        await using var fileStream = fileSystem.OpenWrite(_currentFilePath, FileMode.Append);
-        await segment.Content.CopyToAsync(fileStream!, cancellationToken);
-        await segment.Content.DisposeAsync();
-
-        _accumulatedDuration += segment.Source.Duration;
-        _fileSizeBytes += fileStream.Length;
-
-        return !IsFull ? null : CloseCurrentSegment();
-    }
-
     public LocalSegment? CloseCurrentSegment()
     {
         if (string.IsNullOrEmpty(_currentFilePath))
@@ -76,14 +57,33 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         SegmentContent segment,
         CancellationToken cancellationToken)
     {
+        using var content = segment.Content;
         var initFileName = $"init{GetUrlExtension(segment.Source.Url)}";
         var initPath = Path.Combine(streamFolderPath, initFileName);
 
         await using var fileStream = fileSystem.OpenWrite(initPath, FileMode.Create);
-        await segment.Content.CopyToAsync(fileStream, cancellationToken);
-        await segment.Content.DisposeAsync();
+        await content.CopyToAsync(fileStream, cancellationToken);
 
         return new LocalSegment(initPath, 0, fileStream.Length);
+    }
+
+    private async Task<LocalSegment?> SaveSegmentAsync(
+        string streamFolderPath,
+        SegmentContent segment,
+        string? lastSegmentFileName,
+        CancellationToken cancellationToken)
+    {
+        using var content = segment.Content;
+        string fileName = GetSegmentFilePath(lastSegmentFileName, GetUrlExtension(segment.Source.Url));
+        _currentFilePath = Path.Combine(streamFolderPath, fileName);
+
+        await using var fileStream = fileSystem.OpenWrite(_currentFilePath, FileMode.Append);
+        await content.CopyToAsync(fileStream!, cancellationToken);
+
+        _accumulatedDuration += segment.Source.Duration;
+        _fileSizeBytes += fileStream.Length;
+
+        return !IsFull ? null : CloseCurrentSegment();
     }
 
     private static string GetUrlExtension(string url) =>

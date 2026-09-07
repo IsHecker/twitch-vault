@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using TwitchVault.Api.Common;
 using Microsoft.Extensions.Options;
+using System.Net.Sockets;
 
 namespace TwitchVault.Api.Twitch;
 
@@ -41,14 +42,22 @@ public sealed class TwitchGqlClient(
 
     public async Task<StreamMetadata?> GetStreamMetadataAsync(string channel, CancellationToken cancellationToken)
     {
-        var payload = TwitchGqlPayloads.StreamMetadata(channel);
-        using var response = await SendGqlRequestAsync(payload, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-            return null;
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            var payload = TwitchGqlPayloads.StreamMetadata(channel);
+            using var response = await SendGqlRequestAsync(payload, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+                if (document is not null)
+                    return ParseStreamMetadata(document.RootElement);
+            }
 
-        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+            if (attempt < 3 && !cancellationToken.IsCancellationRequested)
+                await Task.Delay(TimeSpan.FromMilliseconds(400 * attempt), cancellationToken);
+        }
 
-        return ParseStreamMetadata(document!.RootElement);
+        return null;
     }
 
     public async Task<Dictionary<Domain.Channel, StreamMetadata?>> GetStreamMetadataAsync(
@@ -74,36 +83,94 @@ public sealed class TwitchGqlClient(
 
     public async Task<string> GetMasterPlaylistAsync(string channel, CancellationToken cancellationToken)
     {
-        var payload = TwitchGqlPayloads.PlaybackToken(channel);
-        using var response = await SendGqlRequestAsync(payload, cancellationToken);
-        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+        try
+        {
+            var payload = TwitchGqlPayloads.PlaybackToken(channel);
+            using var response = await SendGqlRequestAsync(payload, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return string.Empty;
 
-        var token = document!.RootElement.GetProperty("data")
-            .GetProperty("streamPlaybackAccessToken")
-            .Deserialize<PlaybackToken>();
+            using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+            if (document is null)
+                return string.Empty;
 
-        var masterPlaylistUrl = BuildMasterPlaylistUrl(channel, token!);
-        var playlistResponse = await httpClient.GetAsync(masterPlaylistUrl, cancellationToken);
-        if (!playlistResponse.IsSuccessStatusCode)
+            if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind == JsonValueKind.Null)
+                return string.Empty;
+
+            if (!data.TryGetProperty("streamPlaybackAccessToken", out var tokenElement) || tokenElement.ValueKind == JsonValueKind.Null)
+                return string.Empty;
+
+            var token = tokenElement.Deserialize<PlaybackToken>();
+            var masterPlaylistUrl = BuildMasterPlaylistUrl(channel, token);
+            var playlistResponse = await httpClient.GetAsync(masterPlaylistUrl, cancellationToken);
+            if (!playlistResponse.IsSuccessStatusCode)
+                return string.Empty;
+
+            return await playlistResponse.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Error fetching master playlist for channel '{Channel}'.", channel);
             return string.Empty;
-
-        return await playlistResponse.Content.ReadAsStringAsync(cancellationToken);
+        }
     }
 
     public async Task<string> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken)
     {
-        var response = await httpClient.GetAsync(playlistUrl, cancellationToken);
-        return response.IsSuccessStatusCode ?
-            await response.Content.ReadAsStringAsync(cancellationToken)
-            : string.Empty;
+        try
+        {
+            var response = await httpClient.GetAsync(playlistUrl, cancellationToken);
+            return response.IsSuccessStatusCode ?
+                await response.Content.ReadAsStringAsync(cancellationToken)
+                : string.Empty;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Error fetching playlist content");
+            return string.Empty;
+        }
     }
 
     public async Task<Stream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken)
     {
-        var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStreamAsync(cancellationToken);
+        const int maxAttempts = 3;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var memoryStream = new MemoryStream();
+                await response.Content.CopyToAsync(memoryStream, cancellationToken);
+                memoryStream.Position = 0;
+                return memoryStream;
+            }
+            // TODO: remove this catch
+            catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
+            {
+                if (attempt < maxAttempts && !cancellationToken.IsCancellationRequested)
+                {
+                    logger.LogDebug("Segment not yet available on CDN (404). Retrying in {Delay}ms... ({Attempt}/{MaxAttempts})", 300 * attempt, attempt, maxAttempts);
+                    await Task.Delay(TimeSpan.FromMilliseconds(300 * attempt), cancellationToken);
+                    continue;
+                }
+
+                throw;
+            }
+            catch (Exception ex) when (attempt < maxAttempts && !cancellationToken.IsCancellationRequested && IsTransientNetworkException(ex))
+            {
+                logger.LogWarning(ex, "Transient network error (attempt {Attempt}/{MaxAttempts}). Retrying...", attempt, maxAttempts);
+                await Task.Delay(TimeSpan.FromMilliseconds(300 * attempt), cancellationToken);
+            }
+        }
     }
+
+    private static bool IsTransientNetworkException(Exception ex) =>
+        ex is HttpRequestException
+        or IOException
+        or SocketException
+        or HttpIOException;
 
     public async Task<string?> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken)
     {
@@ -200,7 +267,9 @@ public sealed class TwitchGqlClient(
         var streamId = stream.GetProperty("id").GetString()!;
         var startedAt = EgyptTimeProvider.ToEgyptDateTime(stream.GetProperty("createdAt").GetDateTimeOffset());
 
-        var title = broadcastSettings.GetProperty("title").GetString() ?? string.Empty;
+        var rawTitle = broadcastSettings.GetProperty("title").GetString();
+        var title = string.IsNullOrWhiteSpace(rawTitle) ? "Untitled Stream" : rawTitle;
+
         var game = broadcastSettings.GetProperty("game");
         var gameId = game.ValueKind != JsonValueKind.Null
             ? game.GetProperty("id").GetString() ?? "Unknown"

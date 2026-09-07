@@ -3,7 +3,8 @@ namespace TwitchVault.Api.Recording;
 public record UploadBatch(
     Domain.Stream Stream,
     IReadOnlyList<string> LocalFilePaths,
-    Action? OnCompleted = null);
+    Action? OnCompleted = null,
+    bool IsUrgent = false);
 
 public interface IUploadQueue
 {

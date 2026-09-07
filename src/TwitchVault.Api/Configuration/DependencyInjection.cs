@@ -22,6 +22,9 @@ using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
 using CloudStorage.Core.Catbox;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
+using System.Net;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -93,7 +96,42 @@ public static class DependencyInjection
 
     private static IServiceCollection AddTwitchAndEventSub(this IServiceCollection services)
     {
-        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>();
+        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>()
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+                PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
+                MaxConnectionsPerServer = 500
+            })
+            .AddResilienceHandler($"TwitchGqlClient-RetryPipeline", pipelineBuilder =>
+            {
+                pipelineBuilder.AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = 3,
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,
+                    Delay = TimeSpan.FromMilliseconds(500),
+                    ShouldHandle = args =>
+                    {
+                        var isNetworkError = args.Outcome.Exception is HttpRequestException;
+                        var isTransientHttpError = (args.Outcome.Result?.StatusCode) switch
+                        {
+                            HttpStatusCode.TooManyRequests => true,
+                            HttpStatusCode.RequestTimeout => true,
+                            HttpStatusCode.InternalServerError => true,
+                            HttpStatusCode.BadGateway => true,
+                            HttpStatusCode.ServiceUnavailable => true,
+                            HttpStatusCode.GatewayTimeout => true,
+                            _ => false
+                        };
+                        return ValueTask.FromResult(isNetworkError || isTransientHttpError);
+                    }
+                });
+                pipelineBuilder.AddTimeout(TimeSpan.FromSeconds(20));
+            });
 
         services.AddSingleton<TwitchHelixClient>();
         services.AddHttpClient(nameof(TwitchHelixClient)).AddThrottle(

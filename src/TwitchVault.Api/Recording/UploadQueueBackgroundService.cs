@@ -18,11 +18,6 @@ public sealed class UploadQueueBackgroundService(
     private static readonly TimeSpan ShutdownDrainTimeout = TimeSpan.FromSeconds(15);
 
     private readonly ConcurrentDictionary<int, Worker> _activeWorkers = new();
-
-    // Every worker that has been started but hasn't fully stopped yet. A worker is removed
-    // from _activeWorkers as soon as it's scaled down, but it keeps running (and stays in
-    // _allWorkers) until it observes cancellation and exits. Shutdown waits on this set so
-    // it doesn't abandon workers that were mid-flight when a scale-down happened.
     private readonly ConcurrentDictionary<int, Worker> _allWorkers = new();
 
     private readonly object _scaleLock = new();
@@ -31,9 +26,6 @@ public sealed class UploadQueueBackgroundService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Subscribe before applying the initial value, so a config change landing between
-        // the two can never be missed. AdjustWorkerCount is idempotent (a no-op if the pool
-        // is already at the target size), so an occasional duplicate call is harmless.
         _optionsChangeSubscription = vaultOptions.OnChange(options =>
             AdjustWorkerCount(options.MaxConcurrentUploadWorkers, stoppingToken));
 
@@ -85,8 +77,6 @@ public sealed class UploadQueueBackgroundService(
 
     private async Task ProcessQueueAsync(int workerId, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Upload worker #{WorkerId} started.", workerId);
-
         try
         {
             await foreach (var batch in uploadQueue.ReadAllAsync(cancellationToken))
@@ -107,8 +97,6 @@ public sealed class UploadQueueBackgroundService(
 
             if (_allWorkers.TryRemove(workerId, out var worker))
                 worker.Cts.Dispose();
-
-            logger.LogInformation("Upload worker #{WorkerId} stopped.", workerId);
         }
     }
 
@@ -144,7 +132,17 @@ public sealed class UploadQueueBackgroundService(
         }
         finally
         {
-            batch.OnCompleted?.Invoke();
+            try
+            {
+                batch.OnCompleted?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Worker #{WorkerId}: Error executing batch completion callback for stream '{StreamId}'.",
+                    workerId, batch.Stream.Id);
+            }
         }
     }
 

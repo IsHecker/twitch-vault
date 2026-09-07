@@ -26,10 +26,9 @@ public sealed class StorageCleanupJob(
         {
             var succeeded = await storageService.DeleteStreamAsync(stream, context.CancellationToken);
             if (!succeeded)
-                return;
+                continue;
 
-            logger.LogInformation("Stream '{StreamId}' fully wiped from local and cloud storage.", stream.Id);
-
+            logger.LogInformation("Deletion completed successfully for stream '{StreamId}'.", stream.Id);
             await Task.Delay(TimeSpan.FromSeconds(5), context.CancellationToken);
         }
     }

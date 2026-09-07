@@ -399,6 +399,46 @@ public class StreamRecorderTests
     }
 
     [Fact]
+    public async Task StartAsync_ShouldSkipSegmentAndContinue_WhenSegmentDownloadThrowsNetworkError()
+    {
+        // Arrange
+        StubManifestOnce(Manifest);
+        _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("Connection reset by peer"));
+
+        await using var sut = CreateSut();
+
+        // Act
+        var act = async () => await sut.StartAsync(_stream, _channel);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+        await _hlsPlaylist.DidNotReceive().AddSegmentAsync(Arg.Any<string>(), Arg.Any<float>(), Arg.Any<CancellationToken>());
+        await _finalizer.Received(1).FinalizeAsync(
+            _channel, _stream, sizeBytes: 0, Arg.Is<SessionEndReason>(r => r is SessionEndReason.StreamEnded));
+    }
+
+    [Fact]
+    public async Task StartAsync_ShouldContinueRecording_WhenSegmentStoreThrows()
+    {
+        // Arrange
+        StubManifestOnce(Manifest);
+        StubDownloadSegments(("seg_1.ts", 6f, false));
+        _segmentStore.SaveAsync(Arg.Any<string>(), Arg.Any<SegmentContent>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new IOException("Disk I/O error"));
+
+        await using var sut = CreateSut();
+
+        // Act
+        var act = async () => await sut.StartAsync(_stream, _channel);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+        await _finalizer.Received(1).FinalizeAsync(
+            _channel, _stream, sizeBytes: 0, Arg.Is<SessionEndReason>(r => r is SessionEndReason.StreamEnded));
+    }
+
+    [Fact]
     public async Task DisposeAsync_ShouldDisposePlaylist_AndBeSafeToCallTwice()
     {
         // Arrange
