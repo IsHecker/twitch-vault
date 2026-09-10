@@ -1,18 +1,20 @@
 using System.Net;
 using System.Text.Json;
 using TwitchVault.Api.Common;
-using Microsoft.Extensions.Options;
-using System.Net.Sockets;
 
 namespace TwitchVault.Api.Twitch;
 
+public static class TwitchHttpClients
+{
+    public const string Api = "TwitchApi";
+    public const string Cdn = "TwitchCdn";
+}
+
 public sealed class TwitchGqlClient(
-    HttpClient httpClient,
-    IOptionsMonitor<TwitchOptions> twitchOptions,
+    IHttpClientFactory httpClientFactory,
     ILogger<TwitchGqlClient> logger) : ITwitchGqlClient
 {
     private const string TwitchGqlUrl = "https://gql.twitch.tv/gql";
-    private TwitchOptions Options => twitchOptions.CurrentValue;
 
     public async Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(List<Domain.Channel> channels, CancellationToken cancellationToken)
     {
@@ -25,16 +27,15 @@ public sealed class TwitchGqlClient(
             return [];
 
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-        var results = new Dictionary<Domain.Channel, bool>();
+        var results = new Dictionary<Domain.Channel, bool>(channels.Count);
 
-        var responseArray = document!.RootElement.EnumerateArray().ToList();
-
-        for (var i = 0; i < responseArray.Count; i++)
+        var i = 0;
+        foreach (var item in document!.RootElement.EnumerateArray())
         {
-            var item = responseArray[i];
             var data = item.GetProperty("data");
             var user = data.GetProperty("user");
             results[channels[i]] = user.TryGetProperty("stream", out var stream) && stream.ValueKind != JsonValueKind.Null;
+            i++;
         }
 
         return results;
@@ -71,7 +72,7 @@ public sealed class TwitchGqlClient(
             return [];
 
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-        var results = new Dictionary<Domain.Channel, StreamMetadata?>();
+        var results = new Dictionary<Domain.Channel, StreamMetadata?>(channels.Count);
 
         for (var i = 0; i < channels.Count; i++)
         {
@@ -102,7 +103,9 @@ public sealed class TwitchGqlClient(
 
             var token = tokenElement.Deserialize<PlaybackToken>();
             var masterPlaylistUrl = BuildMasterPlaylistUrl(channel, token);
-            var playlistResponse = await httpClient.GetAsync(masterPlaylistUrl, cancellationToken);
+
+            using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
+            var playlistResponse = await apiClient.GetAsync(masterPlaylistUrl, cancellationToken);
             if (!playlistResponse.IsSuccessStatusCode)
                 return string.Empty;
 
@@ -119,7 +122,8 @@ public sealed class TwitchGqlClient(
     {
         try
         {
-            var response = await httpClient.GetAsync(playlistUrl, cancellationToken);
+            using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
+            var response = await apiClient.GetAsync(playlistUrl, cancellationToken);
             return response.IsSuccessStatusCode ?
                 await response.Content.ReadAsStringAsync(cancellationToken)
                 : string.Empty;
@@ -133,44 +137,29 @@ public sealed class TwitchGqlClient(
 
     public async Task<Stream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken)
     {
-        const int maxAttempts = 3;
-        for (var attempt = 1; ; attempt++)
+        HttpClient? cdnClient = null;
+        HttpResponseMessage? response = null;
+        try
         {
-            try
-            {
-                using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                response.EnsureSuccessStatusCode();
-
-                var memoryStream = new MemoryStream();
-                await response.Content.CopyToAsync(memoryStream, cancellationToken);
-                memoryStream.Position = 0;
-                return memoryStream;
-            }
-            // TODO: remove this catch
-            catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
-            {
-                if (attempt < maxAttempts && !cancellationToken.IsCancellationRequested)
-                {
-                    logger.LogDebug("Segment not yet available on CDN (404). Retrying in {Delay}ms... ({Attempt}/{MaxAttempts})", 300 * attempt, attempt, maxAttempts);
-                    await Task.Delay(TimeSpan.FromMilliseconds(300 * attempt), cancellationToken);
-                    continue;
-                }
-
-                throw;
-            }
-            catch (Exception ex) when (attempt < maxAttempts && !cancellationToken.IsCancellationRequested && IsTransientNetworkException(ex))
-            {
-                logger.LogWarning(ex, "Transient network error (attempt {Attempt}/{MaxAttempts}). Retrying...", attempt, maxAttempts);
-                await Task.Delay(TimeSpan.FromMilliseconds(300 * attempt), cancellationToken);
-            }
+            cdnClient = httpClientFactory.CreateClient(TwitchHttpClients.Cdn);
+            response = await cdnClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            // Transfer ownership: the stream disposes the response (and releases the connection)
+            // when the caller disposes the stream returned by ReadAsStreamAsync.
+            // We must NOT dispose response here — the network stream is still being read.
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            cdnClient.Dispose();
+            return stream;
+        }
+        catch (Exception ex)
+        {
+            response?.Dispose();
+            cdnClient?.Dispose();
+            if (ex is not OperationCanceledException)
+                logger.LogWarning(ex, "Transient network error downloading segment.");
+            return Stream.Null;
         }
     }
-
-    private static bool IsTransientNetworkException(Exception ex) =>
-        ex is HttpRequestException
-        or IOException
-        or SocketException
-        or HttpIOException;
 
     public async Task<string?> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken)
     {
@@ -206,30 +195,14 @@ public sealed class TwitchGqlClient(
 
     private async Task<HttpResponseMessage> SendGqlRequestAsync(object payload, CancellationToken cancellationToken)
     {
+        using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
+
         var request = new HttpRequestMessage(HttpMethod.Post, TwitchGqlUrl)
         {
             Content = JsonContent.Create(payload)
         };
 
-        request.Headers.TryAddWithoutValidation("Client-Id", Options.PublicClientId);
-        request.Headers.TryAddWithoutValidation("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
-
-        request.Headers.TryAddWithoutValidation("Origin", "https://www.twitch.tv");
-        request.Headers.TryAddWithoutValidation("Accept", "*/*");
-        request.Headers.TryAddWithoutValidation("Accept-Language", "en-US");
-        request.Headers.TryAddWithoutValidation("Client-Session-Id", "7c9e031af8864dcb");
-        request.Headers.TryAddWithoutValidation("Client-Version", "aa5594d1-b8dc-4533-8262-11a5a0e9955f");
-        request.Headers.TryAddWithoutValidation("X-Device-Id", "hr3zoVzUji7t6bVuXT4784lLs1cUJR4x");
-        request.Headers.TryAddWithoutValidation("Referer", "https://www.twitch.tv/");
-        request.Headers.TryAddWithoutValidation("Authority", "gql.twitch.tv");
-        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua", "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"");
-        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Mobile", "?0");
-        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Platform", "\"Windows\"");
-        request.Headers.TryAddWithoutValidation("sec-fetch-dest", "empty");
-        request.Headers.TryAddWithoutValidation("sec-gpc", "1");
-
-        var response = await httpClient.SendAsync(request, cancellationToken);
+        var response = await apiClient.SendAsync(request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {

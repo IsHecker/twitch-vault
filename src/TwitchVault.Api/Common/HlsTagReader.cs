@@ -4,6 +4,12 @@ public static class HlsTagReader
 {
     public static string ReadTagValue(ReadOnlySpan<char> manifest, ReadOnlySpan<char> tagName, char endChar = '\n')
     {
+        var span = ReadTagValueSpan(manifest, tagName, endChar);
+        return span.IsEmpty ? string.Empty : span.ToString();
+    }
+
+    public static ReadOnlySpan<char> ReadTagValueSpan(ReadOnlySpan<char> manifest, ReadOnlySpan<char> tagName, char endChar = '\n')
+    {
         ReadOnlySpan<char> ValidSeparators = [':', '=', '\n', '\r'];
 
         var offset = 0;
@@ -11,13 +17,13 @@ public static class HlsTagReader
         {
             var startTagIndex = manifest[offset..].IndexOf(tagName, StringComparison.Ordinal);
             if (startTagIndex < 0)
-                return string.Empty;
+                return [];
 
             startTagIndex += offset;
 
             var afterTagIndex = startTagIndex + tagName.Length;
             if (afterTagIndex >= manifest.Length)
-                return string.Empty;
+                return [];
 
             if (startTagIndex > 0)
             {
@@ -34,17 +40,17 @@ public static class HlsTagReader
             }
 
             if (next is '\n' or '\r')
-                return string.Empty;
+                return [];
 
             var startIndex = afterTagIndex + 1;
             var remaining = manifest[startIndex..];
             var endIndex = remaining.IndexOf(endChar);
             if (endIndex < 0)
-                return remaining.Trim().ToString();
+                return remaining.Trim();
 
-            return remaining[..endIndex].Trim().ToString();
+            return remaining[..endIndex].Trim();
         }
 
-        return string.Empty;
+        return [];
     }
 }

@@ -55,7 +55,7 @@ public class ChapterTrackerTests
         var chapterCountBefore = _stream.Chapters.Count;
 
         // Act
-        await _eventBus.PublishAsync(new ChannelUpdateEvent(ChannelId, "New Title", "New Category"));
+        await _eventBus.PublishAsync(ChannelId, new ChannelUpdateEvent(ChannelId, "New Title", "New Category"));
 
         // Assert
         _stream.Chapters.Count.Should().Be(chapterCountBefore + 1);
@@ -73,7 +73,7 @@ public class ChapterTrackerTests
         var currentCategory = _stream.CurrentChapter.CategoryId;
 
         // Act — title differs, category unchanged: still splits, since it's an OR check
-        await _eventBus.PublishAsync(new ChannelUpdateEvent(ChannelId, "Different Title", currentCategory));
+        await _eventBus.PublishAsync(ChannelId, new ChannelUpdateEvent(ChannelId, "Different Title", currentCategory));
 
         // Assert
         _stream.Chapters.Count.Should().Be(chapterCountBefore + 1);

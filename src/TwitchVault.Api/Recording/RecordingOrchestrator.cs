@@ -109,39 +109,37 @@ public sealed class RecordingOrchestrator(
 
         foreach (var channelId in targetChannelIds)
         {
-            if (streamRecorderRegistry.TryGet(channelId, out var recorder))
-            {
-                if (streamRecorderRegistry.TryGetBackgroundTask(channelId, out var bgTask))
-                    backgroundTasks.Add(bgTask);
+            if (!streamRecorderRegistry.TryGet(channelId, out var recorder))
+                continue;
 
-                await recorder.FinishAsync();
-                finishedChannels.Add(channelId);
-            }
+            if (streamRecorderRegistry.TryGetBackgroundTask(channelId, out var bgTask))
+                backgroundTasks.Add(bgTask);
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await recorder.FinishAsync();
+            finishedChannels.Add(channelId);
         }
 
-        if (backgroundTasks.Count > 0)
+        if (backgroundTasks.Count <= 0)
+            return finishedChannels;
+
+        try
         {
-            try
-            {
-                await Task.WhenAll(backgroundTasks);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Timeout or error waiting for recording sessions to finish.");
-            }
+            await Task.WhenAll(backgroundTasks);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Timeout or error waiting for recording sessions to finish.");
         }
 
         return finishedChannels;
     }
 
-    private Task<Domain.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
+    private async Task<Domain.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
     {
         var stream = streamService.CreateStream(channel, metadata);
-        dataStore.AddAsync(stream);
+        await dataStore.AddAsync(stream);
         channel.UpdateLastStreamedAt(stream.StartedAt);
-        return Task.FromResult(stream);
+        return stream;
     }
 
     private static Domain.Stream MarkAsResuming(Domain.Stream stream)

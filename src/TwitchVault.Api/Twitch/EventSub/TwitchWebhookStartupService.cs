@@ -25,7 +25,7 @@ public sealed class TwitchWebhookStartupService(
             var channelId = e.Payload.Event.BroadcasterUserId;
             var title = e.Payload.Event.Title;
             var categoryId = e.Payload.Event.CategoryId;
-            await eventBus.PublishAsync(new ChannelUpdateEvent(channelId, title, categoryId));
+            await eventBus.PublishAsync(channelId, new ChannelUpdateEvent(channelId, title, categoryId));
         };
 
         try

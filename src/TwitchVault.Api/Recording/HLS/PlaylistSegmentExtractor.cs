@@ -3,7 +3,7 @@ using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Recording.HLS;
 
-public record struct RemoteSegment(string Url, float Duration, bool IsInitSegment = false);
+public readonly record struct RemoteSegment(string Url, float Duration, bool IsInitSegment = false);
 
 public record struct PlaylistExtractionResult(
     IReadOnlyList<RemoteSegment> Segments,
@@ -14,20 +14,21 @@ public static class PlaylistSegmentExtractor
 {
     public static PlaylistExtractionResult ExtractNewSegments(string playlistContent, long lastMediaSequence)
     {
-        var sequenceStr = HlsTagReader.ReadTagValue(playlistContent, HlsTags.MediaSequencePrefix);
-        if (!long.TryParse(sequenceStr, out var firstSequence))
+        var playlistContentSpan = playlistContent.AsSpan();
+        var sequenceSpan = HlsTagReader.ReadTagValueSpan(playlistContentSpan, HlsTags.MediaSequencePrefix);
+        if (!long.TryParse(sequenceSpan, out var firstSequence))
             return new PlaylistExtractionResult([], lastMediaSequence, IsStreamEnded: false);
 
-        var segments = new List<RemoteSegment>();
-        var playlistContentSpan = playlistContent.AsSpan();
-        var lineRanges = new Range[playlistContentSpan.Count('\n') + 1];
-        var lineCount = playlistContentSpan.Split(lineRanges, '\n');
+        List<RemoteSegment>? segments = null;
         long currentSequence = firstSequence - 1;
         var isStreamEnded = false;
 
-        for (int i = 0; i < lineCount; i++)
+        var lineEnumerator = playlistContentSpan.EnumerateLines();
+        while (lineEnumerator.MoveNext())
         {
-            var line = playlistContentSpan[lineRanges[i]];
+            segments ??= [];
+
+            var line = lineEnumerator.Current;
             if (line.StartsWith(HlsTags.EndList, StringComparison.Ordinal))
             {
                 isStreamEnded = true;
@@ -36,7 +37,7 @@ public static class PlaylistSegmentExtractor
 
             if (line.StartsWith(HlsTags.MapPrefix, StringComparison.Ordinal))
             {
-                var initSegmentUrl = HlsTagReader.ReadTagValue(line, HlsTags.MapPrefix).Trim('"');
+                var initSegmentUrl = HlsTagReader.ReadTagValueSpan(line, HlsTags.MapPrefix).Trim('"').ToString();
                 segments.Add(new RemoteSegment(initSegmentUrl, 0, IsInitSegment: true));
                 continue;
             }
@@ -47,14 +48,15 @@ public static class PlaylistSegmentExtractor
             if (++currentSequence <= lastMediaSequence)
                 continue;
 
-            if (i + 1 >= lineCount)
+            if (!lineEnumerator.MoveNext())
                 continue;
 
-            var duration = float.Parse(HlsTagReader.ReadTagValue(line, HlsTags.ExtInfPrefix, ','));
-            segments.Add(new RemoteSegment(playlistContent[lineRanges[++i]].Trim('\r').ToString(), duration));
+            var durationSpan = HlsTagReader.ReadTagValueSpan(line, HlsTags.ExtInfPrefix, ',');
+            var duration = float.Parse(durationSpan, CultureInfo.InvariantCulture);
+            segments.Add(new RemoteSegment(lineEnumerator.Current.ToString(), duration));
         }
 
-        return new PlaylistExtractionResult(segments, currentSequence, isStreamEnded);
+        return new PlaylistExtractionResult(segments ?? (IReadOnlyList<RemoteSegment>)[], currentSequence, isStreamEnded);
     }
 
     public static IEnumerable<RemoteSegment> EnumerateSegments(IEnumerable<string> lines)
@@ -68,15 +70,15 @@ public static class PlaylistSegmentExtractor
 
             if (trimmed.StartsWith(HlsTags.MapPrefix, StringComparison.Ordinal))
             {
-                var initUrl = HlsTagReader.ReadTagValue(trimmed, HlsTags.MapPrefix).Trim('"');
+                var initUrl = HlsTagReader.ReadTagValueSpan(trimmed, HlsTags.MapPrefix).Trim('"').ToString();
                 yield return new RemoteSegment(initUrl, 0, IsInitSegment: true);
                 continue;
             }
 
             if (trimmed.StartsWith(HlsTags.ExtInfPrefix, StringComparison.Ordinal))
             {
-                var durationStr = HlsTagReader.ReadTagValue(trimmed, HlsTags.ExtInfPrefix, ',');
-                pendingDuration = float.Parse(durationStr, CultureInfo.InvariantCulture);
+                var durationSpan = HlsTagReader.ReadTagValueSpan(trimmed, HlsTags.ExtInfPrefix, ',');
+                pendingDuration = float.Parse(durationSpan, CultureInfo.InvariantCulture);
                 continue;
             }
 

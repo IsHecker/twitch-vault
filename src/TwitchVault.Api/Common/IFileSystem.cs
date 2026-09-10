@@ -18,16 +18,14 @@ public sealed class PhysicalFileSystem : IFileSystem
     {
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory))
-        {
             Directory.CreateDirectory(directory);
-        }
 
         return new FileStream(
             path,
             mode,
             FileAccess.Write,
             FileShare.ReadWrite,
-            bufferSize: 4096,
+            bufferSize: 65536,
             useAsync: true);
     }
 }

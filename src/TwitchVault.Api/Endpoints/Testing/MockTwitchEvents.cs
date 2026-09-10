@@ -20,7 +20,7 @@ public class MockTwitchEvents : IEndpoint
 
         group.MapPost("/update", async (string channelId, string title, string categoryId, EventBus bus) =>
         {
-            await bus.PublishAsync(new ChannelUpdateEvent(channelId, title, categoryId));
+            await bus.PublishAsync(channelId, new ChannelUpdateEvent(channelId, title, categoryId));
             return Results.Ok($"Sent ChannelUpdateEvent: {title} | {categoryId}");
         });
 

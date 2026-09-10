@@ -17,14 +17,7 @@ public sealed class StreamRecorderRegistry : IStreamRecorderRegistry
 {
     private readonly ConcurrentDictionary<string, (IStreamRecorder Recorder, Task BackgroundTask)> _activeRecorders = new();
 
-    public bool TryRegister(string channelId)
-    {
-        if (_activeRecorders.TryGetValue(channelId, out _))
-            return false;
-
-        _activeRecorders[channelId] = (null, null)!;
-        return true;
-    }
+    public bool TryRegister(string channelId) => _activeRecorders.TryAdd(channelId, (null, null)!);
 
     public void Register(string channelId, IStreamRecorder recorder, Task backgroundTask) =>
         _activeRecorders[channelId] = (recorder, backgroundTask);

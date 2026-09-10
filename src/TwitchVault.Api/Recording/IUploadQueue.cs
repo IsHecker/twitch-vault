@@ -10,4 +10,5 @@ public interface IUploadQueue
 {
     ValueTask QueueBatchAsync(UploadBatch batch, CancellationToken cancellationToken = default);
     IAsyncEnumerable<UploadBatch> ReadAllAsync(CancellationToken cancellationToken = default);
+    void Complete();
 }

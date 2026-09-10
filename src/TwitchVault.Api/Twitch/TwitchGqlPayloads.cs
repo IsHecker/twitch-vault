@@ -102,42 +102,6 @@ internal static class TwitchGqlPayloads
         }
     };
 
-    public static object GetLatestVOD(string channel) => new
-    {
-        OperationName = "GetLatestVOD",
-        Query = """
-                query GetLatestVOD($login: String) {
-                  user(login: $login) {
-                    videos(first: 1, type: ARCHIVE) {
-                      edges {
-                        node { id }
-                      }
-                    }
-                  }
-                }
-                """,
-        Variables = new
-        {
-            login = channel
-        }
-    };
-
-    public static object VideoMetadata(string vodId) => new
-    {
-        OperationName = "VideoMetadata",
-        Query = """
-                query VideoMetadata($videoID: ID) {
-                  video(id: $videoID) {
-                    previewThumbnailURL(width: 1920, height: 1080)
-                  }
-                }
-                """,
-        Variables = new
-        {
-            videoID = vodId
-        }
-    };
-
     public static object GetChannelId(string channel) => new
     {
         OperationName = "GetUserId",

@@ -1,3 +1,3 @@
 namespace TwitchVault.Api.Recording.HLS;
 
-public sealed record SegmentContent(RemoteSegment Source, Stream Content);
+public readonly record struct SegmentContent(RemoteSegment Source, Stream Content);

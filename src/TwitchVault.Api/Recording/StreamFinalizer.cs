@@ -35,33 +35,36 @@ public sealed class StreamFinalizer(
     {
         try
         {
-            await dataStore.ExecuteAsync(async () =>
+            await dataStore.ExecuteAsync(() =>
             {
                 dataStore.Save(channel);
-                dataStore.Save(stream);
-
                 channel.SetLive(false);
-
-                switch (reason)
-                {
-                    case SessionEndReason.StreamStopped:
-                        await MarkStoppedAsync(stream, sizeBytes);
-                        break;
-
-                    case SessionEndReason.StreamError(var ex):
-                        await HandleErrorAsync(stream, channel.Name, ex, sizeBytes);
-                        break;
-
-                    case SessionEndReason.StreamEnded:
-                    default:
-                        await HandleStreamEndedAsync(stream, sizeBytes);
-                        break;
-                }
+                return Task.CompletedTask;
             });
+
+            switch (reason)
+            {
+                case SessionEndReason.StreamStopped:
+                    await MarkStoppedAsync(stream, sizeBytes);
+                    break;
+
+                case SessionEndReason.StreamError(var ex):
+                    await HandleErrorAsync(stream, channel.Name, ex, sizeBytes);
+                    break;
+
+                case SessionEndReason.StreamEnded:
+                default:
+                    await HandleStreamEndedAsync(stream, sizeBytes);
+                    break;
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during session finalization.");
+        }
+        finally
+        {
+            await UpdateStream(stream);
         }
     }
 
@@ -69,6 +72,7 @@ public sealed class StreamFinalizer(
     {
         stream.MarkAsStopped(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
+
         await storageService.FinalizeStorageAsync(stream);
         logger.LogDebug("Recording manually stopped.");
     }
@@ -91,8 +95,8 @@ public sealed class StreamFinalizer(
     {
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
-        await storageService.FinalizeStorageAsync(stream);
 
+        await storageService.FinalizeStorageAsync(stream);
         var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
         logger.LogInformation("Stream finished. Total duration: {Duration} ({Instance}).", duration, stream.StorageInstanceName);
     }
@@ -101,5 +105,14 @@ public sealed class StreamFinalizer(
     {
         var metadata = await twitchClient.GetStreamMetadataAsync(channelName, CancellationToken.None);
         return metadata?.Id == stream.Id;
+    }
+
+    private Task UpdateStream(Domain.Stream stream)
+    {
+        return dataStore.ExecuteAsync(() =>
+        {
+            dataStore.Save(stream);
+            return Task.CompletedTask;
+        });
     }
 }

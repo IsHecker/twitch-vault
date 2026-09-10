@@ -24,7 +24,8 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
     private float _accumulatedDuration;
     private string? _currentFileName;
     private string? _currentFilePath;
-    private long _fileSizeBytes;
+    private Stream? _currentFileStream;
+
     public bool IsFull => _accumulatedDuration >= vaultOptions.CurrentValue.MaxSegmentDurationInSec;
 
     public async Task<LocalSegment?> SaveAsync(
@@ -44,11 +45,16 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         if (string.IsNullOrEmpty(_currentFilePath))
             return null;
 
-        var closed = new LocalSegment(_currentFilePath, _accumulatedDuration, _fileSizeBytes);
+        var sizeBytes = _currentFileStream?.Length ?? 0;
+        _currentFileStream?.Flush();
+        _currentFileStream?.Dispose();
+        _currentFileStream = null;
+
+        var closed = new LocalSegment(_currentFilePath, _accumulatedDuration, sizeBytes);
+
         _currentFileName = null;
         _currentFilePath = null;
         _accumulatedDuration = 0f;
-        _fileSizeBytes = 0;
         return closed;
     }
 
@@ -70,27 +76,26 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
     private async Task<LocalSegment?> SaveSegmentAsync(
         string streamFolderPath,
         SegmentContent segment,
-        string? lastSegmentFileName,
+        string? lastFlushedFileName,
         CancellationToken cancellationToken)
     {
         using var content = segment.Content;
-        string fileName = GetSegmentFilePath(lastSegmentFileName, GetUrlExtension(segment.Source.Url));
-        _currentFilePath = Path.Combine(streamFolderPath, fileName);
-
-        await using var fileStream = fileSystem.OpenWrite(_currentFilePath, FileMode.Append);
-        await content.CopyToAsync(fileStream!, cancellationToken);
+        EnsureCurrentFileStream(streamFolderPath, lastFlushedFileName, GetUrlExtension(segment.Source.Url));
+        await content.CopyToAsync(_currentFileStream!, cancellationToken);
 
         _accumulatedDuration += segment.Source.Duration;
-        _fileSizeBytes += fileStream.Length;
-
         return !IsFull ? null : CloseCurrentSegment();
     }
 
-    private static string GetUrlExtension(string url) =>
-        Path.GetExtension(new Uri(url).AbsolutePath);
+    private void EnsureCurrentFileStream(string streamFolderPath, string? lastFlushedFileName, string urlExtension)
+    {
+        if (_currentFileStream is not null)
+            return;
 
-    private string GetSegmentFilePath(string? lastFlushedFileName, string urlExtension) =>
-        _currentFileName ?? StartNewSegment(lastFlushedFileName, urlExtension);
+        var fileName = _currentFileName ?? StartNewSegment(lastFlushedFileName, urlExtension);
+        _currentFilePath = Path.Combine(streamFolderPath, fileName);
+        _currentFileStream = fileSystem.OpenWrite(_currentFilePath, FileMode.Create);
+    }
 
     private string StartNewSegment(string? lastFlushedFileName, string urlExtension)
     {
@@ -98,5 +103,30 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         _currentFileName = HlsSegmentNaming.FormatSegmentFileName(nextIndex, urlExtension);
         _accumulatedDuration = 0f;
         return _currentFileName;
+    }
+
+    private static string GetUrlExtension(string url)
+    {
+        var span = url.AsSpan();
+        var queryIndex = span.IndexOf('?');
+        if (queryIndex >= 0)
+            span = span[..queryIndex];
+
+        var dotIndex = span.LastIndexOf('.');
+        var slashIndex = span.LastIndexOf('/');
+        if (dotIndex <= slashIndex || dotIndex < 0)
+            return ".ts";
+
+        var ext = span[dotIndex..];
+        if (ext.Equals(".ts", StringComparison.OrdinalIgnoreCase))
+            return ".ts";
+
+        if (ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase))
+            return ".mp4";
+
+        if (ext.Equals(".m4s", StringComparison.OrdinalIgnoreCase))
+            return ".m4s";
+
+        return ext.ToString();
     }
 }

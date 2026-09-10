@@ -17,7 +17,7 @@ public sealed class ManifestPoller(
     ILogger<ManifestPoller> logger) : IManifestPoller
 {
     private const int MinPollsThreshold = 5;
-    private const int MaxUnchangedPollsThreshold = 10;
+    private const int MaxUnchangedPollsThreshold = 5;
     private const int EarlyStabilityVariantCount = 5;
     private static readonly TimeSpan MasterPlaylistRefreshInterval = TimeSpan.FromSeconds(30);
 
@@ -64,10 +64,11 @@ public sealed class ManifestPoller(
         if (variants.Length == 0)
             return;
 
+        var previousCount = _variants.Length;
         _variants = variants;
         _lastRefreshedAt = dateTimeProvider.DateTimeNow;
+        RecordPoll(variants.Length, previousCount);
 
-        RecordPoll(variants.Length);
         if (!IsStable)
             return;
 
@@ -75,18 +76,6 @@ public sealed class ManifestPoller(
             "Master playlist stabilized with {Count} quality variants. (Source: {Bandwidth} bps)",
             _variants.Length, _variants[^1].Bandwidth);
     }
-
-    // private async Task<(int Rank, string Url)> ResolveQualityAsync(string channelName)
-    // {
-    //     // TODO: Replace quality change with event instead for performance
-    //     var channel = await dataStore.QueryAsync(
-    //         context => context.Channels.GetByNameAsync(channelName));
-
-    //     var requestedRank = channel!.QualityRank - 1;
-    //     var clampedRank = Math.Clamp(requestedRank, 0, _variants.Length - 1);
-
-    //     return (clampedRank, _variants[clampedRank].Url);
-    // }
 
     private (int Rank, string Url) ResolveQuality(Channel channel)
     {
@@ -105,13 +94,12 @@ public sealed class ManifestPoller(
         return StreamVariantExtractor.ExtractVariants(masterPlaylist);
     }
 
-    private void RecordPoll(int variantCount)
+    private void RecordPoll(int variantCount, int previousCount)
     {
-        if (variantCount > _variants.Length)
+        if (variantCount > previousCount)
             _consecutiveUnchangedPolls = 0;
         else
             _consecutiveUnchangedPolls++;
-
         _totalPollCount++;
     }
 }

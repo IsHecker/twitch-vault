@@ -52,9 +52,7 @@ public class ChannelService(
         {
             var stream = streams.OrderByDescending(s => s.StartedAt).FirstOrDefault();
             if (stream is not null)
-            {
-                await recordingOrchestrator.StopRecordingAsync(stream.Id);
-            }
+                await recordingOrchestrator.StopRecordingAsync(channel.Id);
         }
 
         await db.Channels.Where(c => c.Id == channelId).ExecuteDeleteAsync(cancellationToken);

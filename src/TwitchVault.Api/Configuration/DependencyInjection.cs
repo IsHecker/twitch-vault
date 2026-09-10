@@ -96,42 +96,82 @@ public static class DependencyInjection
 
     private static IServiceCollection AddTwitchAndEventSub(this IServiceCollection services)
     {
-        services.AddHttpClient<ITwitchGqlClient, TwitchGqlClient>()
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        services.AddHttpClient(TwitchHttpClients.Api)
+        .ConfigureHttpClient((sp, client) =>
+        {
+            var twitchOptions = sp.GetRequiredService<IOptionsMonitor<TwitchOptions>>().CurrentValue;
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Client-Id", twitchOptions.PublicClientId);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+            KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
+            MaxConnectionsPerServer = 100
+        });
+
+        services.AddHttpClient(TwitchHttpClients.Cdn)
+        .ConfigureHttpClient((sp, client) =>
+        {
+            var twitchOptions = sp.GetRequiredService<IOptionsMonitor<TwitchOptions>>().CurrentValue;
+
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Client-Id", twitchOptions.PublicClientId);
+            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://www.twitch.tv");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "en-US");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Client-Session-Id", "7c9e031af8864dcb");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Client-Version", "aa5594d1-b8dc-4533-8262-11a5a0e9955f");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Device-Id", "hr3zoVzUji7t6bVuXT4784lLs1cUJR4x");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://www.twitch.tv/");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Authority", "gql.twitch.tv");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Ch-Ua",
+                "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Ch-Ua-Mobile", "?0");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Ch-Ua-Platform", "\"Windows\"");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-dest", "empty");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("sec-gpc", "1");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+            KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
+            MaxConnectionsPerServer = 500
+        })
+        .AddResilienceHandler($"{TwitchHttpClients.Cdn}-RetryPipeline", pipelineBuilder =>
+        {
+            pipelineBuilder.AddRetry(new HttpRetryStrategyOptions
             {
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-                PooledConnectionLifetime = TimeSpan.FromMinutes(15),
-                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
-                KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
-                MaxConnectionsPerServer = 500
-            })
-            .AddResilienceHandler($"TwitchGqlClient-RetryPipeline", pipelineBuilder =>
-            {
-                pipelineBuilder.AddRetry(new HttpRetryStrategyOptions
+                MaxRetryAttempts = 3,
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromMilliseconds(500),
+                ShouldHandle = args =>
                 {
-                    MaxRetryAttempts = 3,
-                    BackoffType = DelayBackoffType.Exponential,
-                    UseJitter = true,
-                    Delay = TimeSpan.FromMilliseconds(500),
-                    ShouldHandle = args =>
+                    var isNetworkError = args.Outcome.Exception is HttpRequestException;
+                    var isTransientHttpError = (args.Outcome.Result?.StatusCode) switch
                     {
-                        var isNetworkError = args.Outcome.Exception is HttpRequestException;
-                        var isTransientHttpError = (args.Outcome.Result?.StatusCode) switch
-                        {
-                            HttpStatusCode.TooManyRequests => true,
-                            HttpStatusCode.RequestTimeout => true,
-                            HttpStatusCode.InternalServerError => true,
-                            HttpStatusCode.BadGateway => true,
-                            HttpStatusCode.ServiceUnavailable => true,
-                            HttpStatusCode.GatewayTimeout => true,
-                            _ => false
-                        };
-                        return ValueTask.FromResult(isNetworkError || isTransientHttpError);
-                    }
-                });
-                pipelineBuilder.AddTimeout(TimeSpan.FromSeconds(20));
+                        HttpStatusCode.TooManyRequests => true,
+                        HttpStatusCode.RequestTimeout => true,
+                        HttpStatusCode.InternalServerError => true,
+                        HttpStatusCode.BadGateway => true,
+                        HttpStatusCode.ServiceUnavailable => true,
+                        HttpStatusCode.GatewayTimeout => true,
+                        _ => false
+                    };
+                    return ValueTask.FromResult(isNetworkError || isTransientHttpError);
+                }
             });
+            pipelineBuilder.AddTimeout(TimeSpan.FromSeconds(20));
+        });
+
+        services.AddSingleton<ITwitchGqlClient, TwitchGqlClient>();
 
         services.AddSingleton<TwitchHelixClient>();
         services.AddHttpClient(nameof(TwitchHelixClient)).AddThrottle(

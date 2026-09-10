@@ -35,6 +35,7 @@ public class StreamRecorderFactory(
         var recorder = ActivatorUtilities.CreateInstance<StreamRecorder>(
             serviceProvider,
             playlist,
+            TimeProvider.System,
             cancellationToken);
 
         return recorder;

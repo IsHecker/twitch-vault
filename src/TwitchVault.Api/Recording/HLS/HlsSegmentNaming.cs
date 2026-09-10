@@ -13,7 +13,7 @@ public static class HlsSegmentNaming
         if (string.IsNullOrWhiteSpace(filePath))
             return false;
 
-        var fileName = Path.GetFileName(filePath);
+        var fileName = Path.GetFileName(filePath.AsSpan());
         return fileName.StartsWith(SegmentPrefix, StringComparison.OrdinalIgnoreCase) ||
                fileName.StartsWith(InitPrefix, StringComparison.OrdinalIgnoreCase);
     }
@@ -23,7 +23,7 @@ public static class HlsSegmentNaming
         if (string.IsNullOrWhiteSpace(filePath))
             return 0;
 
-        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath.AsSpan());
         if (fileNameWithoutExt.StartsWith(InitPrefix, StringComparison.OrdinalIgnoreCase))
             return 0;
 

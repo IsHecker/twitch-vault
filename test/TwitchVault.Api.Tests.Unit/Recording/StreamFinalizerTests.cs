@@ -13,7 +13,6 @@ public class StreamFinalizerTests
     private readonly ITwitchGqlClient _twitchClient = Substitute.For<ITwitchGqlClient>();
     private readonly IStreamStorageService _storageService = Substitute.For<IStreamStorageService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
-    private readonly IRecordingOrchestrator _recordingOrchestrator = Substitute.For<IRecordingOrchestrator>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
     private readonly TestDbContextFactory _factory = new();
     private readonly IDataStore _dataStore;
@@ -24,6 +23,133 @@ public class StreamFinalizerTests
     {
         _dataStore = new EfDataStore(_factory);
     }
+
+    [Theory]
+    [MemberData(nameof(AllReasons))]
+    public async Task FinalizeAsync_ShouldSetChannelOffline_ForEveryEndReason(SessionEndReason reason)
+    {
+        // Arrange
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream());
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, reason);
+
+        // Assert
+        AssertChannelIsOffline();
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_ShouldMarkStopped_WhenReasonIsStreamStopped()
+    {
+        // Arrange
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream());
+        var stoppedAt = new DateTime(2026, 1, 1, 12, 0, 0);
+        _dateTimeProvider.DateTimeNow.Returns(stoppedAt);
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamStopped());
+
+        // Assert
+        stream.Status.Should().Be(StreamStatus.Stopped);
+        stream.FinishedAt.Should().Be(stoppedAt);
+        await _storageService.Received(1).FinalizeStorageAsync(stream);
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_ShouldMarkInterrupted_WhenErrorOccursAndChannelStillLiveWithSameStream()
+    {
+        // Arrange
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream("ts_current"));
+        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
+            .Returns(new StreamMetadata("ts_current", "title", "cat", DateTime.Now));
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("network blip")));
+
+        // Assert
+        stream.Status.Should().Be(StreamStatus.Interrupted);
+        // Interrupted streams keep recording later — finalizing storage now would be premature/wrong.
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
+    }
+
+    [Theory]
+    [MemberData(nameof(NotCurrentlyLiveMetadata))]
+    public async Task FinalizeAsync_ShouldMarkFinished_WhenChannelIsNotLiveWithSameStreamAfterError(StreamMetadata? metadata)
+    {
+        // Arrange: covers both "Twitch reports a different/newer stream" and "Twitch reports nothing" (offline).
+        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>()).Returns(metadata);
+
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream("ts_old"));
+        var finishedAt = new DateTime(2026, 1, 1, 11, 0, 0);
+        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
+
+        // Assert
+        stream.Status.Should().Be(StreamStatus.Finished);
+        stream.FinishedAt.Should().Be(finishedAt);
+        await _storageService.Received(1).FinalizeStorageAsync(stream);
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_ShouldMarkFinished_WhenReasonIsStreamEnded()
+    {
+        // Arrange
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream(startedAt: new DateTime(2026, 1, 1, 10, 0, 0)));
+        var finishedAt = new DateTime(2026, 1, 1, 11, 30, 0);
+        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
+
+        // Assert
+        stream.Status.Should().Be(StreamStatus.Finished);
+        stream.FinishedAt.Should().Be(finishedAt);
+        await _storageService.Received(1).FinalizeStorageAsync(stream);
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_ShouldSwallowExceptionAndSkipStorage_WhenTwitchClientThrowsDuringErrorHandling()
+    {
+        // Arrange
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream());
+        _twitchClient.GetStreamMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<StreamMetadata?>(new Exception("twitch api down")));
+
+        // Act
+        var act = async () => await sut.FinalizeAsync(
+            _channel,
+            stream,
+            sizeBytes: 0,
+            new SessionEndReason.StreamError(new Exception("original error")));
+
+        // Assert: the failure is swallowed, but we also confirm *what state that leaves us in* —
+        // the channel-offline write (which happens before the failing call) still committed,
+        // while the never-reached status transition/storage finalization did not.
+        await act.Should().NotThrowAsync();
+        AssertChannelIsOffline();
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
+    }
+
+    public static TheoryData<SessionEndReason> AllReasons() => new()
+    {
+        new SessionEndReason.StreamStopped(),
+        new SessionEndReason.StreamEnded(),
+        new SessionEndReason.StreamError(new InvalidOperationException("boom")),
+    };
+
+    public static TheoryData<StreamMetadata?> NotCurrentlyLiveMetadata() => new()
+    {
+        null, // Twitch has no live metadata for the channel at all.
+        new StreamMetadata("ts_new", "title", "cat", DateTime.Now), // Twitch is live, but as a different stream.
+    };
 
     private StreamFinalizer CreateSut()
     {
@@ -36,135 +162,31 @@ public class StreamFinalizerTests
         return new(_dataStore, _storageService, _twitchClient, _dateTimeProvider, _logger);
     }
 
-    private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null)
-    {
-        return Domain.Stream.Create(
+    private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null) =>
+        Domain.Stream.Create(
             twitchStreamId,
             channelId,
             StreamFolder.Create("streams_root", "testchannel"),
             startedAt ?? new DateTime(2026, 1, 1, 10, 0, 0),
             "Test Title",
             "Test Category");
+
+    // Domain.Stream.Create assigns its Id client-side, so EfDataStore.Save's IsKeySet check
+    // treats *any* such stream as Modified, never Added — it always requires a pre-existing row.
+    // StreamFinalizer only ever updates a stream (never inserts one), so tests must seed it here,
+    // exactly like _channel is seeded in CreateSut, or every persist call throws
+    // DbUpdateConcurrencyException and gets silently swallowed by FinalizeAsync's outer catch.
+    private Domain.Stream SeedStream(Domain.Stream stream)
+    {
+        using var db = _factory.CreateDbContext();
+        db.Streams.Add(stream);
+        db.SaveChanges();
+        return stream;
     }
 
-    [Theory]
-    [MemberData(nameof(AllReasons))]
-    public async Task FinalizeAsync_ShouldAlwaysDelete_RegardlessOfEndReason_WhenMarkedForDeletion(SessionEndReason reason)
+    private void AssertChannelIsOffline()
     {
-        // Arrange
-        var stream = CreateStream();
-        stream.SetStorageOperationStatus(StorageOperationStatus.DeleteRequest);
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, reason);
-
-        // Assert
-        using var dbCheck = _factory.CreateDbContext();
-        dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
+        using var db = _factory.CreateDbContext();
+        db.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
     }
-
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldMarkStopped_WhenReasonIsStreamStopped()
-    {
-        // Arrange
-        var stream = CreateStream();
-        var stoppedAt = new DateTime(2026, 1, 1, 12, 0, 0);
-        _dateTimeProvider.DateTimeNow.Returns(stoppedAt);
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamStopped());
-
-        // Assert
-        stream.Status.Should().Be(StreamStatus.Stopped);
-        stream.FinishedAt.Should().Be(stoppedAt);
-        using var dbCheck = _factory.CreateDbContext();
-        dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
-        await _storageService.Received(1).FinalizeStorageAsync(stream);
-    }
-
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldMarkInterrupted_WhenErrorOccursAndChannelStillLiveWithSameStream()
-    {
-        // Arrange
-        var stream = CreateStream("ts_current");
-        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_current", "title", "cat", DateTime.Now));
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("network blip")));
-
-        // Assert
-        stream.Status.Should().Be(StreamStatus.Interrupted);
-    }
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldNotMarkInterrupted_WhenTwitchReportsADifferentStreamId()
-    {
-        // Arrange
-        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_new", "title", "cat", DateTime.Now));
-
-        var stream = CreateStream("ts_old");
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
-
-        // Assert
-        stream.Status.Should().NotBe(StreamStatus.Interrupted);
-    }
-
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldMarkFinished_WhenReasonIsStreamEnded()
-    {
-        // Arrange
-        var stream = CreateStream(startedAt: new DateTime(2026, 1, 1, 10, 0, 0));
-        var finishedAt = new DateTime(2026, 1, 1, 11, 30, 0);
-        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
-        var sut = CreateSut();
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
-
-        // Assert
-        stream.Status.Should().Be(StreamStatus.Finished);
-        stream.FinishedAt.Should().Be(finishedAt);
-        using var dbCheck = _factory.CreateDbContext();
-        dbCheck.Channels.First(c => c.Id == _channel.Id).IsLive.Should().BeFalse();
-        await _storageService.Received(1).FinalizeStorageAsync(stream);
-    }
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldSwallowException_WhenTwitchClientThrowsDuringErrorHandling()
-    {
-        // Arrange
-        var stream = CreateStream();
-        _twitchClient.GetStreamMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException<StreamMetadata?>(new Exception("twitch api down")));
-
-        var sut = CreateSut();
-
-        // Act
-        var act = async () => await sut.FinalizeAsync(
-            _channel,
-            stream,
-            sizeBytes: 0,
-            new SessionEndReason.StreamError(new Exception("original error")));
-
-        // Assert
-        await act.Should().NotThrowAsync();
-    }
-
-    public static TheoryData<SessionEndReason> AllReasons() => new()
-    {
-        new SessionEndReason.StreamStopped(),
-        new SessionEndReason.StreamEnded(),
-        new SessionEndReason.StreamError(new InvalidOperationException("boom"))
-    };
 }

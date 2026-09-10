@@ -26,13 +26,17 @@ public sealed class StreamRecorder(
     IStreamFinalizer finalizer,
     IOptionsMonitor<VaultOptions> vaultOptions,
     ILogger<StreamRecorder> logger,
+    TimeProvider timeProvider,
     CancellationToken parentCancellationToken) : IStreamRecorder
 {
-    private const int EmptyPollsDelay = 2;
+    private static readonly TimeSpan EmptyPollInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan StreamEndWaitInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
 
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
-    private long _streamSizeBytes = 0;
+    private string _streamDirectory = string.Empty;
+    private long _streamSizeBytes;
     private readonly CancellationTokenSource _cts
         = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
     private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
@@ -46,6 +50,7 @@ public sealed class StreamRecorder(
         {
             _channel = channel;
             _stream = stream;
+            _streamDirectory = _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory);
             chapterTracker.Attach(_stream, _channel);
             segmentUploader.Attach(_stream);
 
@@ -90,7 +95,7 @@ public sealed class StreamRecorder(
             if (string.IsNullOrWhiteSpace(manifest))
             {
                 logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
-                await Task.Delay(TimeSpan.FromSeconds(EmptyPollsDelay), cancellationToken);
+                await Task.Delay(EmptyPollInterval, timeProvider, cancellationToken);
                 continue;
             }
 
@@ -109,7 +114,7 @@ public sealed class StreamRecorder(
             {
                 if (manifestResult.Segments.Where(s => !s.IsInitSegment).Any())
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    await Task.Delay(StreamEndWaitInterval, timeProvider, cancellationToken);
                     continue;
                 }
 
@@ -117,7 +122,7 @@ public sealed class StreamRecorder(
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            await Task.Delay(PollInterval, timeProvider, cancellationToken);
         }
     }
 
@@ -168,7 +173,7 @@ public sealed class StreamRecorder(
                 }
 
                 var localSegment = await segmentStore.SaveAsync(
-                    _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory),
+                    _streamDirectory,
                     segment,
                     playlistWriter.LastSegmentFileName,
                     cancellationToken);

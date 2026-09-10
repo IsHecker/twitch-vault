@@ -180,6 +180,7 @@ public sealed class UploadQueueBackgroundService(
         try
         {
             await Task.WhenAll(_allWorkers.Values.Select(w => w.Task)).WaitAsync(ShutdownDrainTimeout);
+            uploadQueue.Complete();
         }
         catch (Exception ex)
         {

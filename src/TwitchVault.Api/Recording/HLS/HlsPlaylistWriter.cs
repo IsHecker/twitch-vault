@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Diagnostics;
 using System.Text;
 using TwitchVault.Api.Common;
 
@@ -21,6 +23,9 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     private const int TargetDurationDigits = 3;
     private const int MediaSequenceDigits = 12;
     private const string TotalSecondsFormat = "000000000000.000";
+    private static readonly TimeSpan MinFlushInterval = TimeSpan.FromSeconds(5);
+
+    private const int LineBufferSize = 256;
 
     public long LastTwitchMediaSequence { get; private set; }
     public string? LastSegmentFileName { get; private set; }
@@ -30,6 +35,8 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     private readonly Stream _fileStream;
     private readonly DateTime _startTime;
     private readonly bool _isFinalized;
+    private readonly byte[] _lineBuffer = new byte[LineBufferSize];
+    private readonly Stopwatch _flushStopwatch = Stopwatch.StartNew();
     private float _targetDuration;
     private float _totalDuration;
     private bool _lastEntryWasDiscontinuity;
@@ -107,13 +114,13 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             if (duration > _targetDuration)
                 _targetDuration = duration;
 
-            await WriteHeaderAsync(cancellationToken);
             await WriteLineAsync(HlsTags.ExtInf(duration), cancellationToken);
             await WriteLineAsync(fileName, cancellationToken);
-            await _fileStream.FlushAsync(cancellationToken);
 
             LastSegmentFileName = fileName;
             _lastEntryWasDiscontinuity = false;
+
+            await FlushIfDueAsync(cancellationToken);
         }
         finally
         {
@@ -143,6 +150,15 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
 
     public void UpdateTwitchMediaSequence(long mediaSequence) => LastTwitchMediaSequence = mediaSequence;
 
+    private async Task FlushIfDueAsync(CancellationToken cancellationToken)
+    {
+        if (_flushStopwatch.Elapsed < MinFlushInterval)
+            return;
+
+        await _fileStream.FlushAsync(cancellationToken);
+        _flushStopwatch.Restart();
+    }
+
     private async Task ResumeAsync(CancellationToken cancellationToken)
     {
         if (_isFinalized)
@@ -155,15 +171,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     {
         var endListBytes = Encoding.UTF8.GetByteCount($"{HlsTags.EndList}\n");
         if (_fileStream.Length >= endListBytes)
-        {
             _fileStream.SetLength(_fileStream.Length - endListBytes);
-        }
-    }
-
-    private async Task FinalizeAsync(CancellationToken cancellationToken = default)
-    {
-        await WriteLineAsync(HlsTags.EndList, cancellationToken);
-        await _fileStream.FlushAsync(cancellationToken);
     }
 
     private async Task WriteHeaderAsync(CancellationToken cancellationToken)
@@ -197,15 +205,40 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
         _fileStream.Position = _fileStream.Length;
     }
 
-    private ValueTask WriteAsync(string text, CancellationToken ct = default)
-        => _fileStream.WriteAsync(Encoding.UTF8.GetBytes(text), ct);
+    private ValueTask WriteAsync(string text, CancellationToken ct)
+        => WriteCoreAsync(text, appendNewline: false, ct);
 
-    private ValueTask WriteLineAsync(string text, CancellationToken ct = default)
-        => WriteAsync(text + '\n', ct);
+    private ValueTask WriteLineAsync(string text, CancellationToken ct)
+        => WriteCoreAsync(text, appendNewline: true, ct);
+
+    private async ValueTask WriteCoreAsync(string text, bool appendNewline, CancellationToken ct)
+    {
+        var maxByteCount = Encoding.UTF8.GetMaxByteCount(text.Length) + (appendNewline ? 1 : 0);
+
+        var rented = maxByteCount > _lineBuffer.Length
+            ? ArrayPool<byte>.Shared.Rent(maxByteCount) : null;
+        var buffer = rented ?? _lineBuffer;
+
+        try
+        {
+            var bytesWritten = Encoding.UTF8.GetBytes(text, buffer);
+            if (appendNewline)
+                buffer[bytesWritten++] = (byte)'\n';
+
+            await _fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten), ct);
+        }
+        finally
+        {
+            if (rented is not null)
+                ArrayPool<byte>.Shared.Return(rented);
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
-        await FinalizeAsync();
+        await WriteHeaderAsync(CancellationToken.None);
+        await WriteLineAsync(HlsTags.EndList, CancellationToken.None);
+        await _fileStream.FlushAsync();
         await _fileStream.DisposeAsync();
         _lock.Dispose();
     }

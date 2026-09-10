@@ -107,7 +107,11 @@ public sealed class LiveSegmentUploader(
 
     private List<string> ConsumeBuffer()
     {
-        var content = _buffer.Select(s => s.FilePath).ToList();
+        var count = _buffer.Count;
+        var content = new List<string>(count);
+        for (var i = 0; i < count; i++)
+            content.Add(_buffer[i].FilePath);
+
         _buffer.Clear();
         return content;
     }

@@ -72,8 +72,6 @@ public sealed class TwitchSubscriptionService(
                 succeeded.Add(channel.Name);
             else if (onlineOk == false || updateOk == false)
                 failed.Add(channel.Name);
-
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
         }
 
         LogBatchSubscriptionResult(succeeded, failed);
