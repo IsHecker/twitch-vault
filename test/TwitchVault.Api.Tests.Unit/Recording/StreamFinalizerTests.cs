@@ -71,7 +71,6 @@ public class StreamFinalizerTests
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
-        // Interrupted streams keep recording later — finalizing storage now would be premature/wrong.
         await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
     }
 
@@ -79,7 +78,7 @@ public class StreamFinalizerTests
     [MemberData(nameof(NotCurrentlyLiveMetadata))]
     public async Task FinalizeAsync_ShouldMarkFinished_WhenChannelIsNotLiveWithSameStreamAfterError(StreamMetadata? metadata)
     {
-        // Arrange: covers both "Twitch reports a different/newer stream" and "Twitch reports nothing" (offline).
+        // Arrange
         _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>()).Returns(metadata);
 
         var sut = CreateSut();
@@ -130,9 +129,7 @@ public class StreamFinalizerTests
             sizeBytes: 0,
             new SessionEndReason.StreamError(new Exception("original error")));
 
-        // Assert: the failure is swallowed, but we also confirm *what state that leaves us in* —
-        // the channel-offline write (which happens before the failing call) still committed,
-        // while the never-reached status transition/storage finalization did not.
+        // Assert
         await act.Should().NotThrowAsync();
         AssertChannelIsOffline();
         await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
@@ -147,8 +144,8 @@ public class StreamFinalizerTests
 
     public static TheoryData<StreamMetadata?> NotCurrentlyLiveMetadata() => new()
     {
-        null, // Twitch has no live metadata for the channel at all.
-        new StreamMetadata("ts_new", "title", "cat", DateTime.Now), // Twitch is live, but as a different stream.
+        null,
+        new StreamMetadata("ts_new", "title", "cat", DateTime.Now),
     };
 
     private StreamFinalizer CreateSut()
@@ -171,11 +168,6 @@ public class StreamFinalizerTests
             "Test Title",
             "Test Category");
 
-    // Domain.Stream.Create assigns its Id client-side, so EfDataStore.Save's IsKeySet check
-    // treats *any* such stream as Modified, never Added — it always requires a pre-existing row.
-    // StreamFinalizer only ever updates a stream (never inserts one), so tests must seed it here,
-    // exactly like _channel is seeded in CreateSut, or every persist call throws
-    // DbUpdateConcurrencyException and gets silently swallowed by FinalizeAsync's outer catch.
     private Domain.Stream SeedStream(Domain.Stream stream)
     {
         using var db = _factory.CreateDbContext();

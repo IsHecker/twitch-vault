@@ -15,9 +15,11 @@ public sealed class LiveSegmentUploader(
     IOptionsMonitor<VaultOptions> vaultOptions,
     ILogger<LiveSegmentUploader> logger) : ISegmentUploader
 {
+    private const int BufferRoom = 10;
     private static readonly TimeSpan DrainTimeout = TimeSpan.FromSeconds(120);
 
-    private readonly List<LocalSegment> _buffer = [];
+    private int _bufferIndex = 0;
+    private string[] _buffer = null!;
     private readonly object _lock = new();
     private readonly SemaphoreSlim _uploadsCompletedSignal = new(0, 1);
     private Action _onBatchCompleted = null!;
@@ -30,21 +32,22 @@ public sealed class LiveSegmentUploader(
     public void Attach(Domain.Stream stream)
     {
         _stream = stream;
+        _buffer = new string[vaultOptions.CurrentValue.UploadBatchSize + BufferRoom];
         _onBatchCompleted = HandleBatchCompleted;
         // ResetIdleTimer();
     }
 
     public async Task AddAsync(LocalSegment segment)
     {
-        List<string>? batchToQueue = null;
+        string[]? batchToQueue = null;
 
         lock (_lock)
         {
             if (_disposed || _isDraining)
                 return;
 
-            _buffer.Add(segment);
-            if (_buffer.Count >= vaultOptions.CurrentValue.UploadBatchSize)
+            _buffer[_bufferIndex++] = segment.FilePath;
+            if (_bufferIndex >= vaultOptions.CurrentValue.UploadBatchSize)
                 batchToQueue = ConsumeBuffer();
         }
 
@@ -56,13 +59,13 @@ public sealed class LiveSegmentUploader(
     public async Task FlushRemainingAsync()
     {
         // CancelIdleTimer();
-        List<string> remaining;
+        string[] remaining;
         lock (_lock)
         {
             remaining = ConsumeBuffer();
         }
 
-        if (remaining.Count > 0)
+        if (remaining.Length > 0)
             await EnqueueBatchAsync(remaining, isUrgent: true);
 
         lock (_lock)
@@ -81,7 +84,7 @@ public sealed class LiveSegmentUploader(
         }
     }
 
-    private async Task EnqueueBatchAsync(IReadOnlyList<string> filePaths, bool isUrgent)
+    private async Task EnqueueBatchAsync(string[] filePaths, bool isUrgent)
     {
         Interlocked.Increment(ref _pendingUploads);
         await uploadQueue.QueueBatchAsync(new UploadBatch(_stream, filePaths, _onBatchCompleted, isUrgent));
@@ -105,14 +108,13 @@ public sealed class LiveSegmentUploader(
         }
     }
 
-    private List<string> ConsumeBuffer()
+    private string[] ConsumeBuffer()
     {
-        var count = _buffer.Count;
-        var content = new List<string>(count);
-        for (var i = 0; i < count; i++)
-            content.Add(_buffer[i].FilePath);
+        var content = new string[_bufferIndex];
+        for (var i = 0; i < _bufferIndex; i++)
+            content[i] = _buffer[i];
 
-        _buffer.Clear();
+        _bufferIndex = 0;
         return content;
     }
 

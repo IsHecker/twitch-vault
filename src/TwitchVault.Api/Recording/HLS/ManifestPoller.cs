@@ -6,7 +6,7 @@ namespace TwitchVault.Api.Recording.HLS;
 
 public interface IManifestPoller
 {
-    Task<(System.IO.Stream ManifestStream, bool HasQualityChanged)> GetNextManifestAsync(
+    Task<(ResponseStream ManifestStream, bool HasQualityChanged)> GetNextManifestAsync(
         Channel channel,
         CancellationToken cancellationToken);
 }
@@ -36,7 +36,7 @@ public sealed class ManifestPoller(
         _totalPollCount >= MinPollsThreshold &&
         (_variants.Length >= EarlyStabilityVariantCount || _consecutiveUnchangedPolls >= MaxUnchangedPollsThreshold);
 
-    public async Task<(System.IO.Stream ManifestStream, bool HasQualityChanged)> GetNextManifestAsync(
+    public async Task<(ResponseStream ManifestStream, bool HasQualityChanged)> GetNextManifestAsync(
         Channel channel,
         CancellationToken cancellationToken)
     {
@@ -44,7 +44,7 @@ public sealed class ManifestPoller(
             await RefreshVariantsAsync(channel.Name, cancellationToken);
 
         if (_variants.Length == 0)
-            return (System.IO.Stream.Null, false);
+            return (ResponseStream.Null, false);
 
         var (rank, url) = ResolveQuality(channel);
 

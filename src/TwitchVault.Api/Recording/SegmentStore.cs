@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace TwitchVault.Api.Recording;
 
-public sealed record LocalSegment(string FilePath, float Duration, long SizeBytes);
+public readonly record struct LocalSegment(string FilePath, float Duration, long SizeBytes);
 
 public interface ISegmentStore
 {
@@ -63,7 +63,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         SegmentContent segment,
         CancellationToken cancellationToken)
     {
-        using var content = segment.Content;
+        var content = segment.ResponseStream.Content;
         var initFileName = $"init{GetUrlExtension(segment.Source.Url)}";
         var initPath = Path.Combine(streamFolderPath, initFileName);
 
@@ -79,7 +79,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         string? lastFlushedFileName,
         CancellationToken cancellationToken)
     {
-        using var content = segment.Content;
+        var content = segment.ResponseStream.Content;
         EnsureCurrentFileStream(streamFolderPath, lastFlushedFileName, GetUrlExtension(segment.Source.Url));
         await content.CopyToAsync(_currentFileStream!, cancellationToken);
 

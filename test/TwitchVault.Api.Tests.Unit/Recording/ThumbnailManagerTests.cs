@@ -26,7 +26,9 @@ public class ThumbnailManagerTests
             "initialCategoryId");
 
         _twitchGqlClient.DownloadAsStreamAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(_ => new MemoryStream("dummy-image-bytes"u8.ToArray()));
+            .Returns(_ => new ResponseStream(
+                new MemoryStream("dummy-image-bytes"u8.ToArray()),
+                new HttpResponseMessage()));
 
         _fileSystem.OpenWrite(Arg.Any<string>(), Arg.Any<FileMode>())
             .Returns(_ => new MemoryStream());

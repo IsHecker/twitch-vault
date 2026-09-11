@@ -37,10 +37,11 @@ public sealed class StreamRecorder(
     private Channel _channel = null!;
     private string _streamDirectory = string.Empty;
     private long _streamSizeBytes;
+    private readonly List<SegmentContent> _segmentBuffer = [];
+
     private readonly CancellationTokenSource _cts
         = CancellationTokenSource.CreateLinkedTokenSource(parentCancellationToken);
     private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
-
     private VaultOptions VaultOptions => vaultOptions.CurrentValue;
 
     public async Task StartAsync(Domain.Stream stream, Channel channel)
@@ -92,7 +93,7 @@ public sealed class StreamRecorder(
 
             var (manifestStream, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel, cancellationToken);
 
-            if (manifestStream == System.IO.Stream.Null)
+            if (manifestStream == ResponseStream.Null)
             {
                 logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
                 await Task.Delay(EmptyPollInterval, timeProvider, cancellationToken);
@@ -111,7 +112,7 @@ public sealed class StreamRecorder(
 
             playlistWriter.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
 
-            var fetchedSegments = FetchSegmentsAsync(manifestResult, cancellationToken);
+            var fetchedSegments = await FetchSegmentsAsync(manifestResult, cancellationToken);
             await StoreSegmentsAsync(fetchedSegments, cancellationToken);
 
             if (manifestResult.IsStreamEnded)
@@ -137,13 +138,17 @@ public sealed class StreamRecorder(
         logger.LogDebug("Quality switch detected.");
     }
 
-    private async IAsyncEnumerable<SegmentContent> FetchSegmentsAsync(
+    private async ValueTask<List<SegmentContent>> FetchSegmentsAsync(
         PlaylistExtractionResult manifestResult,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
-        foreach (var segment in manifestResult.Segments)
+        _segmentBuffer.Clear();
+
+        var segments = manifestResult.Segments;
+        for (var i = 0; i < segments.Count; i++)
         {
-            System.IO.Stream? segmentStream;
+            var segment = segments[i];
+            ResponseStream segmentStream;
             try
             {
                 segmentStream = await twitchGqlClient.DownloadAsStreamAsync(segment.Url, cancellationToken);
@@ -157,24 +162,23 @@ public sealed class StreamRecorder(
                 continue;
             }
 
-            if (segmentStream is not null)
-                yield return new SegmentContent(segment, segmentStream);
+            if (segmentStream != ResponseStream.Null)
+                _segmentBuffer.Add(new SegmentContent(segment, segmentStream));
         }
+
+        return _segmentBuffer;
     }
 
     private async Task StoreSegmentsAsync(
-        IAsyncEnumerable<SegmentContent> fetchedSegments,
+        List<SegmentContent> fetchedSegments,
         CancellationToken cancellationToken)
     {
-        await foreach (var segment in fetchedSegments)
+        foreach (var segment in fetchedSegments)
         {
             try
             {
                 if (segment.Source.IsInitSegment && playlistWriter.HasInitSegment)
-                {
-                    await segment.Content.DisposeAsync();
                     continue;
-                }
 
                 var localSegment = await segmentStore.SaveAsync(
                     _streamDirectory,
@@ -182,21 +186,25 @@ public sealed class StreamRecorder(
                     playlistWriter.LastSegmentFileName,
                     cancellationToken);
 
-                if (localSegment is null)
+                if (!localSegment.HasValue)
                     continue;
 
-                _streamSizeBytes += localSegment.SizeBytes;
+                _streamSizeBytes += localSegment.Value.SizeBytes;
 
                 if (segment.Source.IsInitSegment)
-                    await playlistWriter.SetInitSegmentAsync(localSegment.FilePath, cancellationToken);
+                    await playlistWriter.SetInitSegmentAsync(localSegment.Value.FilePath, cancellationToken);
                 else
-                    await playlistWriter.AddSegmentAsync(localSegment.FilePath, localSegment.Duration, cancellationToken);
+                    await playlistWriter.AddSegmentAsync(localSegment.Value.FilePath, localSegment.Value.Duration, cancellationToken);
 
-                await segmentUploader.AddAsync(localSegment);
+                await segmentUploader.AddAsync(localSegment.Value);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "Error storing segment for channel '{Channel}'. Skipping segment.", _channel.Name);
+            }
+            finally
+            {
+                await segment.ResponseStream.DisposeAsync();
             }
         }
     }
@@ -204,12 +212,12 @@ public sealed class StreamRecorder(
     private async Task CloseCurrentSegmentAsync(CancellationToken cancellationToken)
     {
         var segment = segmentStore.CloseCurrentSegment();
-        if (segment is null)
+        if (!segment.HasValue)
             return;
 
-        _streamSizeBytes += segment.SizeBytes;
-        await playlistWriter.AddSegmentAsync(segment.FilePath, segment.Duration, cancellationToken);
-        await segmentUploader.AddAsync(segment);
+        _streamSizeBytes += segment.Value.SizeBytes;
+        await playlistWriter.AddSegmentAsync(segment.Value.FilePath, segment.Value.Duration, cancellationToken);
+        await segmentUploader.AddAsync(segment.Value);
     }
 
     private void SetEndReason(SessionEndReason reason) =>

@@ -1,8 +1,8 @@
 namespace TwitchVault.Api.Recording;
 
-public record UploadBatch(
+public readonly record struct UploadBatch(
     Domain.Stream Stream,
-    IReadOnlyList<string> LocalFilePaths,
+    string[] LocalFilePaths,
     Action? OnCompleted = null,
     bool IsUrgent = false);
 

@@ -48,10 +48,10 @@ public sealed class ThumbnailManager(
 
     private async Task SaveThumbnailAsync(string imageUrl, string savePath, CancellationToken cancellationToken)
     {
-        using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, cancellationToken);
+        await using var imageStream = await twitchGqlClient.DownloadAsStreamAsync(imageUrl, cancellationToken);
 
         await using var fileStream = fileSystem.OpenWrite(savePath, FileMode.Create);
-        await imageStream.CopyToAsync(fileStream, cancellationToken);
+        await imageStream.Content.CopyToAsync(fileStream, cancellationToken);
     }
 
     private static string BuildLiveThumbnailUrl(string channelName) =>

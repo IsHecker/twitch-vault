@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO.Pipelines;
 using System.Text;
 using TwitchVault.Api.Common;
+using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Recording.HLS;
 
@@ -17,22 +18,16 @@ public record struct PlaylistExtractionResult(
 public static class PlaylistSegmentExtractor
 {
     public static async ValueTask<PlaylistExtractionResult> ExtractNewSegmentsAsync(
-        Stream playlistStream, long lastMediaSequence, CancellationToken ct)
+        ResponseStream playlistStream, long lastMediaSequence, CancellationToken ct)
     {
-        PipeReader reader = PipeReader.Create(playlistStream);
+        await using var stream = playlistStream.Content;
+        PipeReader reader = PipeReader.Create(stream);
         var state = new ParsingState(lastMediaSequence);
 
         while (true)
         {
             ReadResult readResult = await reader.ReadAsync(ct);
-
-            // consumedUpTo = how far into this chunk we managed to fully parse.
-            // Anything after that point is an incomplete line and gets kept
-            // for next time automatically by AdvanceTo below.
             SequencePosition consumedUpTo = ParseAvailableLines(readResult.Buffer, ref state);
-
-            // Tell the pipe: "the bytes up to consumedUpTo are done, you can
-            // reuse that memory." This is what keeps memory usage low.
             reader.AdvanceTo(consumedUpTo, readResult.Buffer.End);
 
             if (readResult.IsCompleted)
@@ -54,9 +49,8 @@ public static class PlaylistSegmentExtractor
 
         while (lineSplitter.TryReadTo(out ReadOnlySequence<byte> lineBytes, (byte)'\n', advancePastDelimiter: true))
         {
-            // Almost always true: the line fits in one pooled buffer.
             var line = lineBytes.IsSingleSegment
-                ? lineBytes.FirstSpan : lineBytes.ToArray(); // rare: line happened to straddle two buffers
+                ? lineBytes.FirstSpan : lineBytes.ToArray();
 
             if (line.IsEmpty)
                 continue;
@@ -64,8 +58,6 @@ public static class PlaylistSegmentExtractor
             ProcessLine(line, ref state);
         }
 
-        // Position = everything fully consumed above. Whatever's left after
-        // this (a line cut off mid-way) stays in the pipe for next time.
         return lineSplitter.Position;
     }
 
@@ -129,36 +121,4 @@ public static class PlaylistSegmentExtractor
         public bool WaitingForSegmentUrl;
         public float PendingDuration;
     }
-
-    public static IEnumerable<RemoteSegment> EnumerateSegments(IEnumerable<string> lines)
-    {
-        float? pendingDuration = null;
-        foreach (var line in lines)
-        {
-            var trimmed = line.AsSpan().Trim();
-            if (trimmed.IsEmpty)
-                continue;
-
-            if (trimmed.StartsWith(HlsTags.MapPrefix, StringComparison.Ordinal))
-            {
-                var initUrl = HlsTagReader.ReadTagValueSpan(trimmed, HlsTags.MapPrefix).Trim('"').ToString();
-                yield return new RemoteSegment(initUrl, 0, IsInitSegment: true);
-                continue;
-            }
-
-            if (trimmed.StartsWith(HlsTags.ExtInfPrefix, StringComparison.Ordinal))
-            {
-                var durationSpan = HlsTagReader.ReadTagValueSpan(trimmed, HlsTags.ExtInfPrefix, ',');
-                pendingDuration = float.Parse(durationSpan, CultureInfo.InvariantCulture);
-                continue;
-            }
-
-            if (pendingDuration is not null)
-            {
-                yield return new RemoteSegment(trimmed.ToString(), pendingDuration.Value);
-                pendingDuration = null;
-            }
-        }
-    }
 }
-// 284

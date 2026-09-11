@@ -76,10 +76,6 @@ public class Program
             RequestPath = $"/{paths.Streams}"
         });
 
-        // using var scope = app.Services.CreateScope();
-        // var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        // await JsonDataMigrator.RunAsync("Database.json", db);
-
         app.MapEndpoints();
         app.Run();
     }

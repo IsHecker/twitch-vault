@@ -10,13 +10,28 @@ public static class TwitchHttpClients
     public const string Cdn = "TwitchCdn";
 }
 
+public readonly record struct ResponseStream(Stream Stream, HttpResponseMessage? HttpResponse) : IAsyncDisposable
+{
+    public static ResponseStream Null { get; } = new(Stream.Null, null);
+    public static ResponseStream Empty(HttpResponseMessage? response) => new(Stream.Null, response);
+    public Stream Content { get; } = Stream;
+
+    public async ValueTask DisposeAsync()
+    {
+        await Content.DisposeAsync();
+        HttpResponse?.Dispose();
+    }
+}
+
 public sealed class TwitchGqlClient(
     IHttpClientFactory httpClientFactory,
     ILogger<TwitchGqlClient> logger) : ITwitchGqlClient
 {
     private const string TwitchGqlUrl = "https://gql.twitch.tv/gql";
 
-    public async Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(List<Domain.Channel> channels, CancellationToken cancellationToken)
+    public async Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(
+        List<Domain.Channel> channels,
+        CancellationToken cancellationToken)
     {
         if (channels.Count == 0)
             return [];
@@ -118,46 +133,43 @@ public sealed class TwitchGqlClient(
         }
     }
 
-    public async Task<Stream> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken)
+    public async Task<ResponseStream> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken)
     {
+        HttpResponseMessage response = null!;
         try
         {
-            // TODO: response disposal should be handled
             using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
-            var response = await apiClient.GetAsync(playlistUrl, cancellationToken);
+            response = await apiClient.GetAsync(playlistUrl, cancellationToken);
+
             return response.IsSuccessStatusCode ?
-                await response.Content.ReadAsStreamAsync(cancellationToken) : Stream.Null;
+                new(await response.Content.ReadAsStreamAsync(cancellationToken), response)
+                : ResponseStream.Empty(response);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Error fetching playlist content");
-            return Stream.Null;
+            return ResponseStream.Empty(response);
         }
     }
 
-    public async Task<Stream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken)
+    public async Task<ResponseStream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken)
     {
-        HttpClient? cdnClient = null;
         HttpResponseMessage? response = null;
         try
         {
-            cdnClient = httpClientFactory.CreateClient(TwitchHttpClients.Cdn);
+            using var cdnClient = httpClientFactory.CreateClient(TwitchHttpClients.Cdn);
             response = await cdnClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
-            // Transfer ownership: the stream disposes the response (and releases the connection)
-            // when the caller disposes the stream returned by ReadAsStreamAsync.
-            // We must NOT dispose response here — the network stream is still being read.
+
             var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            cdnClient.Dispose();
-            return stream;
+            return new(stream, response);
         }
         catch (Exception ex)
         {
             response?.Dispose();
-            cdnClient?.Dispose();
             if (ex is not OperationCanceledException)
                 logger.LogWarning(ex, "Transient network error downloading segment.");
-            return Stream.Null;
+            return ResponseStream.Empty(response);
         }
     }
 

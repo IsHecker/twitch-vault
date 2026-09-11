@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using TwitchVault.Api.Common;
 
@@ -114,7 +115,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             if (duration > _targetDuration)
                 _targetDuration = duration;
 
-            await WriteLineAsync(HlsTags.ExtInf(duration), cancellationToken);
+            await WriteExtInfAsync(duration, cancellationToken);
             await WriteLineAsync(fileName, cancellationToken);
 
             LastSegmentFileName = fileName;
@@ -203,6 +204,31 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
         await _fileStream.FlushAsync(cancellationToken);
 
         _fileStream.Position = _fileStream.Length;
+    }
+
+    private async ValueTask WriteExtInfAsync(float duration, CancellationToken ct)
+    {
+        var buffer = _lineBuffer;
+        var bytesWritten = 0;
+
+        "#EXTINF:"u8.CopyTo(buffer.AsSpan(bytesWritten));
+        bytesWritten += 8;
+
+        if (duration.TryFormat(buffer.AsSpan(bytesWritten), out var written, "F3", CultureInfo.InvariantCulture))
+        {
+            bytesWritten += written;
+        }
+        // else
+        // {
+        //     var fallback = Encoding.UTF8.GetBytes(duration.ToString("F3", CultureInfo.InvariantCulture));
+        //     fallback.CopyTo(buffer.AsSpan(bytesWritten));
+        //     bytesWritten += fallback.Length;
+        // }
+
+        buffer[bytesWritten++] = (byte)',';
+        buffer[bytesWritten++] = (byte)'\n';
+
+        await _fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten), ct);
     }
 
     private ValueTask WriteAsync(string text, CancellationToken ct)

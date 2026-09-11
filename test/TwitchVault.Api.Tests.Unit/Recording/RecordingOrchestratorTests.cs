@@ -30,8 +30,6 @@ public class RecordingOrchestratorTests
         _appLifetime.ApplicationStopping.Returns(_appStoppingCts.Token);
     }
 
-    // The orchestrator now owns its DB access via IDataStore, so the sut
-    // just needs the same store wrapping the test factory.
     private RecordingOrchestrator CreateSut() =>
         new(_streamRecorderRegistry,
             _streamRecorderFactory,
@@ -61,12 +59,10 @@ public class RecordingOrchestratorTests
         return recorder;
     }
 
-    // --- TryStartRecordingAsync (entry point / dedupe / error handling) ---
-
     [Fact]
     public async Task TryStartRecordingAsync_ShouldDoNothing_WhenChannelAlreadyBeingRecorded()
     {
-        // Arrange — short-circuits before any DbContext is ever created, nothing to seed
+        // Arrange
         _streamRecorderRegistry.TryRegister(ChannelId).Returns(false);
         var sut = CreateSut();
 
@@ -80,8 +76,7 @@ public class RecordingOrchestratorTests
     [Fact]
     public async Task TryStartRecordingAsync_ShouldSwallowAndLogException_WhenUnhandledExceptionOccurs()
     {
-        // Arrange — channel exists (so we get past the null-channel branch), gql client throws instead.
-        // Seeded via a throwaway context; the orchestrator goes through IDataStore.
+        // Arrange
         using (var db = _factory.CreateDbContext())
         {
             db.Channels.Add(CreateChannel());
@@ -124,12 +119,10 @@ public class RecordingOrchestratorTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    // --- RecordStreamAsync (private — exercised through TryStartRecordingAsync) ---
-
     [Fact]
     public async Task RecordStreamAsync_ShouldCreateNewStream_WhenChannelExistsAndNoExistingStream()
     {
-        // Arrange — seed context is separate from the one the orchestrator will create for itself
+        // Arrange
         using var db = _factory.CreateDbContext();
         var channel = CreateChannel();
         db.Channels.Add(channel);
@@ -146,7 +139,6 @@ public class RecordingOrchestratorTests
 
         _streamRecorderRegistry.TryRegister(ChannelId).Returns(true);
         _twitchGqlClient.GetStreamMetadataAsync(ChannelName, Arg.Any<CancellationToken>()).Returns(metadata);
-        // CreateStream is synchronous now, and the orchestrator itself adds the returned stream to its context.
         _streamService.CreateStream(Arg.Is<Channel>(c => c.Id == channel.Id), metadata).Returns(createdStream);
 
         var sut = CreateSut();
@@ -159,14 +151,10 @@ public class RecordingOrchestratorTests
         await _streamRecorderFactory.Received(1).CreateAsync(createdStream, Arg.Any<Channel>(), Arg.Any<CancellationToken>());
         _streamRecorderRegistry.Received(1).Register(channel.Id, recorder, Arg.Any<Task>());
 
-        // capturedChannel is the orchestrator's own internally-loaded Channel — a different
-        // instance than our seed `channel`, but the one that actually got mutated.
         capturedChannel.Should().NotBeNull();
         capturedChannel!.IsLive.Should().BeTrue();
         capturedChannel.LastStreamedAt.Should().Be(createdStream.StartedAt);
 
-        // Verify persistence with a fresh context — the seed `db` never tracked this stream,
-        // so it can't tell us what the orchestrator actually saved.
         await using var verifyDb = _factory.CreateDbContext();
         var savedStream = await verifyDb.Streams.GetByIdAsync(createdStream.Id);
         savedStream.Should().NotBeNull();
@@ -230,8 +218,6 @@ public class RecordingOrchestratorTests
         await _streamRecorderFactory.Received(1)
             .CreateAsync(Arg.Is<Domain.Stream>(s => s.Id == "ts_existing"), Arg.Is<Channel>(c => c.Id == channel.Id), Arg.Any<CancellationToken>());
 
-        // `db` already tracks the pre-mutation `existingStream` (Interrupted) — re-querying it would
-        // just hand back that stale tracked instance. Use a fresh context to see what was really saved.
         await using var verifyDb = _factory.CreateDbContext();
         var persisted = await verifyDb.Streams.GetByIdAsync("ts_existing");
         persisted!.Status.Should().Be(StreamStatus.Recording);
@@ -303,13 +289,10 @@ public class RecordingOrchestratorTests
         // Act
         await sut.TryStartRecordingAsync(ChannelId, ChannelName);
 
-        // Assert — assert on the orchestrator's own Channel instance (captured off the mock call),
-        // not our seed `channel`, since they live in different DbContexts now.
+        // Assert
         capturedChannel.Should().NotBeNull();
         capturedChannel!.IsLive.Should().BeTrue();
     }
-
-    // --- StopRecordingAsync (no DbContext involved at all) ---
 
     [Fact]
     public async Task StopRecordingAsync_ShouldCallStopOnSession_WhenSessionExists()

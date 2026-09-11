@@ -56,7 +56,7 @@ public class AddChannel : IEndpoint
 
             if (!isArchived)
             {
-                await twitchSubscription.AddChannelsAsync([channel], default);
+                // await twitchSubscription.AddChannelsAsync([channel], default);
 
                 // TODO: delete
                 await recordingOrchestrator.TryStartRecordingAsync(channel.Id, channel.Name);

@@ -11,7 +11,7 @@ namespace TwitchVault.Api.Recording;
 public interface IStreamStorageService
 {
     Task<bool> UploadBatchAsync(
-        IEnumerable<string> localFilePaths,
+        string[] localFilePaths,
         Domain.Stream stream,
         CancellationToken cancellationToken = default);
 
@@ -32,12 +32,21 @@ public sealed class StreamStorageService(
 {
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _streamLocks = new();
 
+    private static readonly FileStreamOptions FileReadOptions = new()
+    {
+        Mode = FileMode.Open,
+        Access = FileAccess.Read,
+        Share = FileShare.Read,
+        BufferSize = 4096,
+        Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+    };
+
     public async Task<bool> UploadBatchAsync(
-        IEnumerable<string> localFilePaths,
+        string[] localFilePaths,
         Domain.Stream stream,
         CancellationToken cancellationToken = default)
     {
-        var (storageFiles, localPathByFileName) = OpenSourceFiles(localFilePaths);
+        var (storageFiles, localPaths) = OpenSourceFiles(localFilePaths);
         var uploadResult = await cloudStorageService.UploadAsync(storageFiles, stream.StorageInstanceName, cancellationToken);
         if (uploadResult.IsFailure)
         {
@@ -75,12 +84,13 @@ public sealed class StreamStorageService(
 
             foreach (var remoteUrl in response.RemoteUrls)
             {
-                if (!localPathByFileName.TryGetValue(remoteUrl.FileName, out var localPath))
-                    continue;
+                var localPath = FindLocalPath(localPaths, remoteUrl.FileName);
+                // if (localPath is null)
+                //     continue;
 
                 try
                 {
-                    File.Delete(localPath);
+                    File.Delete(localPath!);
                 }
                 catch (IOException ex)
                 {
@@ -166,17 +176,13 @@ public sealed class StreamStorageService(
         Domain.Stream stream,
         CancellationToken cancellationToken = default)
     {
-        var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
-        if (stream.StorageLocation == StorageLocation.Remote && File.Exists(playlistPath))
+        var urlFilePath = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        if (stream.StorageLocation == StorageLocation.Remote && File.Exists(urlFilePath))
         {
-            // TODO: use the urls from the remoteurls file!
-            var remoteUrls = PlaylistSegmentExtractor
-                .EnumerateSegments(File.ReadLines(playlistPath))
-                .Select(seg => seg.Url)
-                .ToList();
+            var remoteUrls = File.ReadLines(urlFilePath);
 
-            logger.LogInformation("Deleting {Count} remote segment(s) for stream '{StreamId}' (Instance: '{Instance}')...",
-                remoteUrls.Count, stream.Id, stream.StorageInstanceName);
+            logger.LogInformation("Deleting stream '{StreamId}' (Instance: '{Instance}')...",
+                stream.Id, stream.StorageInstanceName);
 
             var result = await cloudStorageService.DeleteBatchAsync(
                 stream.StorageInstanceName!, remoteUrls, cancellationToken);
@@ -201,21 +207,26 @@ public sealed class StreamStorageService(
         return true;
     }
 
-    private static (List<StorageFile> Files, Dictionary<string, string> LocalPathByFileName) OpenSourceFiles(
-        IEnumerable<string> localFilePaths)
+    private static (StorageFile[] Files, string[] Paths) OpenSourceFiles(string[] localFilePaths)
     {
-        _ = localFilePaths.TryGetNonEnumeratedCount(out var count);
-        var storageFiles = new List<StorageFile>(count);
-        var localPathByFileName = new Dictionary<string, string>(count, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var path in localFilePaths)
+        var storageFiles = new StorageFile[localFilePaths.Length];
+        for (var i = 0; i < localFilePaths.Length; i++)
         {
-            var storageFile = new StorageFile(path, ResolveContentType(path), File.OpenRead(path));
-            storageFiles.Add(storageFile);
-            localPathByFileName[storageFile.FileName] = path;
+            var path = localFilePaths[i];
+            storageFiles[i] = new StorageFile(path, ResolveContentType(path), new FileStream(path, FileReadOptions));
         }
 
-        return (storageFiles, localPathByFileName);
+        return (storageFiles, localFilePaths);
+    }
+
+    private static string? FindLocalPath(string[] paths, string fileName)
+    {
+        for (var i = 0; i < paths.Length; i++)
+        {
+            if (Path.GetFileName(paths[i].AsSpan()).Equals(fileName, StringComparison.OrdinalIgnoreCase))
+                return paths[i];
+        }
+        return null;
     }
 
     private SemaphoreSlim GetStreamLock(string streamId)

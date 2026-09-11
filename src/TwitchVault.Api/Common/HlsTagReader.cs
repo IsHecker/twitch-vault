@@ -50,10 +50,9 @@ public static class HlsTagReader
             if (afterTagIndex >= manifest.Length)
                 return [];
 
-            // TODO: Check this as it should continue only without any increment.
             if (startTagIndex > 0 && isLetterOrDigit(manifest[startTagIndex - 1]))
             {
-                offset = startTagIndex + 1; // your original never advanced here — infinite loop; fixed
+                offset = startTagIndex + 1;
                 continue;
             }
 

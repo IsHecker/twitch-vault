@@ -6,6 +6,7 @@ using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 
@@ -74,7 +75,7 @@ public class SegmentStoreTests
     [Fact]
     public async Task SaveAsync_ShouldReuseSameFileStream_AcrossAppendsUntilFull()
     {
-        // Arrange: two partial appends that together cross the 10s threshold.
+        // Arrange
         var expectedPath = Path.Combine(StreamFolderPath, "seg_1.ts");
         var mockFileStream = SetupWrite(expectedPath, FileMode.Create);
         var first = CreateSegment(SegmentUrl, "part-1-", duration: 6f);
@@ -87,7 +88,6 @@ public class SegmentStoreTests
         // Assert
         firstResult.Should().BeNull();
         AssertSavedSegment(secondResult, expectedPath, expectedDuration: 12f, mockFileStream, "part-1-part-2");
-        // The file should only be opened once and reused across both appends.
         _fileSystem.Received(1).OpenWrite(expectedPath, FileMode.Create);
     }
 
@@ -97,8 +97,6 @@ public class SegmentStoreTests
         _sut.CloseCurrentSegment().Should().BeNull();
     }
 
-    // --- shared helpers, so behavior changes to SegmentStore require one edit, not N ---
-
     private MemoryStream SetupWrite(string expectedPath, FileMode expectedMode)
     {
         var mockFileStream = new MemoryStream();
@@ -107,7 +105,8 @@ public class SegmentStoreTests
     }
 
     private static SegmentContent CreateSegment(string url, string content, float duration, bool isInit = false) =>
-        new(new RemoteSegment(url, duration, isInit), new MemoryStream(Encoding.UTF8.GetBytes(content)));
+        new(new RemoteSegment(url, duration, isInit),
+            new ResponseStream(new MemoryStream(Encoding.UTF8.GetBytes(content)), new HttpResponseMessage()));
 
     private static void AssertSavedSegment(
         LocalSegment? result,
@@ -119,9 +118,9 @@ public class SegmentStoreTests
         var expectedBytes = Encoding.UTF8.GetBytes(expectedWrittenContent);
 
         result.Should().NotBeNull();
-        result!.FilePath.Should().Be(expectedPath);
-        result.Duration.Should().Be(expectedDuration);
-        result.SizeBytes.Should().Be(expectedBytes.Length);
+        result!.Value.FilePath.Should().Be(expectedPath);
+        result.Value.Duration.Should().Be(expectedDuration);
+        result.Value.SizeBytes.Should().Be(expectedBytes.Length);
         mockFileStream.ToArray().Should().BeEquivalentTo(expectedBytes);
     }
 }
