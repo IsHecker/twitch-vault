@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace TwitchVault.Api.Recording.HLS;
 
@@ -45,4 +46,12 @@ internal static class HlsTags
 
     public static string ExtInf(float duration)
         => $"{ExtInfPrefix}:{duration.ToString("F3", CultureInfo.InvariantCulture)},";
+
+    public static class Utf8
+    {
+        public static readonly byte[] EndList = Encoding.UTF8.GetBytes(HlsTags.EndList);
+        public static readonly byte[] MediaSequencePrefix = Encoding.UTF8.GetBytes(HlsTags.MediaSequencePrefix);
+        public static readonly byte[] MapPrefix = Encoding.UTF8.GetBytes(HlsTags.MapPrefix);
+        public static readonly byte[] ExtInfPrefix = Encoding.UTF8.GetBytes(HlsTags.ExtInfPrefix);
+    }
 }

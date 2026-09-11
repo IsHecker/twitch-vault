@@ -6,7 +6,7 @@ namespace TwitchVault.Api.Recording.HLS;
 
 public interface IManifestPoller
 {
-    Task<(string? Manifest, bool HasQualityChanged)> GetNextManifestAsync(
+    Task<(System.IO.Stream ManifestStream, bool HasQualityChanged)> GetNextManifestAsync(
         Channel channel,
         CancellationToken cancellationToken);
 }
@@ -36,7 +36,7 @@ public sealed class ManifestPoller(
         _totalPollCount >= MinPollsThreshold &&
         (_variants.Length >= EarlyStabilityVariantCount || _consecutiveUnchangedPolls >= MaxUnchangedPollsThreshold);
 
-    public async Task<(string? Manifest, bool HasQualityChanged)> GetNextManifestAsync(
+    public async Task<(System.IO.Stream ManifestStream, bool HasQualityChanged)> GetNextManifestAsync(
         Channel channel,
         CancellationToken cancellationToken)
     {
@@ -44,15 +44,15 @@ public sealed class ManifestPoller(
             await RefreshVariantsAsync(channel.Name, cancellationToken);
 
         if (_variants.Length == 0)
-            return (null, false);
+            return (System.IO.Stream.Null, false);
 
         var (rank, url) = ResolveQuality(channel);
 
         var hasQualityChanged = rank != _activeQualityRank || url != _activeVariantUrl;
         (_activeQualityRank, _activeVariantUrl) = (rank, url);
 
-        var manifest = await twitchClient.GetPlaylistContentAsync(url, cancellationToken);
-        return (string.IsNullOrWhiteSpace(manifest) ? null : manifest, hasQualityChanged);
+        var manifestStream = await twitchClient.GetPlaylistContentAsync(url, cancellationToken);
+        return (manifestStream, hasQualityChanged);
     }
 
     private async Task RefreshVariantsAsync(string channelName, CancellationToken cancellationToken)

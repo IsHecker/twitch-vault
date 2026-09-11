@@ -118,20 +118,20 @@ public sealed class TwitchGqlClient(
         }
     }
 
-    public async Task<string> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken)
+    public async Task<Stream> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken)
     {
         try
         {
+            // TODO: response disposal should be handled
             using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
             var response = await apiClient.GetAsync(playlistUrl, cancellationToken);
             return response.IsSuccessStatusCode ?
-                await response.Content.ReadAsStringAsync(cancellationToken)
-                : string.Empty;
+                await response.Content.ReadAsStreamAsync(cancellationToken) : Stream.Null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Error fetching playlist content");
-            return string.Empty;
+            return Stream.Null;
         }
     }
 

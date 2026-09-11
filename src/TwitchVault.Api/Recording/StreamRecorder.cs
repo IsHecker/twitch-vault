@@ -90,9 +90,9 @@ public sealed class StreamRecorder(
         {
             await thumbnailManager.TryCaptureSnapshotAsync(_channel.Name, _stream, cancellationToken);
 
-            var (manifest, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel, cancellationToken);
+            var (manifestStream, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel, cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(manifest))
+            if (manifestStream == System.IO.Stream.Null)
             {
                 logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
                 await Task.Delay(EmptyPollInterval, timeProvider, cancellationToken);
@@ -104,7 +104,11 @@ public sealed class StreamRecorder(
             if (hasQualityChanged)
                 await HandleQualitySwitchAsync(cancellationToken);
 
-            var manifestResult = PlaylistSegmentExtractor.ExtractNewSegments(manifest, playlistWriter.LastTwitchMediaSequence);
+            var manifestResult = await PlaylistSegmentExtractor.ExtractNewSegmentsAsync(
+                manifestStream,
+                playlistWriter.LastTwitchMediaSequence,
+                cancellationToken);
+
             playlistWriter.UpdateTwitchMediaSequence(manifestResult.LastMediaSequence);
 
             var fetchedSegments = FetchSegmentsAsync(manifestResult, cancellationToken);
