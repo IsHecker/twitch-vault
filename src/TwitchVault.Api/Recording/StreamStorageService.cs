@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using CloudStorage.Core;
+using PolyStore;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording.HLS;
@@ -25,7 +25,7 @@ public interface IStreamStorageService
 }
 
 public sealed class StreamStorageService(
-    ICloudStorageService cloudStorageService,
+    IPolyStore polyStore,
     IDataStore dataStore,
     IWebHostEnvironment env,
     ILogger<StreamStorageService> logger) : IStreamStorageService
@@ -47,7 +47,7 @@ public sealed class StreamStorageService(
         CancellationToken cancellationToken = default)
     {
         var (storageFiles, localPaths) = OpenSourceFiles(localFilePaths);
-        var uploadResult = await cloudStorageService.UploadAsync(storageFiles, stream.StorageInstanceName, cancellationToken);
+        var uploadResult = await polyStore.UploadAsync(storageFiles, stream.StorageInstanceName, cancellationToken);
         if (uploadResult.IsFailure)
         {
             logger.LogError("Batch upload failed for stream '{StreamId}': {Error}",
@@ -176,24 +176,34 @@ public sealed class StreamStorageService(
         Domain.Stream stream,
         CancellationToken cancellationToken = default)
     {
-        var urlFilePath = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        var urlFilePath = Path.Combine(stream.Folder.GetAbsolutePath(env.ContentRootPath), StreamFolder.RemoteUrlsFile);
         if (stream.StorageLocation == StorageLocation.Remote && File.Exists(urlFilePath))
         {
-            var remoteUrls = File.ReadLines(urlFilePath);
+            var batch = new List<string>(200);
 
-            logger.LogInformation("Deleting stream '{StreamId}' (Instance: '{Instance}')...",
-                stream.Id, stream.StorageInstanceName);
-
-            var result = await cloudStorageService.DeleteBatchAsync(
-                stream.StorageInstanceName!, remoteUrls, cancellationToken);
-
-            if (result.IsFailure)
+            using (var reader = new StreamReader(urlFilePath))
             {
-                logger.LogError(
-                    "Failed to delete remote segments for stream '{StreamId}' on instance '{Instance}': {Error}",
-                    stream.Id, stream.StorageInstanceName, result.Error);
-                return false;
+                string? line;
+                while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
+                {
+                    var url = ExtractUrl(line);
+                    if (string.IsNullOrWhiteSpace(url))
+                        continue;
+
+                    batch.Add(url);
+
+                    if (batch.Count >= 200)
+                    {
+                        await polyStore.DeleteBatchAsync(
+                            stream.StorageInstanceName!, batch, cancellationToken);
+                        batch.Clear();
+                    }
+                }
             }
+
+            if (batch.Count > 0)
+                await polyStore.DeleteBatchAsync(
+                    stream.StorageInstanceName!, batch, cancellationToken);
         }
 
         await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<Domain.Stream, string>(stream.Id));
@@ -207,13 +217,25 @@ public sealed class StreamStorageService(
         return true;
     }
 
-    private static (StorageFile[] Files, string[] Paths) OpenSourceFiles(string[] localFilePaths)
+    private static string? ExtractUrl(string line)
     {
-        var storageFiles = new StorageFile[localFilePaths.Length];
+        var trimmed = line.AsSpan().Trim();
+        if (trimmed.IsEmpty)
+            return null;
+
+        Span<Range> ranges = stackalloc Range[2];
+        int count = trimmed.Split(ranges, '\t', StringSplitOptions.RemoveEmptyEntries);
+
+        return count == 2 ? trimmed[ranges[1]].ToString() : line;
+    }
+
+    private static (FilePayload[] Files, string[] Paths) OpenSourceFiles(string[] localFilePaths)
+    {
+        var storageFiles = new FilePayload[localFilePaths.Length];
         for (var i = 0; i < localFilePaths.Length; i++)
         {
             var path = localFilePaths[i];
-            storageFiles[i] = new StorageFile(path, ResolveContentType(path), new FileStream(path, FileReadOptions));
+            storageFiles[i] = new FilePayload(path, ResolveContentType(path), new FileStream(path, FileReadOptions));
         }
 
         return (storageFiles, localFilePaths);

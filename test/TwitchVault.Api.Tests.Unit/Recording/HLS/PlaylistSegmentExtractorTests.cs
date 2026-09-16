@@ -98,7 +98,7 @@ public class PlaylistSegmentExtractorTests
             "#EXT-X-MEDIA-SEQUENCE:1\n" +
             "#EXTINF:2.5,\n" +
             "segment_1.ts\n" +
-            "#EXT-X-ENDLIST\n";
+            "#EXT-X-ENDLIST";
 
         // Act
         var result = await PlaylistSegmentExtractor.ExtractNewSegmentsAsync(

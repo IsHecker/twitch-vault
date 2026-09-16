@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using CloudStorage.Core;
+using PolyStore;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
@@ -21,7 +21,7 @@ public class DiscordBulkDeleteEndpoints : IEndpoint
 
         group.MapPost("/bulk-delete", async (
             DiscordBulkDeleteRequest request,
-            ICloudStorageService cloudStorageService,
+            IPolyStore polyStore,
             IHttpClientFactory httpClientFactory,
             ILogger<DiscordBulkDeleteEndpoints> logger,
             CancellationToken cancellationToken) =>
@@ -124,7 +124,7 @@ public class DiscordBulkDeleteEndpoints : IEndpoint
                 // Format fake URLs for CloudStorageService: path is /{channelId}/{messageId}
                 var fakeUrls = messageIds.Select(id => $"https://fake.com/{id}/{channelId}").ToList();
 
-                var deleteResult = await cloudStorageService.DeleteBatchAsync(
+                var deleteResult = await polyStore.DeleteBatchAsync(
                     instanceName,
                     fakeUrls,
                     cancellationToken);

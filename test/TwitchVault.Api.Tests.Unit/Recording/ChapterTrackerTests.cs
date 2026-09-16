@@ -16,7 +16,6 @@ public class ChapterTrackerTests
 
     private readonly EventBus _eventBus = new(Substitute.For<ILogger<EventBus>>());
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
-    private readonly ILogger<ChapterTracker> _logger = Substitute.For<ILogger<ChapterTracker>>();
     private readonly TestDbContextFactory _factory = new();
     private readonly IDataStore _dataStore;
 
@@ -34,7 +33,7 @@ public class ChapterTrackerTests
         _dateTimeProvider.DateTimeNow.Returns(new DateTime(2026, 1, 1, 1, 0, 0));
     }
 
-    private ChapterTracker CreateSut() => new(_eventBus, _dataStore, _dateTimeProvider, _logger);
+    private ChapterTracker CreateSut() => new(_eventBus, _dataStore, _dateTimeProvider);
 
     private async Task SeedStreamAsync()
     {

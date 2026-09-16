@@ -30,8 +30,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="CloudStorage.Core">
-      <HintPath>lib\CloudStorage.Core.dll</HintPath>
+    <Reference Include="PolyStore.Abstractions">
+      <HintPath>lib\PolyStore.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="PolyStore.Core">
+      <HintPath>lib\PolyStore.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="PolyStore.Providers">
+      <HintPath>lib\PolyStore.Providers.dll</HintPath>
     </Reference>
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-using CloudStorage.Core;
+using PolyStore;
 using TwitchVault.Api.Storage;
 
 namespace TwitchVault.Api.Endpoints.Testing;
@@ -10,18 +10,18 @@ public class MockStorageEndpoints : IEndpoint
         var group = app.MapGroup("/testing/storage").WithTags("Testing");
 
         group.MapPost("/upload-file", async (
-            ICloudStorageService service) =>
+            IPolyStore polyStore) =>
         {
             var files = new DirectoryInfo("C:\\Users\\Mhamed\\Desktop")
                 .EnumerateFiles();
 
             var storageFiles = files.Select(file =>
-                new StorageFile(
+                new FilePayload(
                     file.FullName,
                     "text/plain",
                     File.OpenRead(file.FullName)));
 
-            var result = await service.UploadAsync(
+            var result = await polyStore.UploadAsync(
                 storageFiles,
                 null,
                 CancellationToken.None);
@@ -34,9 +34,9 @@ public class MockStorageEndpoints : IEndpoint
         group.MapPost("/delete-file", async (
             string storageInstance,
             string[] urls,
-            ICloudStorageService service) =>
+            IPolyStore polyStore) =>
         {
-            var result = await service.DeleteBatchAsync(storageInstance, urls, CancellationToken.None);
+            var result = await polyStore.DeleteBatchAsync(storageInstance, urls, CancellationToken.None);
             return Results.Ok(result);
         });
 

@@ -2,7 +2,6 @@ using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
-using System.Runtime.CompilerServices;
 
 using Microsoft.Extensions.Options;
 
@@ -93,8 +92,9 @@ public sealed class StreamRecorder(
 
             var (manifestStream, hasQualityChanged) = await manifestPoller.GetNextManifestAsync(_channel, cancellationToken);
 
-            if (manifestStream == ResponseStream.Null)
+            if (manifestStream.IsEmpty)
             {
+                await manifestStream.DisposeAsync();
                 logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
                 await Task.Delay(EmptyPollInterval, timeProvider, cancellationToken);
                 continue;
@@ -162,8 +162,10 @@ public sealed class StreamRecorder(
                 continue;
             }
 
-            if (segmentStream != ResponseStream.Null)
+            if (!segmentStream.IsEmpty)
                 _segmentBuffer.Add(new SegmentContent(segment, segmentStream));
+            else
+                await segmentStream.DisposeAsync();
         }
 
         return _segmentBuffer;

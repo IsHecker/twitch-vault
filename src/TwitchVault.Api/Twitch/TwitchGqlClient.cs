@@ -13,12 +13,13 @@ public static class TwitchHttpClients
 public readonly record struct ResponseStream(Stream Stream, HttpResponseMessage? HttpResponse) : IAsyncDisposable
 {
     public static ResponseStream Null { get; } = new(Stream.Null, null);
-    public static ResponseStream Empty(HttpResponseMessage? response) => new(Stream.Null, response);
-    public Stream Content { get; } = Stream;
+    public Stream Content => Stream ?? Stream.Null;
+    public bool IsEmpty => Stream is null || Stream == Stream.Null;
 
     public async ValueTask DisposeAsync()
     {
-        await Content.DisposeAsync();
+        if (Stream is not null)
+            await Stream.DisposeAsync();
         HttpResponse?.Dispose();
     }
 }
@@ -135,20 +136,26 @@ public sealed class TwitchGqlClient(
 
     public async Task<ResponseStream> GetPlaylistContentAsync(string playlistUrl, CancellationToken cancellationToken)
     {
-        HttpResponseMessage response = null!;
+        HttpResponseMessage? response = null;
         try
         {
             using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
             response = await apiClient.GetAsync(playlistUrl, cancellationToken);
 
-            return response.IsSuccessStatusCode ?
-                new(await response.Content.ReadAsStreamAsync(cancellationToken), response)
-                : ResponseStream.Empty(response);
+            if (!response.IsSuccessStatusCode)
+            {
+                response.Dispose();
+                return ResponseStream.Null;
+            }
+
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            return new(stream, response);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            response?.Dispose();
             logger.LogWarning(ex, "Error fetching playlist content");
-            return ResponseStream.Empty(response);
+            return ResponseStream.Null;
         }
     }
 
@@ -169,7 +176,7 @@ public sealed class TwitchGqlClient(
             response?.Dispose();
             if (ex is not OperationCanceledException)
                 logger.LogWarning(ex, "Transient network error downloading segment.");
-            return ResponseStream.Empty(response);
+            return ResponseStream.Null;
         }
     }
 

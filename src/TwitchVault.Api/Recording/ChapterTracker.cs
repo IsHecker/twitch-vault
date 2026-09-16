@@ -14,8 +14,7 @@ public interface IChapterTracker
 public sealed class ChapterTracker(
     EventBus eventBus,
     IDataStore dataStore,
-    IDateTimeProvider dateTimeProvider,
-    ILogger<ChapterTracker> logger) : IDisposable, IChapterTracker
+    IDateTimeProvider dateTimeProvider) : IDisposable, IChapterTracker
 {
     private Domain.Stream _stream = null!;
     private Channel _channel = null!;
@@ -31,16 +30,9 @@ public sealed class ChapterTracker(
 
     private async Task OnMetadataChangedAsync(ChannelUpdateEvent e)
     {
-        using var _chnlScope = logger.BeginScope("{Channel}", _channel.Name);
-        using var _metaScope = logger.BeginScope("'{Title}' ({CategoryId})", e.Title, e.CategoryId);
-
-        if (_stream.CurrentChapter.Title == e.Title && _stream.CurrentChapter.CategoryId == e.CategoryId)
-        {
-            logger.LogInformation("Metadata change ignored: title and game unchanged.");
+        if (_stream.CurrentChapter.Title == e.Title
+            && _stream.CurrentChapter.CategoryId == e.CategoryId)
             return;
-        }
-
-        logger.LogInformation("Metadata split triggered.");
 
         await dataStore.ExecuteAsync(() =>
         {

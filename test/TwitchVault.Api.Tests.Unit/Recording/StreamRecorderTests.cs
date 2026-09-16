@@ -47,8 +47,28 @@ public class StreamRecorderTests : IDisposable
             "Some Title",
             "Some Category");
 
-        _hlsPlaylist.LastTwitchMediaSequence.Returns(0L);
-        _hlsPlaylist.HasInitSegment.Returns(true);
+        // IHlsPlaylistWriter must behave statefully by default -- exactly like
+        // the real implementation -- so PlaylistSegmentExtractor's dedup logic
+        // (LastTwitchMediaSequence) is genuinely exercised in every test, not
+        // just ones that remember to opt in. A frozen .Returns(0L) here is what
+        // caused segments to be re-extracted and re-added on every subsequent
+        // poll: the writer never told the extractor it had already consumed
+        // anything. Individual tests can still .Returns(...) over this to force
+        // a specific single-poll branch (e.g. HasInitSegment.Returns(false)).
+        long lastSequence = 0;
+        bool hasInit = true;
+        string? lastSegmentFileName = null;
+
+        _hlsPlaylist.LastTwitchMediaSequence.Returns(_ => lastSequence);
+        _hlsPlaylist.HasInitSegment.Returns(_ => hasInit);
+        _hlsPlaylist.LastSegmentFileName.Returns(_ => lastSegmentFileName);
+
+        _hlsPlaylist.When(x => x.UpdateTwitchMediaSequence(Arg.Any<long>()))
+            .Do(c => lastSequence = c.Arg<long>());
+        _hlsPlaylist.When(x => x.SetInitSegmentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()))
+            .Do(_ => hasInit = true);
+        _hlsPlaylist.When(x => x.AddSegmentAsync(Arg.Any<string>(), Arg.Any<float>(), Arg.Any<CancellationToken>()))
+            .Do(c => lastSegmentFileName = c.Arg<string>());
 
         _finalizer.FinalizeAsync(
             Arg.Any<Channel>(),
@@ -60,9 +80,12 @@ public class StreamRecorderTests : IDisposable
     [Fact]
     public async Task StartAsync_ShouldProduceStreamEndedReason_WhenManifestSignalsStreamEnded()
     {
-        // Arrange
-        StubManifestOnce(DefaultManifest);
-        StubDownloadSegments();
+        var feed = new LiveHlsPlaylistFeed(windowSize: 2, firstMediaSequence: 100);
+        StubLiveManifest(feed,
+            f => f.AppendSegments(("seg_1.ts", 6f)).EndStream(),
+            f => { }); // re-fetch of the same ended window: nothing new -> finalize
+        StubDownloadSegments(Segment("seg_1.ts", 6f));
+
         await using var sut = CreateSut();
 
         // Act
@@ -70,6 +93,8 @@ public class StreamRecorderTests : IDisposable
 
         // Assert
         await AssertFinalizedAsync(new SessionEndReason.StreamEnded());
+        await _manifestPoller.Received(2).GetNextManifestAsync(_channel, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_1.ts", 6f, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -130,6 +155,23 @@ public class StreamRecorderTests : IDisposable
     {
         // Arrange
         StubManifestOnce(string.Empty);
+        await using var sut = CreateSut();
+
+        // Act
+        var act = async () => await StartAndRunToCompletionAsync(sut);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+        await _manifestPoller.Received(MaxConsecutiveEmptyPolls).GetNextManifestAsync(_channel, Arg.Any<CancellationToken>());
+        await AssertFinalizedAsync(new SessionEndReason.StreamEnded());
+    }
+
+    [Fact]
+    public async Task StartAsync_ShouldRetryUntilExhausted_WhenManifestReturnsEmptyResponseStreamWithHttpResponse()
+    {
+        // Arrange
+        _manifestPoller.GetNextManifestAsync(_channel, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult((new ResponseStream(System.IO.Stream.Null, new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)), false)));
         await using var sut = CreateSut();
 
         // Act
@@ -371,6 +413,97 @@ public class StreamRecorderTests : IDisposable
         _chapterTracker.Received().Dispose();
     }
 
+    // ---------------------------------------------------------------------
+    // Live-playlist tests: these exercise PlaylistSegmentExtractor's real
+    // sliding-window dedup logic across multiple polls. LastTwitchMediaSequence
+    // is made stateful (StubStatefulMediaSequence) so the extractor is told
+    // the truth about what's already been consumed, exactly as the real
+    // IHlsPlaylistWriter would report it.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task StartAsync_ShouldAddEachSegmentExactlyOnce_AsTheyArriveAcrossASlidingLivePlaylist()
+    {
+        // Arrange: seg_1 rolls out of the 2-wide window once seg_3 arrives,
+        // exactly like a real live Twitch playlist. If sequence tracking were
+        // static (as in the pre-existing StubManifestOnce path), seg_1/seg_2
+        // would get silently re-added on the second poll.
+        StubStatefulMediaSequence();
+        var feed = new LiveHlsPlaylistFeed(windowSize: 2, firstMediaSequence: 100);
+        StubLiveManifest(feed,
+            f => f.AppendSegments(("seg_1.ts", 6f)),
+            f => f.AppendSegments(("seg_2.ts", 6f), ("seg_3.ts", 6f)),
+            f => f.EndStream());
+        StubDownloadSegments(Segment("seg_1.ts", 6f), Segment("seg_2.ts", 6f), Segment("seg_3.ts", 6f));
+
+        await using var sut = CreateSut();
+
+        // Act
+        await StartAndRunToCompletionAsync(sut);
+
+        // Assert
+        Received.InOrder(() =>
+        {
+            _hlsPlaylist.AddSegmentAsync("seg_1.ts", 6f, Arg.Any<CancellationToken>());
+            _hlsPlaylist.AddSegmentAsync("seg_2.ts", 6f, Arg.Any<CancellationToken>());
+            _hlsPlaylist.AddSegmentAsync("seg_3.ts", 6f, Arg.Any<CancellationToken>());
+        });
+        await _hlsPlaylist.Received(3).AddSegmentAsync(Arg.Any<string>(), Arg.Any<float>(), Arg.Any<CancellationToken>());
+        await AssertFinalizedAsync(new SessionEndReason.StreamEnded());
+    }
+
+    [Fact]
+    public async Task StartAsync_ShouldNotReAddSegments_WhenPollFindsNoNewSegmentsInTheWindow()
+    {
+        // Arrange: two polls see the exact same window (nothing new arrived
+        // yet), then a third poll adds a genuinely new segment before ending.
+        // Only the new segment should ever reach AddSegmentAsync.
+        StubStatefulMediaSequence();
+        var feed = new LiveHlsPlaylistFeed(windowSize: 3, firstMediaSequence: 100);
+        StubLiveManifest(feed,
+            f => f.AppendSegments(("seg_1.ts", 6f)),
+            f => { /* no-op poll: nothing new arrived */ },
+            f => f.AppendSegments(("seg_2.ts", 6f)),
+            f => f.EndStream());
+        StubDownloadSegments(Segment("seg_1.ts", 6f), Segment("seg_2.ts", 6f));
+
+        await using var sut = CreateSut();
+
+        // Act
+        await StartAndRunToCompletionAsync(sut);
+
+        // Assert
+        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_1.ts", 6f, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(1).AddSegmentAsync("seg_2.ts", 6f, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(2).AddSegmentAsync(Arg.Any<string>(), Arg.Any<float>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartAsync_ShouldWaitAndKeepPolling_WhileStreamEndedFlagIsSetButSegmentsStillRemainUnconsumed()
+    {
+        // Arrange: real Twitch behavior -- EXT-X-ENDLIST can appear alongside
+        // segments that haven't been fully drained from the window yet. The
+        // recorder should keep polling (StreamEndWaitInterval) rather than
+        // finalizing immediately, only stopping once no non-init segments
+        // remain in a still-ended manifest.
+        StubStatefulMediaSequence();
+        var feed = new LiveHlsPlaylistFeed(windowSize: 2, firstMediaSequence: 100);
+        StubLiveManifest(feed,
+            f => f.AppendSegments(("seg_1.ts", 6f), ("seg_2.ts", 6f)).EndStream(),
+            f => { }); // second poll: same ended manifest, no new segments -> should finalize here
+        StubDownloadSegments(Segment("seg_1.ts", 6f), Segment("seg_2.ts", 6f));
+
+        await using var sut = CreateSut();
+
+        // Act
+        await StartAndRunToCompletionAsync(sut);
+
+        // Assert
+        await _manifestPoller.Received(2).GetNextManifestAsync(_channel, Arg.Any<CancellationToken>());
+        await _hlsPlaylist.Received(2).AddSegmentAsync(Arg.Any<string>(), Arg.Any<float>(), Arg.Any<CancellationToken>());
+        await AssertFinalizedAsync(new SessionEndReason.StreamEnded());
+    }
+
     public void Dispose() => _pollStarted.Dispose();
 
     private StreamRecorder CreateSut(CancellationToken parentToken = default) =>
@@ -416,7 +549,100 @@ public class StreamRecorderTests : IDisposable
 
     private static readonly string DefaultManifest = BuildManifest();
 
-    // GetNextManifestAsync now returns (ResponseStream, bool) instead of
+    /// <summary>
+    /// Simulates a real, growing live HLS media playlist the way Twitch
+    /// actually serves one: a sliding EXT-X-MEDIA-SEQUENCE window that only
+    /// ever grows, with older segments falling out of the window as new ones
+    /// arrive. Nothing about tag placement or segment shape is special-cased
+    /// here -- PlaylistSegmentExtractor parses the rendered text exactly as
+    /// it would parse a real Twitch response.
+    /// </summary>
+    private sealed class LiveHlsPlaylistFeed(string? initUri = "init.mp4", int windowSize = 3, long firstMediaSequence = 100)
+    {
+        private readonly List<(string FileName, float Duration)> _allSegments = [];
+        private bool _ended;
+
+        public LiveHlsPlaylistFeed AppendSegments(params (string FileName, float Duration)[] segments)
+        {
+            if (_ended)
+                throw new InvalidOperationException("Cannot append segments after the simulated stream has ended.");
+            _allSegments.AddRange(segments);
+            return this;
+        }
+
+        public LiveHlsPlaylistFeed EndStream()
+        {
+            _ended = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Renders the manifest exactly as it would look "right now": only
+        /// the most recent <c>windowSize</c> segments are present, with the
+        /// media sequence advanced to match whatever rolled out of the window.
+        /// </summary>
+        public string RenderCurrentManifest()
+        {
+            var windowStart = Math.Max(0, _allSegments.Count - windowSize);
+            var windowSegments = _allSegments.Skip(windowStart).ToArray();
+
+            var sb = new StringBuilder();
+            sb.Append("#EXTM3U\n");
+            sb.Append($"#EXT-X-MEDIA-SEQUENCE:{firstMediaSequence + windowStart}\n");
+            if (initUri is not null)
+                sb.Append($"#EXT-X-MAP:URI=\"{initUri}\"\n");
+
+            foreach (var (fileName, duration) in windowSegments)
+            {
+                sb.Append($"#EXTINF:{duration:0.000},\n");
+                sb.Append($"{fileName}\n");
+            }
+
+            if (_ended)
+                sb.Append("#EXT-X-ENDLIST\n");
+
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Makes the mocked playlist writer remember its sequence number the way
+    /// the real one would, so ExtractNewSegmentsAsync's dedup logic is
+    /// genuinely exercised across polls instead of re-seeing the same
+    /// segments forever (which is what a fixed .Returns(0L) would cause).
+    /// </summary>
+    private void StubStatefulMediaSequence()
+    {
+        long lastSequence = 0;
+        _hlsPlaylist.LastTwitchMediaSequence.Returns(_ => lastSequence);
+        _hlsPlaylist.When(x => x.UpdateTwitchMediaSequence(Arg.Any<long>()))
+            .Do(callInfo => lastSequence = callInfo.Arg<long>());
+    }
+
+    /// <summary>
+    /// Feeds one "poll step" per call to GetNextManifestAsync, running
+    /// <paramref name="steps"/> in order. Extra polls beyond the given steps
+    /// just re-render the feed's current, unchanged state -- exactly like a
+    /// live poll that finds nothing new.
+    /// </summary>
+    private void StubLiveManifest(LiveHlsPlaylistFeed feed, params Action<LiveHlsPlaylistFeed>[] steps)
+    {
+        var stepIndex = 0;
+        _manifestPoller.GetNextManifestAsync(_channel, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                if (stepIndex < steps.Length)
+                    steps[stepIndex++](feed);
+
+                var manifest = feed.RenderCurrentManifest();
+                var responseStream = new ResponseStream(
+                    new MemoryStream(Encoding.UTF8.GetBytes(manifest)),
+                    new HttpResponseMessage());
+                return Task.FromResult((responseStream, HasQualityChanged: false));
+            });
+    }
+
+    // GetNextManifestAsync returns (ResponseStream, bool) instead of
     // (string?, bool). A manifest is turned into a ResponseStream wrapping a
     // fresh MemoryStream (ExtractNewSegmentsAsync disposes the stream after
     // reading, so each call needs its own instance). "No manifest" -- either

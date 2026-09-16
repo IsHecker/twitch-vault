@@ -9,9 +9,6 @@ using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.ChannelMonitor;
-using CloudStorage.Core;
-using CloudStorage.Core.Discord;
-using CloudStorage.Core.Telegram;
 using TwitchVault.Api.Storage.Jobs;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
@@ -21,10 +18,13 @@ using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
-using CloudStorage.Core.Catbox;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
 using System.Net;
+using PolyStore;
+using PolyStore.Discord;
+using PolyStore.Catbox;
+using PolyStore.Telegram;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -266,10 +266,15 @@ public static class DependencyInjection
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
         services.ConfigureOptions<StorageUploadJobConfiguration>();
 
-        services.AddCloudStorage(configuration)
-            .AddDiscordStorage()
-            .AddCatboxStorage()
-            .AddTelegramStorage();
+        // services.AddCloudStorage(configuration)
+        //     .AddDiscordStorage()
+        //     .AddCatboxStorage()
+        //     .AddTelegramStorage();
+
+        services.AddPolyStore(configuration)
+            .AddDiscord()
+            .AddCatbox()
+            .AddTelegram();
 
         return services;
     }
