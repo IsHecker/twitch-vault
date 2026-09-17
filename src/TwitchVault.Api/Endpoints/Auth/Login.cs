@@ -24,6 +24,7 @@ public class Login : IEndpoint
             return Results.Ok(token);
         })
         .AllowAnonymous()
+        .RequireRateLimiting("AuthRateLimit")
         .WithName(nameof(Login))
         .WithTags("Auth")
         .WithSummary("Login and receive a JWT token")

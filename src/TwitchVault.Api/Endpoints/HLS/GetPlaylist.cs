@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using TwitchVault.Api.Auth;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence.Extensions;
 
@@ -9,6 +11,7 @@ public class GetPlaylist : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/{streamId}/playlist.m3u8", async (
             string streamId,
+            ClaimsPrincipal principal,
             AppDbContext db,
             IWebHostEnvironment env) =>
         {
@@ -20,8 +23,18 @@ public class GetPlaylist : IEndpoint
                 return Results.NotFound();
             }
 
-            var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
+            if (!principal.IsInRole("Admin"))
+            {
+                var userId = principal.GetUserId();
+                var userChannel = await db.UserChannels
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == stream.ChannelId);
 
+                if (userChannel is null || stream.StartedAt < userChannel.AddedAt)
+                    return Results.NotFound();
+            }
+
+            var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
             if (!File.Exists(playlistPath))
                 return Results.NotFound();
 

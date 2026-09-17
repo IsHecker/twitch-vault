@@ -10,7 +10,7 @@ namespace TwitchVault.Api.Twitch.EventSub;
 public sealed class TwitchSubscriptionService(
     TwitchHelixClient twitchHelixClient,
     IDataStore dataStore,
-    ILogger<TwitchSubscriptionService> logger)
+    ILogger<TwitchSubscriptionService> logger) : ITwitchSubscriptionService
 {
     private const int MaxTotalCost = 10_000;
     private const int MaxChannels = MaxTotalCost / TotalEventsPerChannel;

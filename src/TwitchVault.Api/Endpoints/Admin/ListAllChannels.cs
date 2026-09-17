@@ -1,23 +1,23 @@
-using Microsoft.EntityFrameworkCore;
+using TwitchVault.Api.Common;
+using TwitchVault.Api.Endpoints.Channels;
+using TwitchVault.Api.Recording;
 
 namespace TwitchVault.Api.Endpoints.Admin;
 
 public class ListAllChannels : IEndpoint
 {
-    // TODO: Use pagination
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/admin/channels", async (AppDbContext db) =>
+        app.MapGet("/api/admin/channels", async (
+            [AsParameters] Pagination pagination,
+            IChannelService channelService,
+            CancellationToken ct) =>
         {
-            var channels = await db.Channels
-                .AsNoTracking()
-                .Select(c => Channels.ChannelResponse.FromDomain(c))
-                .ToListAsync();
-
-            return Results.Ok(channels);
+            var paged = await channelService.GetAllChannelsAsync(pagination, ct);
+            return Results.Ok(paged);
         })
         .RequireAuthorization("Admin")
         .WithName("AdminGetAllChannels")
         .WithTags("Admin")
         .WithSummary("[Admin] List all channels in the system across all users")
-        .Produces<List<Channels.ChannelResponse>>();
+        .Produces<PagedResponse<ChannelResponse>>();
 }

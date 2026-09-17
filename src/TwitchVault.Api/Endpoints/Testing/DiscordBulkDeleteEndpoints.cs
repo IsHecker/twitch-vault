@@ -11,7 +11,7 @@ public sealed record DiscordBulkDeleteRequest(
     string? StorageInstance = "discord-main",
     int? MaxMessages = null);
 
-public class DiscordBulkDeleteEndpoints : IEndpoint
+public class DiscordBulkDeleteEndpoints : IDevOnlyEndpoint
 {
     private const string DefaultChannelId = "1534946063272771788";
 
@@ -124,7 +124,7 @@ public class DiscordBulkDeleteEndpoints : IEndpoint
                 // Format fake URLs for CloudStorageService: path is /{channelId}/{messageId}
                 var fakeUrls = messageIds.Select(id => $"https://fake.com/{id}/{channelId}").ToList();
 
-                var deleteResult = await polyStore.DeleteBatchAsync(
+                var deleteResult = await polyStore.DeleteAsync(
                     instanceName,
                     fakeUrls,
                     cancellationToken);

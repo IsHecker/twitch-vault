@@ -1,24 +1,29 @@
 using Microsoft.EntityFrameworkCore;
+using TwitchVault.Api.Common;
+using TwitchVault.Api.Common.Extensions;
 
 namespace TwitchVault.Api.Endpoints.Admin;
 
 public class ListAllUsers : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/admin/users", async (AppDbContext db) =>
+        app.MapGet("/api/admin/users", async (
+            [AsParameters] Pagination pagination,
+            AppDbContext db) =>
         {
-            var users = await db.Users
+            var query = db.Users
                 .AsNoTracking()
-                .Select(u => new UserSummary(u.Id, u.Username, u.IsAdmin, u.CreatedAt))
-                .ToListAsync();
+                .OrderBy(u => u.Username)
+                .Select(u => new UserSummary(u.Id, u.Username, u.IsAdmin, u.CreatedAt));
 
-            return Results.Ok(users);
+            var paged = await query.ToPagedResponseAsync(pagination);
+            return Results.Ok(paged);
         })
         .RequireAuthorization("Admin")
         .WithName("AdminGetAllUsers")
         .WithTags("Admin")
         .WithSummary("[Admin] List all registered users")
-        .Produces<List<UserSummary>>();
+        .Produces<PagedResponse<UserSummary>>();
 
     internal record UserSummary(Guid Id, string Username, bool IsAdmin, DateTime CreatedAt);
 }

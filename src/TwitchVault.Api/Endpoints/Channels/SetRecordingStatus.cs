@@ -1,5 +1,5 @@
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Twitch.EventSub;
+using TwitchVault.Api.Common.Results;
+using TwitchVault.Api.Recording;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
@@ -9,25 +9,11 @@ public class SetArchiveStatus : IEndpoint
         app.MapPut("/api/channels/{channelId}/archive", async (
             string channelId,
             Request request,
-            AppDbContext db,
-            TwitchSubscriptionService twitchSubscription) =>
+            IChannelService channelService,
+            CancellationToken ct) =>
         {
-            var channel = await db.Channels.GetByIdAsync(channelId);
-            if (channel is null)
-                return Results.NotFound();
-
-            if (channel.IsArchived == request.Archive)
-                return Results.BadRequest();
-
-            channel.SetArchivingStatus(request.Archive);
-            await db.SaveChangesAsync();
-
-            if (request.Archive)
-                _ = twitchSubscription.RemoveChannelAsync(channel, default);
-            else
-                _ = twitchSubscription.AddChannelsAsync([channel], default);
-
-            return Results.NoContent();
+            var result = await channelService.SetArchiveStatusAsync(channelId, request.Archive, ct);
+            return result.ToHttpResult();
         })
         .RequireAuthorization("Admin")
         .WithName(nameof(SetArchiveStatus))

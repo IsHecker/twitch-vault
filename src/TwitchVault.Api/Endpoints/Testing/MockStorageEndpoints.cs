@@ -3,32 +3,17 @@ using TwitchVault.Api.Storage;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
-public class MockStorageEndpoints : IEndpoint
+public class MockStorageEndpoints : IDevOnlyEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/testing/storage").WithTags("Testing");
 
-        group.MapPost("/upload-file", async (
-            IPolyStore polyStore) =>
+        group.MapPost("/upload-file", () =>
         {
-            var files = new DirectoryInfo("C:\\Users\\Mhamed\\Desktop")
-                .EnumerateFiles();
-
-            var storageFiles = files.Select(file =>
-                new FilePayload(
-                    file.FullName,
-                    "text/plain",
-                    File.OpenRead(file.FullName)));
-
-            var result = await polyStore.UploadAsync(
-                storageFiles,
-                null,
-                CancellationToken.None);
-
-            return result.IsFailure
-                ? Results.Ok(result.Error)
-                : Results.Ok(result);
+            // Desktop enumeration was removed for security reasons.
+            // Provide a specific file path via the /delete-file or /rewrite endpoints instead.
+            return Results.BadRequest("Direct file upload from a fixed path is not supported.");
         }).DisableAntiforgery();
 
         group.MapPost("/delete-file", async (
@@ -36,7 +21,7 @@ public class MockStorageEndpoints : IEndpoint
             string[] urls,
             IPolyStore polyStore) =>
         {
-            var result = await polyStore.DeleteBatchAsync(storageInstance, urls, CancellationToken.None);
+            var result = await polyStore.DeleteAsync(storageInstance, urls, CancellationToken.None);
             return Results.Ok(result);
         });
 

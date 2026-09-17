@@ -1,4 +1,5 @@
-using TwitchVault.Api.Persistence.Extensions;
+using TwitchVault.Api.Common.Results;
+using TwitchVault.Api.Recording;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
@@ -8,15 +9,11 @@ public class UpdateChannelQuality : IEndpoint
         app.MapPut("/api/channels/{channelId}/quality", async (
             string channelId,
             Request request,
-            AppDbContext db) =>
+            IChannelService channelService,
+            CancellationToken ct) =>
         {
-            var channel = await db.Channels.GetByIdAsync(channelId);
-            if (channel is null)
-                return Results.NotFound();
-
-            channel.UpdateQualityRank(request.QualityRank);
-            await db.SaveChangesAsync();
-            return Results.Ok(ChannelResponse.FromDomain(channel));
+            var result = await channelService.UpdateChannelQualityAsync(channelId, request.QualityRank, ct);
+            return result.ToHttpResult(channel => Results.Ok(ChannelResponse.FromDomain(channel)));
         })
         .RequireAuthorization("Admin")
         .WithName(nameof(UpdateChannelQuality))

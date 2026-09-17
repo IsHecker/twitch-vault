@@ -1,30 +1,34 @@
+using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Polly;
+using PolyStore;
+using PolyStore.Catbox;
+using PolyStore.Discord;
+using PolyStore.Telegram;
 using Quartz;
 using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchVault.Api.Auth;
 using TwitchVault.Api.ChannelMonitor;
-using TwitchVault.Api.Storage.Jobs;
 using TwitchVault.Api.Common;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Endpoints;
 using TwitchVault.Api.Events;
 using TwitchVault.Api.Recording;
 using TwitchVault.Api.Recording.HLS;
+using TwitchVault.Api.Storage.Jobs;
 using TwitchVault.Api.Twitch;
 using TwitchVault.Api.Twitch.EventSub;
-using Microsoft.Extensions.Http.Resilience;
-using Polly;
-using System.Net;
-using PolyStore;
-using PolyStore.Discord;
-using PolyStore.Catbox;
-using PolyStore.Telegram;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -41,7 +45,8 @@ public static class DependencyInjection
             .AddAuthenticationInternal(configuration)
             .AddTwitchAndEventSub()
             .AddRecording()
-            .AddBackgroundJobs();
+            .AddBackgroundJobs()
+            .AddRateLimiting();
 
         services.AddCloudStorageSystem(configuration);
 
@@ -194,6 +199,7 @@ public static class DependencyInjection
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
+        services.AddSingleton<ITwitchSubscriptionService>(sp => sp.GetRequiredService<TwitchSubscriptionService>());
         services.AddHostedService<TwitchWebhookStartupService>();
 
         return services;
@@ -259,17 +265,51 @@ public static class DependencyInjection
         return services;
     }
 
+    private static IServiceCollection AddRateLimiting(this IServiceCollection services)
+    {
+        services.AddRateLimiter(limiter =>
+        {
+            limiter.AddSlidingWindowLimiter("AuthRateLimit", options =>
+            {
+                options.PermitLimit = 10;
+                options.Window = TimeSpan.FromMinutes(1);
+                options.SegmentsPerWindow = 6;
+                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 0;
+            });
+
+            limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                RateLimitPartition.GetTokenBucketLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = 50,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                        TokensPerPeriod = 10,
+                        AutoReplenishment = true,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
+            limiter.OnRejected = async (context, ct) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/problem+json";
+                await context.HttpContext.Response.WriteAsync(
+                    """{"title":"Too Many Requests","status":429,"detail":"Rate limit exceeded. Try again later."}""",
+                    ct);
+            };
+        });
+
+        return services;
+    }
+
     private static IServiceCollection AddCloudStorageSystem(
         this IServiceCollection services,
         IConfiguration configuration)
     {
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
         services.ConfigureOptions<StorageUploadJobConfiguration>();
-
-        // services.AddCloudStorage(configuration)
-        //     .AddDiscordStorage()
-        //     .AddCatboxStorage()
-        //     .AddTelegramStorage();
 
         services.AddPolyStore(configuration)
             .AddDiscord()

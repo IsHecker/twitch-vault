@@ -10,7 +10,7 @@ using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
-public class LiveTestEndpoints : IEndpoint
+public class LiveTestEndpoints : IDevOnlyEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {

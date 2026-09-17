@@ -1,5 +1,9 @@
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using TwitchVault.Api.Auth;
+using TwitchVault.Api.Common;
+using TwitchVault.Api.Common.Extensions;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Domain;
 using TwitchVault.Api.Persistence.Extensions;
@@ -11,28 +15,51 @@ public class ListStreamsByChannel : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/channels/{channelId}/streams", async (
             string channelId,
+            ClaimsPrincipal principal,
+            [AsParameters] Pagination pagination,
             AppDbContext db,
             IOptions<PathsOptions> options) =>
         {
+            var isAdmin = principal.IsInRole("Admin");
+
             var channel = await db.Channels.AsNoTracking().GetByIdAsync(channelId);
             if (channel is null)
                 return Results.NotFound();
 
-            var activeStreams = await db.Streams
+            DateTime? subscribedAt = null;
+            if (!isAdmin)
+            {
+                var userId = principal.GetUserId();
+                var userChannel = await db.UserChannels
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
+
+                if (userChannel is null)
+                    return Results.NotFound();
+
+                subscribedAt = userChannel.AddedAt;
+            }
+
+            var query = db.Streams
                 .AsNoTracking()
                 .ForChannel(channelId)
                 .Where(s => s.Status == StreamStatus.Recording
                     || s.StorageLocation == StorageLocation.Remote
-                    && s.StorageOperationStatus == StorageOperationStatus.Uploaded)
-                .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl))
-                .ToListAsync();
+                    && s.StorageOperationStatus == StorageOperationStatus.Uploaded);
 
-            return Results.Ok(activeStreams);
+            if (subscribedAt.HasValue)
+                query = query.Where(s => s.StartedAt >= subscribedAt.Value);
+
+            var projected = query.OrderByDescending(s => s.StartedAt)
+                .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl));
+
+            var paged = await projected.ToPagedResponseAsync(pagination);
+            return Results.Ok(paged);
         })
         .RequireAuthorization()
         .WithName(nameof(ListStreamsByChannel))
         .WithTags("Channels")
         .WithSummary("Get all stream instances for a specific channel")
-        .Produces<List<StreamResponse>>()
+        .Produces<PagedResponse<StreamResponse>>()
         .Produces(StatusCodes.Status404NotFound);
 }

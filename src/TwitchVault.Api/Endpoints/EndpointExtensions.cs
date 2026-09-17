@@ -20,7 +20,8 @@ public static class EndpointExtensions
 
     public static IApplicationBuilder MapEndpoints(
         this WebApplication app,
-        RouteGroupBuilder? routeGroupBuilder = null)
+        RouteGroupBuilder? routeGroupBuilder = null,
+        bool isDevelopment = true)
     {
         IEndpointRouteBuilder builder = routeGroupBuilder is not null
             ? routeGroupBuilder
@@ -28,7 +29,13 @@ public static class EndpointExtensions
 
         var endpoints = app.Services.GetRequiredService<IEnumerable<IEndpoint>>();
         foreach (var endpoint in endpoints)
+        {
+            // Skip Development-only endpoints when running in production.
+            if (!isDevelopment && endpoint is IDevOnlyEndpoint)
+                continue;
+
             endpoint.MapEndpoint(builder);
+        }
 
         return app;
     }

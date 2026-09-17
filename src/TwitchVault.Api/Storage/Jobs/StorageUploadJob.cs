@@ -60,10 +60,6 @@ public sealed class StorageUploadJob(
 
         if (remainingSegments.Count > 0)
         {
-            logger.LogInformation(
-                "Backup upload for '{Title}': {Count} segment(s) left on disk.",
-                streamTitle, remainingSegments.Count);
-
             await dataStore.ExecuteAsync(() =>
             {
                 stream.SetStorageOperationStatus(StorageOperationStatus.Uploading);
@@ -75,12 +71,6 @@ public sealed class StorageUploadJob(
                 remainingSegments,
                 stream,
                 cancellationToken);
-        }
-        else
-        {
-            logger.LogInformation(
-                "Backup upload for '{Title}': all segments already uploaded by live batcher.",
-                streamTitle);
         }
 
         await storageService.FinalizeStorageAsync(stream, cancellationToken);

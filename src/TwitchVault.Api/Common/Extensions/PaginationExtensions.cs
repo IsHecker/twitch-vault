@@ -15,16 +15,32 @@ public static class PaginationExtensions
     }
 
     public static async Task<PagedResponse<T>> ToPagedResponseAsync<T>(
-        this IEnumerable<T> source,
-        Pagination pagination,
-        int totalCount)
+        this IQueryable<T> source,
+        Pagination pagination)
     {
-        var items = await ((IQueryable<T>)source).ToListAsync();
+        var items = await source.Paginate(pagination).ToListAsync();
+        var totalCount = await source.CountAsync();
 
         return new PagedResponse<T>
         {
             Items = items,
             TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize
+        };
+    }
+
+    public static PagedResponse<T> ToPagedResponse<T>(
+        this IEnumerable<T> source,
+        Pagination pagination)
+    {
+        var list = source.ToList();
+        var items = list.Paginate(pagination);
+
+        return new PagedResponse<T>
+        {
+            Items = items,
+            TotalCount = list.Count,
             PageNumber = pagination.PageNumber,
             PageSize = pagination.PageSize
         };

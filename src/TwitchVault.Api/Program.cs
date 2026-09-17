@@ -1,6 +1,4 @@
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Ui.Core.Extensions;
 using Serilog.Ui.SqliteDataProvider.Extensions;
@@ -26,8 +24,8 @@ public class Program
                 .ReadFrom.Configuration(context.Configuration));
 
         var dbPath = Path.Combine(AppContext.BaseDirectory, "logs.db");
-        builder.Services.AddSerilogUi(options => options
-            .UseSqliteServer(config =>
+        builder.Services.AddSerilogUi(options =>
+            options.UseSqliteServer(config =>
             {
                 config.WithConnectionString($"Data Source={dbPath}")
                 .WithTable("Logs");
@@ -51,32 +49,29 @@ public class Program
         var app = builder.Build();
 
         app.UseSerilogRequestLogging();
+        app.UseCors();
+        app.UseHttpsRedirection();
+        app.UseMiddleware<GlobalExceptionMiddleware>();
+
         app.UseSerilogUi(options =>
         {
             options.WithRoutePrefix("logs");
         });
-
-        app.UseCors();
-        app.UseHttpsRedirection();
-        app.UseMiddleware<GlobalExceptionMiddleware>();
 
         app.UseTwitchLibEventSubWebhooks();
 
         app.UseAuthentication();
         app.UseAuthorization();
 
-        app.UseSwagger();
-        app.UseSwaggerUI();
-
-        var paths = app.Services.GetRequiredService<IOptions<PathsOptions>>().Value;
-        Directory.CreateDirectory(paths.Streams);
-        app.UseStaticFiles(new StaticFileOptions
+        if (app.Environment.IsDevelopment())
         {
-            FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, paths.Streams)),
-            RequestPath = $"/{paths.Streams}"
-        });
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
 
-        app.MapEndpoints();
+        app.UseRateLimiter();
+        app.UseStreamThumbnails();
+        app.MapEndpoints(isDevelopment: app.Environment.IsDevelopment());
         app.Run();
     }
 }

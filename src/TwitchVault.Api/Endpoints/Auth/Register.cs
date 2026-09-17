@@ -31,6 +31,7 @@ public class Register : IEndpoint
             return Results.Ok(tokenService.GenerateToken(user));
         })
         .AllowAnonymous()
+        .RequireRateLimiting("AuthRateLimit")
         .WithName(nameof(Register))
         .WithTags("Auth")
         .WithSummary("Register a new user account")

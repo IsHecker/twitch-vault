@@ -129,12 +129,7 @@ public sealed class StreamStorageService(
             .ToList();
 
         if (remainingSegments.Count > 0)
-        {
-            logger.LogInformation(
-                "Storage finalization deferred for stream '{StreamId}': {Count} segment(s) still on disk. Backup uploader will process them.",
-                stream.Id, remainingSegments.Count);
             return false;
-        }
 
         var remoteUrlsFilePath = Path.Combine(localDirectory, StreamFolder.RemoteUrlsFile);
         if (!File.Exists(remoteUrlsFilePath))
@@ -194,16 +189,28 @@ public sealed class StreamStorageService(
 
                     if (batch.Count >= 200)
                     {
-                        await polyStore.DeleteBatchAsync(
+                        var deleteResult = await polyStore.DeleteAsync(
                             stream.StorageInstanceName!, batch, cancellationToken);
+                        if (deleteResult.IsFailure)
+                        {
+                            logger.LogError("Batch delete failed for stream '{StreamId}': {Error}",
+                                stream.Id, deleteResult.Error);
+                        }
                         batch.Clear();
                     }
                 }
             }
 
             if (batch.Count > 0)
-                await polyStore.DeleteBatchAsync(
+            {
+                var deleteResult = await polyStore.DeleteAsync(
                     stream.StorageInstanceName!, batch, cancellationToken);
+                if (deleteResult.IsFailure)
+                {
+                    logger.LogError("Batch delete failed for stream '{StreamId}': {Error}",
+                        stream.Id, deleteResult.Error);
+                }
+            }
         }
 
         await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<Domain.Stream, string>(stream.Id));

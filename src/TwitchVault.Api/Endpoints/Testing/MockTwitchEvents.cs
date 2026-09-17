@@ -4,7 +4,7 @@ using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Endpoints.Testing;
 
-public class MockTwitchEvents : IEndpoint
+public class MockTwitchEvents : IDevOnlyEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {

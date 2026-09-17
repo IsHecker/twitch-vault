@@ -1,7 +1,8 @@
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
 using TwitchVault.Api.Auth;
-using TwitchVault.Api.Persistence.Extensions;
+using TwitchVault.Api.Common;
+using TwitchVault.Api.Common.Results;
+using TwitchVault.Api.Recording;
 
 namespace TwitchVault.Api.Endpoints.Channels;
 
@@ -10,28 +11,18 @@ public class ListUserChannels : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/users/me/channels", async (
             ClaimsPrincipal principal,
-            AppDbContext db) =>
+            [AsParameters] Pagination pagination,
+            IChannelService channelService,
+            CancellationToken ct) =>
         {
-            var userId = principal.GetUserId();
-
-            var userExists = await db.Users.AsNoTracking().AnyAsync(u => u.Id == userId);
-            if (!userExists)
-                return Results.NotFound($"User '{userId}' not found.");
-
-            var channels = await db.UserChannels
-                .AsNoTracking()
-                .Include(u => u.Channel)
-                .ForUser(userId)
-                .Select(u => ChannelResponse.FromDomain(u.Channel))
-                .ToListAsync();
-
-            return Results.Ok(channels);
+            var result = await channelService.GetChannelsForUserAsync(principal.GetUserId(), pagination, ct);
+            return result.ToHttpResult(Results.Ok);
         })
         .RequireAuthorization()
         .WithName(nameof(ListUserChannels))
         .WithTags("Channels")
-        .WithSummary("List all channels belonging to a specific user")
-        .Produces<List<ChannelResponse>>()
+        .WithSummary("List channels subscribed to by the currently authenticated user")
+        .Produces<PagedResponse<ChannelResponse>>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status403Forbidden);
 }
