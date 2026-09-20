@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Common.Extensions;
 
-namespace TwitchVault.Api.Endpoints.Admin;
+namespace TwitchVault.Api.Features.Auth.Endpoints;
 
 public class ListAllUsers : IEndpoint
 {

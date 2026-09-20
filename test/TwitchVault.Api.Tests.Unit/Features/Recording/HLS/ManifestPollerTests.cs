@@ -1,9 +1,5 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Persistence.Database;
-using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Twitch;
 using FluentAssertions;
 using System.Text;
 

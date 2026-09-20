@@ -1,8 +1,6 @@
 using System.Text;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Recording.HLS;
 
-namespace TwitchVault.Api.Storage;
+namespace TwitchVault.Api.Features.Storage;
 
 public static class HlsPlaylistRewriter
 {

@@ -1,6 +1,5 @@
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Twitch.EventSub;
+namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public interface ITwitchSubscriptionService
 {

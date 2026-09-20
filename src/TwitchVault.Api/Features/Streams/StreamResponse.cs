@@ -1,6 +1,5 @@
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Endpoints.Streams;
+namespace TwitchVault.Api.Features.Streams;
 
 public record ChapterResponse(
     string Title,
@@ -26,7 +25,7 @@ public record StreamResponse(
     DateTime? FinishedAt,
     List<ChapterResponse> Chapters)
 {
-    public static StreamResponse FromDomain(Domain.Stream stream, string baseUrl) =>
+    public static StreamResponse FromDomain(TwitchVault.Api.Features.Streams.Stream stream, string baseUrl) =>
         new(
             stream.Id,
             stream.ChannelId,

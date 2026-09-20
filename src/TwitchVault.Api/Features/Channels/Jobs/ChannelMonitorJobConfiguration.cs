@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.ChannelMonitor;
+namespace TwitchVault.Api.Features.Channels.Jobs;
 
 public sealed class ChannelMonitorJobConfiguration(IOptions<BackgroundJobsOptions> jobsOptions)
     : IConfigureOptions<QuartzOptions>

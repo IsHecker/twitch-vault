@@ -2,11 +2,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Recording;
 using FluentAssertions;
-using TwitchVault.Api.Common;
-using DomainStream = TwitchVault.Api.Domain.Stream;
-using TwitchVault.Api.Persistence.Database;
+using DomainStream = TwitchVault.Api.Features.Streams.Stream;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
@@ -102,7 +99,7 @@ public class StreamServiceTests
     {
         // Arrange
         var channelId = "channel-1";
-        var channel = Channel.Create(channelId, "testchannel",1, isArchived: false);
+        var channel = Channel.Create(channelId, "testchannel", 1, isArchived: false);
         var staleStream = DomainStream.Create("stale-1", channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
         var activeStreamId = "active-1";
         var activeStream = DomainStream.Create(activeStreamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");

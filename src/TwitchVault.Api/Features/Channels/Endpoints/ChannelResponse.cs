@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Endpoints.Channels;
+namespace TwitchVault.Api.Features.Channels.Endpoints;
 
 public record ChannelResponse(
     string Id,

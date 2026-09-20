@@ -1,7 +1,7 @@
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording.LiveUpload;
 
 public readonly record struct UploadBatch(
-    Domain.Stream Stream,
+    TwitchVault.Api.Features.Streams.Stream Stream,
     string[] LocalFilePaths,
     Action? OnCompleted = null,
     bool IsUrgent = false);

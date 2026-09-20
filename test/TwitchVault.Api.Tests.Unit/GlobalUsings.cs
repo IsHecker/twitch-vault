@@ -1,2 +1,13 @@
 global using Xunit;
-global using TwitchVault.Api.Domain;
+global using TwitchVault.Api.Common;
+global using TwitchVault.Api.Common.Results;
+global using TwitchVault.Api.Database;
+global using TwitchVault.Api.Features.Auth;
+global using TwitchVault.Api.Features.Channels;
+global using TwitchVault.Api.Features.Recording;
+global using TwitchVault.Api.Features.Recording.HLS;
+global using TwitchVault.Api.Features.Recording.LiveUpload;
+global using TwitchVault.Api.Features.Streams;
+global using TwitchVault.Api.Features.Twitch;
+global using TwitchVault.Api.Features.Twitch.EventSub;
+global using TwitchVault.Api.Infrastructure.Events;

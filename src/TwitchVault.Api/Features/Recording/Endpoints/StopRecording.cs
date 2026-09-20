@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Recording;
 
-namespace TwitchVault.Api.Endpoints.Streams;
+namespace TwitchVault.Api.Features.Recording.Endpoints;
 
 public class StopRecording : IEndpoint
 {

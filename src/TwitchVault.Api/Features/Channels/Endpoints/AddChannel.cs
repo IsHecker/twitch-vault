@@ -1,9 +1,6 @@
 using System.Security.Claims;
-using TwitchVault.Api.Auth;
-using TwitchVault.Api.Common.Results;
-using TwitchVault.Api.Recording;
 
-namespace TwitchVault.Api.Endpoints.Channels;
+namespace TwitchVault.Api.Features.Channels.Endpoints;
 
 public class AddChannel : IEndpoint
 {
@@ -32,6 +29,7 @@ public class AddChannel : IEndpoint
         .Accepts<Request>("application/json")
         .Produces<ChannelResponse>(StatusCodes.Status201Created)
         .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status409Conflict);
     }

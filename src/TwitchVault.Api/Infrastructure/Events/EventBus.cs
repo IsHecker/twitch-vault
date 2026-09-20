@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace TwitchVault.Api.Events;
+namespace TwitchVault.Api.Infrastructure.Events;
 
 public class EventBus(ILogger<EventBus> logger)
 {

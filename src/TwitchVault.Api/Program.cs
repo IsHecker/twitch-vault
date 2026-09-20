@@ -5,7 +5,6 @@ using Serilog.Ui.SqliteDataProvider.Extensions;
 using Serilog.Ui.Web.Extensions;
 using TwitchLib.EventSub.Webhooks.Extensions;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Endpoints;
 using TwitchVault.Api.Infrastructure.Middleware;
 using TwitchVault.Api.Infrastructure.Swagger;
 

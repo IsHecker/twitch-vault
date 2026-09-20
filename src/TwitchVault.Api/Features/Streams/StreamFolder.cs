@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TwitchVault.Api.Domain;
+namespace TwitchVault.Api.Features.Streams;
 
 public sealed class StreamFolder
 {

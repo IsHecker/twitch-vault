@@ -1,15 +1,12 @@
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Twitch;
 
 using Microsoft.Extensions.Options;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public interface IStreamRecorder : IAsyncDisposable
 {
-    Task StartAsync(Domain.Stream stream, Channel channel);
+    Task StartAsync(TwitchVault.Api.Features.Streams.Stream stream, Channel channel);
     Task StopAsync();
     Task FinishAsync();
     Task ShutdownAsync();
@@ -33,7 +30,7 @@ public sealed class StreamRecorder(
     private static readonly TimeSpan StreamEndWaitInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
 
-    private Domain.Stream _stream = null!;
+    private TwitchVault.Api.Features.Streams.Stream _stream = null!;
     private Channel _channel = null!;
     private string _streamDirectory = string.Empty;
     private long _streamSizeBytes;
@@ -44,7 +41,7 @@ public sealed class StreamRecorder(
     private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
     private VaultOptions VaultOptions => vaultOptions.CurrentValue;
 
-    public async Task StartAsync(Domain.Stream stream, Channel channel)
+    public async Task StartAsync(TwitchVault.Api.Features.Streams.Stream stream, Channel channel)
     {
         logger.LogInformation("Recording started for '{Channel}'", channel.Name);
         try

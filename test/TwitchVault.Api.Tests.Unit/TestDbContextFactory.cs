@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Persistence.Database;
 
 namespace TwitchVault.Api.Tests.Unit;
 

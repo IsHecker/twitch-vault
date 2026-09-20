@@ -1,4 +1,6 @@
-namespace TwitchVault.Api.Domain;
+using Stream = TwitchVault.Api.Features.Streams.Stream;
+
+namespace TwitchVault.Api.Database;
 
 public class AppDatabase
 {

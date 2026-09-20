@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public sealed record PlaylistState(
     DateTime StartTime,

@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using TwitchVault.Api.Persistence.Data;
 
-namespace TwitchVault.Api.Persistence.Extensions;
+namespace TwitchVault.Api.Database.Common;
 
 public static class FluentApiExtensions
 {

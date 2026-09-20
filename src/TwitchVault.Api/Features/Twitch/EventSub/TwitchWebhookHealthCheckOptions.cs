@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TwitchVault.Api.Twitch.EventSub;
+namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public sealed class TwitchWebhookHealthCheckOptions
 {

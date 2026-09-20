@@ -1,15 +1,12 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
 public class ThumbnailManagerTests
 {
     private const string ChannelName = "testchannel";
-    private readonly Domain.Stream _stream;
+    private readonly TwitchVault.Api.Features.Streams.Stream _stream;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
@@ -17,7 +14,7 @@ public class ThumbnailManagerTests
 
     public ThumbnailManagerTests()
     {
-        _stream = Domain.Stream.Create(
+        _stream = TwitchVault.Api.Features.Streams.Stream.Create(
             "test-stream",
             "channel-1",
             StreamFolder.Create("streams_root", "Test Channel"),

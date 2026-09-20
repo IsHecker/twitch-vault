@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Endpoints;
+namespace TwitchVault.Api.Features.Testing.Endpoints;
 
 internal sealed class Ping : IEndpoint
 {

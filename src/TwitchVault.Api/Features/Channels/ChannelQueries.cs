@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Persistence.Extensions;
+namespace TwitchVault.Api.Features.Channels;
 
 public static class ChannelQueries
 {

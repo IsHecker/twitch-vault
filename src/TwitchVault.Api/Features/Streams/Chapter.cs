@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Domain;
+namespace TwitchVault.Api.Features.Streams;
 
 public sealed class Chapter
 {

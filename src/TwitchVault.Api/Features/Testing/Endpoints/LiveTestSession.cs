@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace TwitchVault.Api.Endpoints.Testing;
+namespace TwitchVault.Api.Features.Testing.Endpoints;
 
 /// <summary>
 /// Singleton in-memory state shared across all live-test endpoints.

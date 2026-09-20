@@ -2,11 +2,7 @@ using System.Text;
 using FluentAssertions;
 using NSubstitute;
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 

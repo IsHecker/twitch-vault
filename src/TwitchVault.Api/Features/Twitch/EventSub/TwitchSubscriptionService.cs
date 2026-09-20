@@ -1,11 +1,8 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
 
-namespace TwitchVault.Api.Twitch.EventSub;
+namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public sealed class TwitchSubscriptionService(
     TwitchHelixClient twitchHelixClient,

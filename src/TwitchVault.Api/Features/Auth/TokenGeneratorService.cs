@@ -3,10 +3,8 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Endpoints.Auth;
 
-namespace TwitchVault.Api.Auth;
+namespace TwitchVault.Api.Features.Auth;
 
 public sealed class TokenGeneratorService(IOptions<JwtOptions> options)
 {

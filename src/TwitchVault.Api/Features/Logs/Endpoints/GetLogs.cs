@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 
-namespace TwitchVault.Api.Endpoints.Logs;
+namespace TwitchVault.Api.Features.Logs.Endpoints;
 
 internal sealed class GetLogs : IEndpoint
 {

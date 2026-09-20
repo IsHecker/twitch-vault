@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Persistence.Database.Configurations;
+namespace TwitchVault.Api.Database.Configurations;
 
 public class ChannelConfiguration : IEntityTypeConfiguration<Channel>
 {

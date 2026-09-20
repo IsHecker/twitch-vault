@@ -1,19 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Streams;
 
 public interface IStreamService
 {
-    Domain.Stream CreateStream(Channel channel, StreamMetadata metadata);
+    TwitchVault.Api.Features.Streams.Stream CreateStream(Channel channel, StreamMetadata metadata);
     Task<Result> DeleteStreamAsync(string twitchStreamId);
-    Task<Result> DeleteStreamAsync(Domain.Stream stream);
+    Task<Result> DeleteStreamAsync(TwitchVault.Api.Features.Streams.Stream stream);
     Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null);
 }
 
@@ -23,10 +18,10 @@ public class StreamService(
     IOptions<PathsOptions> pathsOptions,
     ILogger<StreamService> logger) : IStreamService
 {
-    public Domain.Stream CreateStream(Channel channel, StreamMetadata metadata)
+    public TwitchVault.Api.Features.Streams.Stream CreateStream(Channel channel, StreamMetadata metadata)
     {
         var folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name);
-        return Domain.Stream.Create(
+        return TwitchVault.Api.Features.Streams.Stream.Create(
             metadata.Id,
             channel.Id,
             folder,
@@ -38,13 +33,13 @@ public class StreamService(
     public Task<Result> DeleteStreamAsync(string twitchStreamId) =>
         dataStore.ExecuteAsync(async () =>
         {
-            var stream = await dataStore.QueryAsync<Domain.Stream, Domain.Stream?>(
+            var stream = await dataStore.QueryAsync<TwitchVault.Api.Features.Streams.Stream, TwitchVault.Api.Features.Streams.Stream?>(
                 streams => streams.GetByIdAsync(twitchStreamId));
 
             return await DeleteStreamAsync(stream);
         });
 
-    public Task<Result> DeleteStreamAsync(Domain.Stream? stream) =>
+    public Task<Result> DeleteStreamAsync(TwitchVault.Api.Features.Streams.Stream? stream) =>
         dataStore.ExecuteAsync(() =>
         {
             if (stream == null || stream.IsDeleted)
@@ -62,7 +57,7 @@ public class StreamService(
     public Task ResetStaleStreamsAsync(string channelId, string? currentTwitchStreamId = null) =>
         dataStore.ExecuteAsync(async () =>
         {
-            var stale = await dataStore.QueryAsync<Domain.Stream, List<Domain.Stream>>(
+            var stale = await dataStore.QueryAsync<TwitchVault.Api.Features.Streams.Stream, List<TwitchVault.Api.Features.Streams.Stream>>(
                 streams => streams.StaleActive(channelId, currentTwitchStreamId).ToListAsync());
 
             foreach (var stream in stale)
@@ -72,7 +67,7 @@ public class StreamService(
             }
         });
 
-    private Result RequestDeletion(Domain.Stream? stream)
+    private Result RequestDeletion(TwitchVault.Api.Features.Streams.Stream? stream)
     {
         if (stream == null || stream.IsDeleted)
             return Error.NotFound();

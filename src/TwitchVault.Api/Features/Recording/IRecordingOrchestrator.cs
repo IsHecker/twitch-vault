@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public interface IRecordingOrchestrator
 {

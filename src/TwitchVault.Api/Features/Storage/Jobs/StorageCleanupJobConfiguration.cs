@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Storage.Jobs;
+namespace TwitchVault.Api.Features.Storage.Jobs;
 
 public sealed class StorageCleanupJobConfiguration(IOptions<BackgroundJobsOptions> jobsOptions)
     : IConfigureOptions<QuartzOptions>

@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Twitch.EventSub;
+namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public sealed class TwitchWebhookHealthCheckJobConfiguration(IOptions<BackgroundJobsOptions> jobsOptions)
     : IConfigureOptions<QuartzOptions>

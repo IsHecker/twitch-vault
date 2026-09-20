@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using PolyStore;
 
-namespace TwitchVault.Api.Endpoints.Testing;
+namespace TwitchVault.Api.Features.Testing.Endpoints;
 
 public sealed record DiscordBulkDeleteRequest(
     string StartMessageId = "1544469567571755039",

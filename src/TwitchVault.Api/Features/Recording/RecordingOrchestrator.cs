@@ -1,9 +1,6 @@
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Twitch;
 using Serilog.Context;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public sealed class RecordingOrchestrator(
     IStreamRecorderRegistry streamRecorderRegistry,
@@ -171,7 +168,7 @@ public sealed class RecordingOrchestrator(
         }
     }
 
-    private async Task<Domain.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
+    private async Task<TwitchVault.Api.Features.Streams.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
     {
         var stream = streamService.CreateStream(channel, metadata);
         await dataStore.AddAsync(stream);
@@ -179,13 +176,13 @@ public sealed class RecordingOrchestrator(
         return stream;
     }
 
-    private static Domain.Stream MarkAsResuming(Domain.Stream stream)
+    private static TwitchVault.Api.Features.Streams.Stream MarkAsResuming(TwitchVault.Api.Features.Streams.Stream stream)
     {
         stream.MarkAsRecording();
         return stream;
     }
 
-    private async Task LaunchRecordingSessionAsync(Domain.Stream stream, Channel channel)
+    private async Task LaunchRecordingSessionAsync(TwitchVault.Api.Features.Streams.Stream stream, Channel channel)
     {
         var session = await streamRecorderFactory.CreateAsync(stream, channel, appLifetime.ApplicationStopping);
 

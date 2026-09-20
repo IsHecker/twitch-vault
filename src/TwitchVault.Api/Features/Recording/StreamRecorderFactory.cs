@@ -1,13 +1,9 @@
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Recording.HLS;
-
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public interface IStreamRecorderFactory
 {
     Task<IStreamRecorder> CreateAsync(
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         Channel channel,
         CancellationToken cancellationToken);
 }
@@ -19,7 +15,7 @@ public class StreamRecorderFactory(
     IFileSystem fileSystem) : IStreamRecorderFactory
 {
     public async Task<IStreamRecorder> CreateAsync(
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         Channel channel,
         CancellationToken cancellationToken)
     {

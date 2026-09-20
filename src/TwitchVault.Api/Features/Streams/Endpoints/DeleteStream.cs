@@ -1,5 +1,4 @@
-using TwitchVault.Api.Recording;
-namespace TwitchVault.Api.Endpoints.Streams;
+namespace TwitchVault.Api.Features.Streams.Endpoints;
 
 public class DeleteStream : IEndpoint
 {

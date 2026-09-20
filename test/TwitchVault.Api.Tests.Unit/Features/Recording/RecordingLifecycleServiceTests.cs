@@ -1,10 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Database;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
@@ -35,10 +31,10 @@ public class RecordingLifecycleServiceTests
         return channel;
     }
 
-    private Domain.Stream SeedStream(string id, string channelId, StreamStatus status, DateTime? finishedAt = null)
+    private TwitchVault.Api.Features.Streams.Stream SeedStream(string id, string channelId, StreamStatus status, DateTime? finishedAt = null)
     {
         using var db = _factory.CreateDbContext();
-        var stream = Domain.Stream.Create(
+        var stream = TwitchVault.Api.Features.Streams.Stream.Create(
             id,
             channelId,
             StreamFolder.Create("streams_root", "testchannel"),

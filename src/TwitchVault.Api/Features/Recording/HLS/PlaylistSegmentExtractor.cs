@@ -2,10 +2,8 @@ using System.Buffers;
 using System.Buffers.Text;
 using System.IO.Pipelines;
 using System.Text;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public readonly record struct RemoteSegment(string Url, float Duration, bool IsInitSegment = false);
 

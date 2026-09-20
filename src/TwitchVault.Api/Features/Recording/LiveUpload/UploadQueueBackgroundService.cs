@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording.LiveUpload;
 
 public sealed class UploadQueueBackgroundService(
     IUploadQueue uploadQueue,

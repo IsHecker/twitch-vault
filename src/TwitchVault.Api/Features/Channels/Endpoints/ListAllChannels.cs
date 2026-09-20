@@ -1,8 +1,4 @@
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Endpoints.Channels;
-using TwitchVault.Api.Recording;
-
-namespace TwitchVault.Api.Endpoints.Admin;
+namespace TwitchVault.Api.Features.Channels.Endpoints;
 
 public class ListAllChannels : IEndpoint
 {

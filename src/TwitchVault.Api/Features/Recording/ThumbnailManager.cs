@@ -1,11 +1,8 @@
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Twitch;
-
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public interface IThumbnailManager
 {
-    Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream, CancellationToken cancellationToken);
+    Task TryCaptureSnapshotAsync(string channelName, TwitchVault.Api.Features.Streams.Stream stream, CancellationToken cancellationToken);
 }
 
 public sealed class ThumbnailManager(
@@ -19,7 +16,7 @@ public sealed class ThumbnailManager(
     private readonly DateTime _sessionStartTime = dateTimeProvider.DateTimeNow;
     private DateTime _lastSnapshotTime = DateTime.MinValue;
 
-    public async Task TryCaptureSnapshotAsync(string channelName, Domain.Stream stream, CancellationToken cancellationToken)
+    public async Task TryCaptureSnapshotAsync(string channelName, TwitchVault.Api.Features.Streams.Stream stream, CancellationToken cancellationToken)
     {
         if (!CanCaptureSnapshot())
             return;

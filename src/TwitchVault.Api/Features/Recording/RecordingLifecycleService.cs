@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public sealed class RecordingLifecycleService(
     IRecordingOrchestrator orchestrator,
@@ -44,7 +41,7 @@ public sealed class RecordingLifecycleService(
 
             // Collect channels that have interrupted/recording streams but whose
             // IsLive flag was already reset (error-interrupted path).
-            var interruptedChannelIds = await dataStore.QueryAsync<Domain.Stream, List<string>>(
+            var interruptedChannelIds = await dataStore.QueryAsync<TwitchVault.Api.Features.Streams.Stream, List<string>>(
                 streams => streams
                     .Where(s => (s.Status == StreamStatus.Interrupted || s.Status == StreamStatus.Recording)
                                 && s.FinishedAt == null)

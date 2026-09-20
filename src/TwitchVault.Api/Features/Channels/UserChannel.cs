@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Domain;
+namespace TwitchVault.Api.Features.Channels;
 
 public sealed class UserChannel
 {

@@ -1,11 +1,11 @@
 using TwitchVault.Api.Configuration;
 using Microsoft.Extensions.Options;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording.LiveUpload;
 
 public interface ISegmentUploader : IDisposable
 {
-    void Attach(Domain.Stream stream);
+    void Attach(TwitchVault.Api.Features.Streams.Stream stream);
     Task AddAsync(LocalSegment segment);
     Task FlushRemainingAsync();
 }
@@ -24,12 +24,12 @@ public sealed class LiveSegmentUploader(
     private readonly SemaphoreSlim _uploadsCompletedSignal = new(0, 1);
     private Action _onBatchCompleted = null!;
 
-    private Domain.Stream _stream = null!;
+    private TwitchVault.Api.Features.Streams.Stream _stream = null!;
     private int _pendingUploads;
     private bool _isDraining;
     private bool _disposed;
 
-    public void Attach(Domain.Stream stream)
+    public void Attach(TwitchVault.Api.Features.Streams.Stream stream)
     {
         _stream = stream;
         _buffer = new string[vaultOptions.CurrentValue.UploadBatchSize + BufferRoom];

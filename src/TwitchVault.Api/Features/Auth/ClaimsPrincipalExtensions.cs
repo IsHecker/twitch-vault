@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace TwitchVault.Api.Auth;
+namespace TwitchVault.Api.Features.Auth;
 
 public static class ClaimsPrincipalExtensions
 {

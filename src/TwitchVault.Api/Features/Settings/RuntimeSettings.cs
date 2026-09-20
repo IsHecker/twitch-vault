@@ -1,8 +1,7 @@
 using System.Text.Json.Serialization;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.Domain;
+namespace TwitchVault.Api.Features.Settings;
 
 public class RuntimeSettings
 {

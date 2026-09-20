@@ -1,8 +1,4 @@
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Twitch;
-
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public interface IManifestPoller
 {

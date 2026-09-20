@@ -1,8 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using TwitchVault.Api.Common;
 
-namespace TwitchVault.Api.Twitch;
+namespace TwitchVault.Api.Features.Twitch;
 
 public static class TwitchHttpClients
 {
@@ -10,11 +9,11 @@ public static class TwitchHttpClients
     public const string Cdn = "TwitchCdn";
 }
 
-public readonly record struct ResponseStream(Stream Stream, HttpResponseMessage? HttpResponse) : IAsyncDisposable
+public readonly record struct ResponseStream(System.IO.Stream Stream, HttpResponseMessage? HttpResponse) : IAsyncDisposable
 {
-    public static ResponseStream Null { get; } = new(Stream.Null, null);
-    public Stream Content => Stream ?? Stream.Null;
-    public bool IsEmpty => Stream is null || Stream == Stream.Null;
+    public static ResponseStream Null { get; } = new(System.IO.Stream.Null, null);
+    public System.IO.Stream Content => Stream ?? System.IO.Stream.Null;
+    public bool IsEmpty => Stream is null || Stream == System.IO.Stream.Null;
 
     public async ValueTask DisposeAsync()
     {
@@ -30,8 +29,8 @@ public sealed class TwitchGqlClient(
 {
     private const string TwitchGqlUrl = "https://gql.twitch.tv/gql";
 
-    public async Task<Dictionary<Domain.Channel, bool>> IsChannelLiveAsync(
-        List<Domain.Channel> channels,
+    public async Task<Dictionary<Channel, bool>> IsChannelLiveAsync(
+        List<Channel> channels,
         CancellationToken cancellationToken)
     {
         if (channels.Count == 0)
@@ -43,7 +42,7 @@ public sealed class TwitchGqlClient(
             return [];
 
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-        var results = new Dictionary<Domain.Channel, bool>(channels.Count);
+        var results = new Dictionary<Channel, bool>(channels.Count);
 
         var i = 0;
         foreach (var item in document!.RootElement.EnumerateArray())
@@ -77,8 +76,8 @@ public sealed class TwitchGqlClient(
         return null;
     }
 
-    public async Task<Dictionary<Domain.Channel, StreamMetadata?>> GetStreamMetadataAsync(
-        List<Domain.Channel> channels,
+    public async Task<Dictionary<Channel, StreamMetadata?>> GetStreamMetadataAsync(
+        List<Channel> channels,
         CancellationToken cancellationToken)
     {
         var payloads = channels.Select(c => TwitchGqlPayloads.StreamMetadata(c.Name));
@@ -88,7 +87,7 @@ public sealed class TwitchGqlClient(
             return [];
 
         using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-        var results = new Dictionary<Domain.Channel, StreamMetadata?>(channels.Count);
+        var results = new Dictionary<Channel, StreamMetadata?>(channels.Count);
 
         for (var i = 0; i < channels.Count; i++)
         {

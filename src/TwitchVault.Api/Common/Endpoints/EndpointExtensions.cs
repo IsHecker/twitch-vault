@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace TwitchVault.Api.Endpoints;
+namespace TwitchVault.Api.Common.Endpoints;
 
 public static class EndpointExtensions
 {

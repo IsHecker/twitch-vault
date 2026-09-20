@@ -1,8 +1,6 @@
 using TwitchLib.EventSub.Webhooks.Core;
-using TwitchVault.Api.Events;
-using TwitchVault.Api.Recording;
 
-namespace TwitchVault.Api.Twitch.EventSub;
+namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public sealed class TwitchWebhookStartupService(
     IEventSubWebhooks eventSubWebhooks,

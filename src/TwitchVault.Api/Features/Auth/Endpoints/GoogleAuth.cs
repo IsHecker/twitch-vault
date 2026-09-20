@@ -1,7 +1,4 @@
-using TwitchVault.Api.Auth;
-using TwitchVault.Api.Common.Results;
-
-namespace TwitchVault.Api.Endpoints.Auth;
+namespace TwitchVault.Api.Features.Auth.Endpoints;
 
 public class GoogleAuth : IEndpoint
 {

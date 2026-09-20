@@ -1,13 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
 
-namespace TwitchVault.Api.Persistence.Database.Configurations;
+namespace TwitchVault.Api.Database.Configurations;
 
-public class StreamConfiguration : IEntityTypeConfiguration<Domain.Stream>
+public class StreamConfiguration : IEntityTypeConfiguration<TwitchVault.Api.Features.Streams.Stream>
 {
-    public void Configure(EntityTypeBuilder<Domain.Stream> builder)
+    public void Configure(EntityTypeBuilder<TwitchVault.Api.Features.Streams.Stream> builder)
     {
         builder.HasIndex(s => s.ChannelId);
 

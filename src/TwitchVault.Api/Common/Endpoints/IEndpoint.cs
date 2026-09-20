@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Endpoints;
+namespace TwitchVault.Api.Common.Endpoints;
 
 public interface IEndpoint { void MapEndpoint(IEndpointRouteBuilder app); }
 

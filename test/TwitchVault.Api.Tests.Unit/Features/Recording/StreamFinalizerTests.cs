@@ -1,10 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Persistence.Database;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
@@ -71,7 +67,7 @@ public class StreamFinalizerTests
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
-        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>());
     }
 
     [Theory]
@@ -132,7 +128,7 @@ public class StreamFinalizerTests
         // Assert
         await act.Should().NotThrowAsync();
         AssertChannelIsOffline();
-        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>());
     }
 
     [Fact]
@@ -149,7 +145,7 @@ public class StreamFinalizerTests
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
-        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>());
     }
 
     [Theory]
@@ -198,8 +194,8 @@ public class StreamFinalizerTests
         return new(_dataStore, _storageService, _twitchClient, _dateTimeProvider, _logger);
     }
 
-    private static Domain.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null) =>
-        Domain.Stream.Create(
+    private static TwitchVault.Api.Features.Streams.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null) =>
+        TwitchVault.Api.Features.Streams.Stream.Create(
             twitchStreamId,
             channelId,
             StreamFolder.Create("streams_root", "testchannel"),
@@ -207,7 +203,7 @@ public class StreamFinalizerTests
             "Test Title",
             "Test Category");
 
-    private Domain.Stream SeedStream(Domain.Stream stream)
+    private TwitchVault.Api.Features.Streams.Stream SeedStream(TwitchVault.Api.Features.Streams.Stream stream)
     {
         using var db = _factory.CreateDbContext();
         db.Streams.Add(stream);

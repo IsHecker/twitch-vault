@@ -1,7 +1,6 @@
 using PolyStore;
-using TwitchVault.Api.Storage;
 
-namespace TwitchVault.Api.Endpoints.Testing;
+namespace TwitchVault.Api.Features.Testing.Endpoints;
 
 public class MockStorageEndpoints : IDevOnlyEndpoint
 {

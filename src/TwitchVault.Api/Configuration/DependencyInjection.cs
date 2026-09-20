@@ -3,8 +3,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
@@ -18,17 +16,6 @@ using PolyStore.Telegram;
 using Quartz;
 using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchLib.EventSub.Webhooks.Extensions;
-using TwitchVault.Api.Auth;
-using TwitchVault.Api.ChannelMonitor;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Endpoints;
-using TwitchVault.Api.Events;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Storage.Jobs;
-using TwitchVault.Api.Twitch;
-using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -42,15 +29,16 @@ public static class DependencyInjection
             .AddConfigurationOptions(configuration)
             .AddCommonInfrastructure()
             .AddDatabase(configuration)
-            .AddAuthenticationInternal(configuration)
-            .AddTwitchAndEventSub()
-            .AddRecording()
+            .AddAuthFeature(configuration)
+            .AddTwitchFeature()
+            .AddChannelsFeature()
+            .AddRecordingFeature()
+            .AddStreamsFeature()
+            .AddStorageFeature(configuration)
             .AddBackgroundJobs()
             .AddRateLimiting();
 
-        services.AddCloudStorageSystem(configuration);
-
-        services.AddSingleton<Endpoints.Testing.LiveTestSession>();
+        services.AddSingleton<LiveTestSession>();
         services.AddEndpoints(Assembly.GetExecutingAssembly());
 
         return services;
@@ -99,7 +87,59 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddTwitchAndEventSub(this IServiceCollection services)
+    private static IServiceCollection AddChannelsFeature(this IServiceCollection services)
+    {
+        services.AddScoped<IChannelService, ChannelService>();
+        services.ConfigureOptions<ChannelMonitorJobConfiguration>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddRecordingFeature(this IServiceCollection services)
+    {
+        services.AddSingleton<IRecordingOrchestrator, RecordingOrchestrator>();
+        services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
+        services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
+        services.AddSingleton<IStreamStorageService, StreamStorageService>();
+
+        services.AddTransient<SegmentStateTracker>();
+        services.AddTransient<IChapterTracker, ChapterTracker>();
+        services.AddTransient<IStreamFinalizer, StreamFinalizer>();
+        services.AddTransient<ISegmentStore, SegmentStore>();
+        services.AddTransient<IManifestPoller, ManifestPoller>();
+        services.AddTransient<IThumbnailManager, ThumbnailManager>();
+        services.AddTransient<ISegmentUploader, LiveSegmentUploader>();
+
+        services.AddSingleton<IUploadQueue, UploadQueue>();
+        services.AddHostedService<UploadQueueBackgroundService>();
+        services.AddHostedService<RecordingLifecycleService>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddStreamsFeature(this IServiceCollection services)
+    {
+        services.AddSingleton<IStreamService, StreamService>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddStorageFeature(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.ConfigureOptions<StorageCleanupJobConfiguration>();
+        services.ConfigureOptions<StorageUploadJobConfiguration>();
+
+        services.AddPolyStore(configuration)
+            .AddDiscord()
+            .AddCatbox()
+            .AddTelegram();
+
+        return services;
+    }
+
+    private static IServiceCollection AddTwitchFeature(this IServiceCollection services)
     {
         services.AddHttpClient(TwitchHttpClients.Api)
         .ConfigureHttpClient((sp, client) =>
@@ -205,32 +245,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddRecording(this IServiceCollection services)
-    {
-        services.AddScoped<IChannelService, ChannelService>();
-
-        services.AddSingleton<IStreamService, StreamService>();
-        services.AddSingleton<IRecordingOrchestrator, RecordingOrchestrator>();
-        services.AddSingleton<IStreamRecorderRegistry, StreamRecorderRegistry>();
-        services.AddSingleton<IStreamRecorderFactory, StreamRecorderFactory>();
-        services.AddSingleton<IStreamStorageService, StreamStorageService>();
-
-        services.AddTransient<SegmentStateTracker>();
-        services.AddTransient<IChapterTracker, ChapterTracker>();
-        services.AddTransient<IStreamFinalizer, StreamFinalizer>();
-        services.AddTransient<ISegmentStore, SegmentStore>();
-        services.AddTransient<IManifestPoller, ManifestPoller>();
-        services.AddTransient<IThumbnailManager, ThumbnailManager>();
-        services.AddTransient<ISegmentUploader, LiveSegmentUploader>();
-
-        services.AddSingleton<IUploadQueue, UploadQueue>();
-        services.AddHostedService<UploadQueueBackgroundService>();
-        services.AddHostedService<RecordingLifecycleService>();
-
-        return services;
-    }
-
-    private static IServiceCollection AddAuthenticationInternal(
+    private static IServiceCollection AddAuthFeature(
         this IServiceCollection services,
         IConfiguration configuration)
     {
@@ -307,24 +322,8 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddCloudStorageSystem(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        services.ConfigureOptions<StorageCleanupJobConfiguration>();
-        services.ConfigureOptions<StorageUploadJobConfiguration>();
-
-        services.AddPolyStore(configuration)
-            .AddDiscord()
-            .AddCatbox()
-            .AddTelegram();
-
-        return services;
-    }
-
     private static IServiceCollection AddBackgroundJobs(this IServiceCollection services)
     {
-        services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         services.ConfigureOptions<TwitchWebhookHealthCheckJobConfiguration>();
 
         services.AddQuartz();

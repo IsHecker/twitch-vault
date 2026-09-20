@@ -4,7 +4,7 @@ public interface IFileSystem
 {
     bool Exists(string path);
     Task<string[]> ReadAllLinesAsync(string path, CancellationToken cancellationToken = default);
-    Stream OpenWrite(string path, FileMode mode);
+    System.IO.Stream OpenWrite(string path, FileMode mode);
 }
 
 public sealed class PhysicalFileSystem : IFileSystem
@@ -14,7 +14,7 @@ public sealed class PhysicalFileSystem : IFileSystem
     public Task<string[]> ReadAllLinesAsync(string path, CancellationToken cancellationToken = default)
         => File.ReadAllLinesAsync(path, cancellationToken);
 
-    public Stream OpenWrite(string path, FileMode mode)
+    public System.IO.Stream OpenWrite(string path, FileMode mode)
     {
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory))

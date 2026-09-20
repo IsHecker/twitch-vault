@@ -1,7 +1,7 @@
 using TwitchVault.Api.Configuration;
 using Microsoft.Extensions.Options;
 
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public sealed class SegmentStateTracker(IOptionsMonitor<VaultOptions> vaultOptions)
 {

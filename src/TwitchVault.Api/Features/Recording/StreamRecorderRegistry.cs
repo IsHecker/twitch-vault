@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public interface IStreamRecorderRegistry
 {

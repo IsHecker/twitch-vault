@@ -2,12 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Quartz;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Recording.HLS;
 
-namespace TwitchVault.Api.Storage.Jobs;
+namespace TwitchVault.Api.Features.Storage.Jobs;
 
 public sealed class StorageUploadJob(
     IDataStore dataStore,
@@ -39,7 +35,7 @@ public sealed class StorageUploadJob(
         }
     }
 
-    private async Task UploadStreamAsync(Domain.Stream stream, CancellationToken cancellationToken)
+    private async Task UploadStreamAsync(TwitchVault.Api.Features.Streams.Stream stream, CancellationToken cancellationToken)
     {
         var streamTitle = stream.Chapters.FirstOrDefault()?.Title ?? stream.Id;
         var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
@@ -78,7 +74,7 @@ public sealed class StorageUploadJob(
 
     private async Task UploadRemainingSegmentsAsync(
         List<string> remainingSegments,
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         CancellationToken cancellationToken)
     {
         try

@@ -1,7 +1,5 @@
 using FluentAssertions;
-using TwitchVault.Api.Recording.HLS;
 using System.Text;
-using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
 

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Persistence.Database;
+namespace TwitchVault.Api.Database;
 
 public interface IDataStore
 {

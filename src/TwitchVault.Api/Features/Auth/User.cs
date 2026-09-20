@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Domain;
+namespace TwitchVault.Api.Features.Auth;
 
 public class User : Entity<Guid>
 {

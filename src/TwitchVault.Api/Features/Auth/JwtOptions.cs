@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Auth;
+namespace TwitchVault.Api.Features.Auth;
 
 public sealed class JwtOptions
 {

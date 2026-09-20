@@ -1,5 +1,4 @@
 using FluentAssertions;
-using TwitchVault.Api.Common;
 
 namespace TwitchVault.Api.Tests.Unit.Common;
 

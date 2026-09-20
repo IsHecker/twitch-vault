@@ -2,13 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Common.Results;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Persistence.Database;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
-using TwitchVault.Api.Twitch.EventSub;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
@@ -34,7 +28,7 @@ public class ChannelServiceTests : IDisposable
     private ChannelService CreateSut() =>
         new(_db, _twitchGqlClient, _twitchSubscription, _recordingOrchestrator, _dateTimeProvider, _pathsOptions, _vaultOptions);
 
-    private async Task<User> CreateUserAsync(Guid? id = null, string? username = null)
+    private async Task<User> CreateUserAsync(Guid? id = null, string? username = null, bool isAdmin = false)
     {
         var uname = username ?? $"user_{Guid.NewGuid():N}";
         var user = User.Create(
@@ -42,7 +36,8 @@ public class ChannelServiceTests : IDisposable
             username: uname,
             email: $"{uname}@example.com",
             googleId: $"google_{Guid.NewGuid():N}",
-            createdAt: DateTime.UtcNow);
+            createdAt: DateTime.UtcNow,
+            isAdmin: isAdmin);
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
         return user;
@@ -482,6 +477,182 @@ public class ChannelServiceTests : IDisposable
         // Assert
         result.TotalCount.Should().Be(2);
         result.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task AddChannelAsync_ShouldReturnForbidden_WhenChannelIsBannedAndUserIsNotAdmin()
+    {
+        // Arrange
+        var user = await CreateUserAsync(isAdmin: false);
+        var channelId = "banned_123";
+        var channelName = "bannedchannel";
+
+        _twitchGqlClient.GetChannelIdAsync(channelName, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<string?>(channelId));
+
+        _db.BannedChannels.Add(BannedChannel.Create(channelId, channelName, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.AddChannelAsync(user.Id, channelName, null, null, isAdmin: false);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Forbidden);
+    }
+
+    [Fact]
+    public async Task AddChannelAsync_ShouldSucceed_WhenChannelIsBannedAndUserIsAdmin()
+    {
+        // Arrange
+        var admin = await CreateUserAsync(isAdmin: true);
+        var channelId = "banned_456";
+        var channelName = "adminallowedchannel";
+
+        _twitchGqlClient.GetChannelIdAsync(channelName, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<string?>(channelId));
+
+        _db.BannedChannels.Add(BannedChannel.Create(channelId, channelName, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.AddChannelAsync(admin.Id, channelName, null, null, isAdmin: true);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(channelId);
+    }
+
+    [Fact]
+    public async Task BanChannelAsync_ShouldBanChannelAndRemoveNonAdminSubscriptions()
+    {
+        // Arrange
+        var regularUser = await CreateUserAsync(isAdmin: false);
+        var adminUser = await CreateUserAsync(isAdmin: true);
+        var channelId = "chan_to_ban";
+        var channelName = "badchannel";
+
+        var channel = Channel.Create(channelId, channelName, 2, isArchived: false);
+        _db.Channels.Add(channel);
+        _db.UserChannels.AddRange(
+            UserChannel.Create(regularUser.Id, channelId, DateTime.UtcNow),
+            UserChannel.Create(adminUser.Id, channelId, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.BanChannelAsync(channelName, "Inappropriate content");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(channelId);
+
+        var isBanned = await _db.BannedChannels.AnyAsync(b => b.Id == channelId);
+        isBanned.Should().BeTrue();
+
+        var regularSubExists = await _db.UserChannels.AnyAsync(uc => uc.UserId == regularUser.Id && uc.ChannelId == channelId);
+        regularSubExists.Should().BeFalse();
+
+        var adminSubExists = await _db.UserChannels.AnyAsync(uc => uc.UserId == adminUser.Id && uc.ChannelId == channelId);
+        adminSubExists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task BanChannelAsync_ShouldReturnConflict_WhenAlreadyBanned()
+    {
+        // Arrange
+        var channelId = "already_banned";
+        var channelName = "alreadybanned";
+        _db.BannedChannels.Add(BannedChannel.Create(channelId, channelName, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        _twitchGqlClient.GetChannelIdAsync(channelName, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<string?>(channelId));
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.BanChannelAsync(channelName, null);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public async Task UnbanChannelAsync_ShouldRemoveChannelFromBannedChannels()
+    {
+        // Arrange
+        var channelId = "unban_me";
+        var channelName = "unbanchan";
+        _db.BannedChannels.Add(BannedChannel.Create(channelId, channelName, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.UnbanChannelAsync(channelId);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var exists = await _db.BannedChannels.AnyAsync(b => b.Id == channelId);
+        exists.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetChannelsForUserAsync_ShouldExcludeBannedChannelsForNonAdmin()
+    {
+        // Arrange
+        var user = await CreateUserAsync(isAdmin: false);
+        var ch1 = Channel.Create("ok_chan", "okchan", 2, isArchived: false);
+        var ch2 = Channel.Create("banned_chan", "bannedchan", 2, isArchived: false);
+
+        _db.Channels.AddRange(ch1, ch2);
+        _db.BannedChannels.Add(BannedChannel.Create(ch2.Id, ch2.Name, DateTime.UtcNow));
+        _db.UserChannels.AddRange(
+            UserChannel.Create(user.Id, ch1.Id, DateTime.UtcNow),
+            UserChannel.Create(user.Id, ch2.Id, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetChannelsForUserAsync(user.Id, Pagination.Default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(1);
+        result.Value.Items.Single().Id.Should().Be("ok_chan");
+    }
+
+    [Fact]
+    public async Task GetChannelsForUserAsync_ShouldIncludeBannedChannelsForAdmin()
+    {
+        // Arrange
+        var admin = await CreateUserAsync(isAdmin: true);
+        var ch1 = Channel.Create("ok_chan_admin", "okchanadmin", 2, isArchived: false);
+        var ch2 = Channel.Create("banned_chan_admin", "bannedchanadmin", 2, isArchived: false);
+
+        _db.Channels.AddRange(ch1, ch2);
+        _db.BannedChannels.Add(BannedChannel.Create(ch2.Id, ch2.Name, DateTime.UtcNow));
+        _db.UserChannels.AddRange(
+            UserChannel.Create(admin.Id, ch1.Id, DateTime.UtcNow),
+            UserChannel.Create(admin.Id, ch2.Id, DateTime.UtcNow));
+        await _db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetChannelsForUserAsync(admin.Id, Pagination.Default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
     }
 
     public void Dispose()

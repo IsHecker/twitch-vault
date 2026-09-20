@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace TwitchVault.Api.Persistence.Data;
+namespace TwitchVault.Api.Database.Common;
 
 internal sealed class ValueJsonConverter<T>(ConverterMappingHints? mappingHints = null) : ValueConverter<T, string>(
     v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),

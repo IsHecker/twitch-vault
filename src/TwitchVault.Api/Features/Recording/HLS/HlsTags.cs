@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 internal static class HlsTags
 {

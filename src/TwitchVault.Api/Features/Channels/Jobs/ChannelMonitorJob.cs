@@ -1,12 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Quartz;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.ChannelMonitor;
+namespace TwitchVault.Api.Features.Channels.Jobs;
 
 [DisallowConcurrentExecution]
 public sealed class ChannelMonitorJob(

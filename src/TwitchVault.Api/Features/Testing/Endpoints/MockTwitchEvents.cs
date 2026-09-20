@@ -1,8 +1,5 @@
-using TwitchVault.Api.Events;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch.EventSub;
 
-namespace TwitchVault.Api.Endpoints.Testing;
+namespace TwitchVault.Api.Features.Testing.Endpoints;
 
 public class MockTwitchEvents : IDevOnlyEndpoint
 {

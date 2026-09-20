@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Twitch.EventSub;
+namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public static class EventsubConstants
 {

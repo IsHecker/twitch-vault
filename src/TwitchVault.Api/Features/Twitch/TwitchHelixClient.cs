@@ -3,9 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Twitch.EventSub;
 
-namespace TwitchVault.Api.Twitch;
+namespace TwitchVault.Api.Features.Twitch;
 
 public sealed class TwitchHelixClient(
     IHttpClientFactory httpClientFactory,

@@ -1,14 +1,10 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Auth;
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Common.Extensions;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
 
-namespace TwitchVault.Api.Endpoints.Streams;
+namespace TwitchVault.Api.Features.Streams.Endpoints;
 
 public class ListStreamsByChannel : IEndpoint
 {
@@ -29,6 +25,10 @@ public class ListStreamsByChannel : IEndpoint
             DateTime? subscribedAt = null;
             if (!isAdmin)
             {
+                var isBanned = await db.BannedChannels.AsNoTracking().AnyAsync(b => b.Id == channelId);
+                if (isBanned)
+                    return Results.NotFound();
+
                 var userId = principal.GetUserId();
                 var userChannel = await db.UserChannels
                     .AsNoTracking()

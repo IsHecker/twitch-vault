@@ -5,7 +5,7 @@ public static class IOUtils
     private const int MaxRetries = 5;
     private const int DelayMs = 500;
 
-    public static async Task DeleteDirectoryWithRetriesAsync(string path)
+    public static async Task DeleteDirectoryAsync(string path)
     {
         if (!Directory.Exists(path))
             return;

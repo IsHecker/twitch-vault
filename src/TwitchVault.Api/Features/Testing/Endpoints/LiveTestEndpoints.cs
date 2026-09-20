@@ -1,14 +1,9 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Auth;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.Endpoints.Testing;
+namespace TwitchVault.Api.Features.Testing.Endpoints;
 
 public class LiveTestEndpoints : IDevOnlyEndpoint
 {
@@ -163,7 +158,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
 
             foreach (var (channelId, channelName) in createdChannels)
             {
-                var streams = await dataStore.QueryAsync<Domain.Stream, List<Domain.Stream>>(
+                var streams = await dataStore.QueryAsync<TwitchVault.Api.Features.Streams.Stream, List<TwitchVault.Api.Features.Streams.Stream>>(
                     q => q.ForChannel(channelId).ToListAsync());
 
                 foreach (var stream in streams)
@@ -246,7 +241,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
                         q => q.Where(c => c.Id == channelId).ExecuteDeleteAsync());
 
                     var rootChannelDir = Path.Combine(pathsOptions.Value.Streams, channel.Name);
-                    await Common.IOUtils.DeleteDirectoryWithRetriesAsync(rootChannelDir);
+                    await Common.IOUtils.DeleteDirectoryAsync(rootChannelDir);
 
                     deletedChannels.Add(channelName);
                 }

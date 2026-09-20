@@ -1,9 +1,7 @@
-using TwitchVault.Api.Common;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Recording.HLS;
 using Microsoft.Extensions.Options;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public readonly record struct LocalSegment(string FilePath, float Duration, long SizeBytes);
 
@@ -24,7 +22,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
     private float _accumulatedDuration;
     private string? _currentFileName;
     private string? _currentFilePath;
-    private Stream? _currentFileStream;
+    private System.IO.Stream? _currentFileStream;
 
     public bool IsFull => _accumulatedDuration >= vaultOptions.CurrentValue.MaxSegmentDurationInSec;
 

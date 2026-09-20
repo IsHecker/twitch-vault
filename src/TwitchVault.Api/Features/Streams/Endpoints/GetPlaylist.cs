@@ -1,10 +1,7 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using TwitchVault.Api.Auth;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Persistence.Extensions;
 
-namespace TwitchVault.Api.Endpoints.HLS;
+namespace TwitchVault.Api.Features.Streams.Endpoints;
 
 public class GetPlaylist : IEndpoint
 {
@@ -25,6 +22,10 @@ public class GetPlaylist : IEndpoint
 
             if (!principal.IsInRole("Admin"))
             {
+                var isBanned = await db.BannedChannels.AsNoTracking().AnyAsync(b => b.Id == stream.ChannelId);
+                if (isBanned)
+                    return Results.NotFound();
+
                 var userId = principal.GetUserId();
                 var userChannel = await db.UserChannels
                     .AsNoTracking()

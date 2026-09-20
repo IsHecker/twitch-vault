@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Endpoints.Settings;
+namespace TwitchVault.Api.Features.Settings.Endpoints;
 
 public class UpdateSettings : IEndpoint
 {

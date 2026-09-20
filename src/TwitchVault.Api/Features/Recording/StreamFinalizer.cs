@@ -1,14 +1,10 @@
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Twitch;
-
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 public interface IStreamFinalizer
 {
     Task FinalizeAsync(
         Channel channel,
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         long sizeBytes,
         SessionEndReason reason);
 }
@@ -30,7 +26,7 @@ public sealed class StreamFinalizer(
 {
     public async Task FinalizeAsync(
         Channel channel,
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         long sizeBytes,
         SessionEndReason reason)
     {
@@ -73,7 +69,7 @@ public sealed class StreamFinalizer(
         }
     }
 
-    private async Task HandleServerShutdownAsync(Channel channel, Domain.Stream stream, long sizeBytes)
+    private async Task HandleServerShutdownAsync(Channel channel, TwitchVault.Api.Features.Streams.Stream stream, long sizeBytes)
     {
         var isStillLive = await IsChannelLiveAsync(stream, channel.Name);
 
@@ -90,7 +86,7 @@ public sealed class StreamFinalizer(
         }
     }
 
-    private async Task MarkStoppedAsync(Domain.Stream stream, long sizeBytes)
+    private async Task MarkStoppedAsync(TwitchVault.Api.Features.Streams.Stream stream, long sizeBytes)
     {
         stream.MarkAsStopped(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
@@ -99,7 +95,7 @@ public sealed class StreamFinalizer(
         logger.LogDebug("Recording manually stopped.");
     }
 
-    private async Task HandleErrorAsync(Domain.Stream stream, string channelName, Exception ex, long sizeBytes)
+    private async Task HandleErrorAsync(TwitchVault.Api.Features.Streams.Stream stream, string channelName, Exception ex, long sizeBytes)
     {
         logger.LogError(ex, "Session ended due to an error.");
 
@@ -113,7 +109,7 @@ public sealed class StreamFinalizer(
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
     }
 
-    private async Task HandleStreamEndedAsync(Domain.Stream stream, long sizeBytes)
+    private async Task HandleStreamEndedAsync(TwitchVault.Api.Features.Streams.Stream stream, long sizeBytes)
     {
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
@@ -123,13 +119,13 @@ public sealed class StreamFinalizer(
         logger.LogInformation("Stream finished. Total duration: {Duration} ({Instance}).", duration, stream.StorageInstanceName);
     }
 
-    private async Task<bool> IsChannelLiveAsync(Domain.Stream stream, string channelName)
+    private async Task<bool> IsChannelLiveAsync(TwitchVault.Api.Features.Streams.Stream stream, string channelName)
     {
         var metadata = await twitchClient.GetStreamMetadataAsync(channelName, CancellationToken.None);
         return metadata?.Id == stream.Id;
     }
 
-    private Task UpdateStream(Domain.Stream stream)
+    private Task UpdateStream(TwitchVault.Api.Features.Streams.Stream stream)
     {
         return dataStore.ExecuteAsync(() =>
         {

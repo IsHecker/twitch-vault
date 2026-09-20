@@ -1,5 +1,4 @@
-using TwitchVault.Api.Twitch;
 
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public readonly record struct SegmentContent(RemoteSegment Source, ResponseStream ResponseStream);

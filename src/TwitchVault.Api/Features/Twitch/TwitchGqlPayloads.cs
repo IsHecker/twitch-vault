@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Twitch;
+namespace TwitchVault.Api.Features.Twitch;
 
 internal static class TwitchGqlPayloads
 {

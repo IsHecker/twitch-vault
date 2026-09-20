@@ -1,9 +1,6 @@
 using System.Security.Claims;
-using TwitchVault.Api.Auth;
-using TwitchVault.Api.Common.Results;
-using TwitchVault.Api.Recording;
 
-namespace TwitchVault.Api.Endpoints.Channels;
+namespace TwitchVault.Api.Features.Channels.Endpoints;
 
 public class UnsubscribeChannel : IEndpoint
 {

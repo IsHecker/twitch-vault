@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Domain;
 
-namespace TwitchVault.Api.Endpoints.Settings;
+namespace TwitchVault.Api.Features.Settings.Endpoints;
 
 public class GetSettings : IEndpoint
 {

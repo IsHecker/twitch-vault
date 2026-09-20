@@ -1,4 +1,4 @@
-namespace TwitchVault.Api.Domain;
+namespace TwitchVault.Api.Database;
 
 public abstract class Entity<TKey>
 {

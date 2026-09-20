@@ -1,6 +1,4 @@
-using TwitchVault.Api.Common;
-
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public record struct StreamVariant(int Bandwidth, string Url);
 

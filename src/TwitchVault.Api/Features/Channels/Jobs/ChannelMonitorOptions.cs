@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TwitchVault.Api.ChannelMonitor;
+namespace TwitchVault.Api.Features.Channels.Jobs;
 
 public sealed class ChannelMonitorOptions
 {

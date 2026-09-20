@@ -1,13 +1,8 @@
 using Google.Apis.Auth;
 using Microsoft.Extensions.Options;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Common.Results;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Endpoints.Auth;
-using TwitchVault.Api.Persistence.Extensions;
 using static Google.Apis.Auth.GoogleJsonWebSignature;
 
-namespace TwitchVault.Api.Auth;
+namespace TwitchVault.Api.Features.Auth;
 
 public sealed class GoogleAuthService(
     AppDbContext db,

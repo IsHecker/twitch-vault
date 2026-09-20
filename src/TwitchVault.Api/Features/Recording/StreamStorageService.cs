@@ -1,26 +1,22 @@
 using System.Collections.Concurrent;
 using PolyStore;
-using TwitchVault.Api.Common;
-using TwitchVault.Api.Domain;
-using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Storage;
 
-namespace TwitchVault.Api.Recording;
+namespace TwitchVault.Api.Features.Recording;
 
 // TODO: Refactor and improve implementation
 public interface IStreamStorageService
 {
     Task<bool> UploadBatchAsync(
         string[] localFilePaths,
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         CancellationToken cancellationToken = default);
 
     Task<bool> FinalizeStorageAsync(
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         CancellationToken cancellationToken = default);
 
     Task<bool> DeleteStreamAsync(
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         CancellationToken cancellationToken = default);
 }
 
@@ -43,7 +39,7 @@ public sealed class StreamStorageService(
 
     public async Task<bool> UploadBatchAsync(
         string[] localFilePaths,
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         CancellationToken cancellationToken = default)
     {
         var (storageFiles, localPaths) = OpenSourceFiles(localFilePaths);
@@ -112,7 +108,7 @@ public sealed class StreamStorageService(
         }
     }
 
-    public async Task<bool> FinalizeStorageAsync(Domain.Stream stream, CancellationToken cancellationToken)
+    public async Task<bool> FinalizeStorageAsync(TwitchVault.Api.Features.Streams.Stream stream, CancellationToken cancellationToken)
     {
         var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
         if (!Directory.Exists(localDirectory))
@@ -168,7 +164,7 @@ public sealed class StreamStorageService(
     }
 
     public async Task<bool> DeleteStreamAsync(
-        Domain.Stream stream,
+        TwitchVault.Api.Features.Streams.Stream stream,
         CancellationToken cancellationToken = default)
     {
         var urlFilePath = Path.Combine(stream.Folder.GetAbsolutePath(env.ContentRootPath), StreamFolder.RemoteUrlsFile);
@@ -213,10 +209,10 @@ public sealed class StreamStorageService(
             }
         }
 
-        await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<Domain.Stream, string>(stream.Id));
+        await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<TwitchVault.Api.Features.Streams.Stream, string>(stream.Id));
 
         var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
-        await IOUtils.DeleteDirectoryWithRetriesAsync(localDirectory);
+        await IOUtils.DeleteDirectoryAsync(localDirectory);
 
         if (_streamLocks.TryRemove(stream.Id, out var sem))
             sem.Dispose();

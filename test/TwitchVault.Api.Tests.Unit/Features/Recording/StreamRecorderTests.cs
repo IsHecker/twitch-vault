@@ -5,9 +5,6 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using TwitchVault.Api.Configuration;
-using TwitchVault.Api.Recording;
-using TwitchVault.Api.Recording.HLS;
-using TwitchVault.Api.Twitch;
 
 namespace TwitchVault.Api.Tests.Unit.Recording;
 
@@ -33,13 +30,13 @@ public class StreamRecorderTests : IDisposable
     private readonly SemaphoreSlim _pollStarted = new(0, 1);
 
     private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
-    private readonly Domain.Stream _stream;
+    private readonly TwitchVault.Api.Features.Streams.Stream _stream;
 
     public StreamRecorderTests()
     {
         _vaultOptions.CurrentValue.Returns(new VaultOptions { MaxConsecutiveEmptyPolls = MaxConsecutiveEmptyPolls });
 
-        _stream = Domain.Stream.Create(
+        _stream = TwitchVault.Api.Features.Streams.Stream.Create(
             "ts_1",
             ChannelId,
             StreamFolder.Create("streams_root", ChannelName),
@@ -72,7 +69,7 @@ public class StreamRecorderTests : IDisposable
 
         _finalizer.FinalizeAsync(
             Arg.Any<Channel>(),
-            Arg.Any<Domain.Stream>(),
+            Arg.Any<TwitchVault.Api.Features.Streams.Stream>(),
             Arg.Any<long>(),
             Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
     }

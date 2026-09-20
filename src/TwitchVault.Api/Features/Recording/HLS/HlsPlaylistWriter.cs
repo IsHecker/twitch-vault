@@ -2,9 +2,8 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using TwitchVault.Api.Common;
 
-namespace TwitchVault.Api.Recording.HLS;
+namespace TwitchVault.Api.Features.Recording.HLS;
 
 public interface IHlsPlaylistWriter : IAsyncDisposable
 {
@@ -33,7 +32,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     public bool HasInitSegment { get; private set; }
 
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private readonly Stream _fileStream;
+    private readonly System.IO.Stream _fileStream;
     private readonly DateTime _startTime;
     private readonly bool _isFinalized;
     private readonly byte[] _lineBuffer = new byte[LineBufferSize];
@@ -42,7 +41,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     private float _totalDuration;
     private bool _lastEntryWasDiscontinuity;
 
-    private HlsPlaylistWriter(Stream fileStream, PlaylistState state)
+    private HlsPlaylistWriter(System.IO.Stream fileStream, PlaylistState state)
     {
         _fileStream = fileStream;
         _startTime = state.StartTime;
