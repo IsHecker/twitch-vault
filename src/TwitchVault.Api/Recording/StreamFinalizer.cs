@@ -18,6 +18,7 @@ public abstract record SessionEndReason
     public sealed record StreamEnded : SessionEndReason;
     public sealed record StreamStopped : SessionEndReason;
     public sealed record StreamError(Exception Ex) : SessionEndReason;
+    public sealed record ServerShutdown : SessionEndReason;
 }
 
 public sealed class StreamFinalizer(
@@ -52,6 +53,10 @@ public sealed class StreamFinalizer(
                     await HandleErrorAsync(stream, channel.Name, ex, sizeBytes);
                     break;
 
+                case SessionEndReason.ServerShutdown:
+                    await HandleServerShutdownAsync(channel, stream, sizeBytes);
+                    break;
+
                 case SessionEndReason.StreamEnded:
                 default:
                     await HandleStreamEndedAsync(stream, sizeBytes);
@@ -65,6 +70,23 @@ public sealed class StreamFinalizer(
         finally
         {
             await UpdateStream(stream);
+        }
+    }
+
+    private async Task HandleServerShutdownAsync(Channel channel, Domain.Stream stream, long sizeBytes)
+    {
+        var isStillLive = await IsChannelLiveAsync(stream, channel.Name);
+
+        if (isStillLive)
+        {
+            stream.MarkAsInterrupted();
+            logger.LogInformation(
+                "Server shutdown: stream '{StreamId}' for '{Channel}' marked as interrupted (channel still live on Twitch).",
+                stream.Id, channel.Name);
+        }
+        else
+        {
+            await HandleStreamEndedAsync(stream, sizeBytes);
         }
     }
 

@@ -134,6 +134,43 @@ public sealed class RecordingOrchestrator(
         return finishedChannels;
     }
 
+    public async Task ShutdownAllRecordingsAsync()
+    {
+        var channelIds = streamRecorderRegistry.GetActiveChannelIds();
+        if (channelIds.Count == 0)
+        {
+            logger.LogDebug("ShutdownAllRecordingsAsync: no active recording sessions.");
+            return;
+        }
+
+        logger.LogInformation("Server shutdown: gracefully stopping {Count} active recording session(s)...", channelIds.Count);
+
+        var backgroundTasks = new List<Task>();
+
+        foreach (var channelId in channelIds)
+        {
+            if (!streamRecorderRegistry.TryGet(channelId, out var recorder))
+                continue;
+
+            if (streamRecorderRegistry.TryGetBackgroundTask(channelId, out var bgTask))
+                backgroundTasks.Add(bgTask);
+
+            await recorder.ShutdownAsync();
+        }
+
+        if (backgroundTasks.Count <= 0)
+            return;
+
+        try
+        {
+            await Task.WhenAll(backgroundTasks);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error waiting for recording sessions to shut down.");
+        }
+    }
+
     private async Task<Domain.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
     {
         var stream = streamService.CreateStream(channel, metadata);

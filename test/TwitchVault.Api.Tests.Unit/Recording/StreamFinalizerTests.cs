@@ -135,11 +135,50 @@ public class StreamFinalizerTests
         await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
     }
 
+    [Fact]
+    public async Task FinalizeAsync_ShouldMarkInterrupted_WhenServerShutdownAndChannelStillLiveWithSameStream()
+    {
+        // Arrange
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream("ts_shutdown_live"));
+        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
+            .Returns(new StreamMetadata("ts_shutdown_live", "title", "cat", DateTime.Now));
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.ServerShutdown());
+
+        // Assert
+        stream.Status.Should().Be(StreamStatus.Interrupted);
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Domain.Stream>());
+    }
+
+    [Theory]
+    [MemberData(nameof(NotCurrentlyLiveMetadata))]
+    public async Task FinalizeAsync_ShouldMarkFinished_WhenServerShutdownAndChannelNoLongerLive(StreamMetadata? metadata)
+    {
+        // Arrange
+        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>()).Returns(metadata);
+
+        var sut = CreateSut();
+        var stream = SeedStream(CreateStream("ts_shutdown_offline"));
+        var finishedAt = new DateTime(2026, 1, 1, 11, 0, 0);
+        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
+
+        // Act
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.ServerShutdown());
+
+        // Assert
+        stream.Status.Should().Be(StreamStatus.Finished);
+        stream.FinishedAt.Should().Be(finishedAt);
+        await _storageService.Received(1).FinalizeStorageAsync(stream);
+    }
+
     public static TheoryData<SessionEndReason> AllReasons() => new()
     {
         new SessionEndReason.StreamStopped(),
         new SessionEndReason.StreamEnded(),
         new SessionEndReason.StreamError(new InvalidOperationException("boom")),
+        new SessionEndReason.ServerShutdown(),
     };
 
     public static TheoryData<StreamMetadata?> NotCurrentlyLiveMetadata() => new()

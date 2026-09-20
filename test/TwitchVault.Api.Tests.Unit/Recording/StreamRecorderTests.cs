@@ -132,6 +132,24 @@ public class StreamRecorderTests : IDisposable
     }
 
     [Fact]
+    public async Task ShutdownAsync_ShouldDelegateServerShutdownReason_AndCancelTheLoop()
+    {
+        // Arrange
+        BlockPollIndefinitely();
+        await using var sut = CreateSut();
+        var startTask = sut.StartAsync(_stream, _channel);
+        await _pollStarted.WaitAsync();
+
+        // Act
+        await sut.ShutdownAsync();
+        var act = async () => await startTask;
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        await AssertFinalizedAsync(new SessionEndReason.ServerShutdown());
+    }
+
+    [Fact]
     public async Task StopAsync_ShouldTakePrecedence_EvenIfLoopWouldOtherwiseReportStreamEnded()
     {
         // Arrange

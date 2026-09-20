@@ -328,4 +328,56 @@ public class RecordingOrchestratorTests
         // Assert
         await act.Should().NotThrowAsync();
     }
+
+    [Fact]
+    public async Task ShutdownAllRecordingsAsync_ShouldDoNothing_WhenNoActiveSessions()
+    {
+        // Arrange
+        _streamRecorderRegistry.GetActiveChannelIds().Returns([]);
+        var sut = CreateSut();
+
+        // Act
+        await sut.ShutdownAllRecordingsAsync();
+
+        // Assert
+        _streamRecorderRegistry.DidNotReceive().TryGet(Arg.Any<string>(), out Arg.Any<IStreamRecorder>());
+    }
+
+    [Fact]
+    public async Task ShutdownAllRecordingsAsync_ShouldCallShutdownAsyncOnAllActiveRecorders_AndWaitForBackgroundTasks()
+    {
+        // Arrange
+        var recorder1 = Substitute.For<IStreamRecorder>();
+        var recorder2 = Substitute.For<IStreamRecorder>();
+
+        var bgTaskCompletion = new TaskCompletionSource();
+        recorder1.ShutdownAsync().Returns(_ =>
+        {
+            bgTaskCompletion.SetResult();
+            return Task.CompletedTask;
+        });
+        recorder2.ShutdownAsync().Returns(Task.CompletedTask);
+
+        _streamRecorderRegistry.GetActiveChannelIds().Returns(["chan_1", "chan_2"]);
+
+        _streamRecorderRegistry.TryGet("chan_1", out Arg.Any<IStreamRecorder>())
+            .Returns(x => { x[1] = recorder1; return true; });
+        _streamRecorderRegistry.TryGet("chan_2", out Arg.Any<IStreamRecorder>())
+            .Returns(x => { x[1] = recorder2; return true; });
+
+        _streamRecorderRegistry.TryGetBackgroundTask("chan_1", out Arg.Any<Task>())
+            .Returns(x => { x[1] = bgTaskCompletion.Task; return true; });
+        _streamRecorderRegistry.TryGetBackgroundTask("chan_2", out Arg.Any<Task>())
+            .Returns(x => { x[1] = Task.CompletedTask; return true; });
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ShutdownAllRecordingsAsync();
+
+        // Assert
+        await recorder1.Received(1).ShutdownAsync();
+        await recorder2.Received(1).ShutdownAsync();
+        bgTaskCompletion.Task.IsCompletedSuccessfully.Should().BeTrue();
+    }
 }

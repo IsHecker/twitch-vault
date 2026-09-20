@@ -225,6 +225,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IUploadQueue, UploadQueue>();
         services.AddHostedService<UploadQueueBackgroundService>();
+        services.AddHostedService<RecordingLifecycleService>();
 
         return services;
     }
@@ -235,8 +236,10 @@ public static class DependencyInjection
     {
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<GoogleAuthOptions>(configuration.GetSection(GoogleAuthOptions.SectionName));
 
         services.AddSingleton<TokenGeneratorService>();
+        services.AddScoped<GoogleAuthService>();
 
         services.AddAuthentication(options =>
         {

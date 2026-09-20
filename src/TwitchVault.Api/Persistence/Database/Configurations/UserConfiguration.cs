@@ -8,15 +8,17 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
+        // builder.HasIndex(u => u.GoogleId)
+        //     .IsUnique();
+
+        builder.Property(u => u.GoogleId)
+            .IsRequired(false);
+
+        builder.Property(u => u.Email)
+            .IsRequired(false);
+
         builder.Property(u => u.Username)
-            .HasMaxLength(50)
-            .IsRequired();
-
-        builder.HasIndex(u => u.Username)
-            .IsUnique();
-
-        builder.Property(u => u.Password)
-            .HasMaxLength(16)
+            .HasMaxLength(100)
             .IsRequired();
 
         builder.HasMany(x => x.Channels)

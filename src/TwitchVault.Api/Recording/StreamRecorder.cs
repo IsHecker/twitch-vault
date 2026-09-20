@@ -12,6 +12,7 @@ public interface IStreamRecorder : IAsyncDisposable
     Task StartAsync(Domain.Stream stream, Channel channel);
     Task StopAsync();
     Task FinishAsync();
+    Task ShutdownAsync();
 }
 
 public sealed class StreamRecorder(
@@ -79,6 +80,12 @@ public sealed class StreamRecorder(
     public async Task FinishAsync()
     {
         SetEndReason(new SessionEndReason.StreamEnded());
+        await _cts.CancelAsync();
+    }
+
+    public async Task ShutdownAsync()
+    {
+        SetEndReason(new SessionEndReason.ServerShutdown());
         await _cts.CancelAsync();
     }
 

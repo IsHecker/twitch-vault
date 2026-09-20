@@ -36,11 +36,13 @@ public class ChannelServiceTests : IDisposable
 
     private async Task<User> CreateUserAsync(Guid? id = null, string? username = null)
     {
+        var uname = username ?? $"user_{Guid.NewGuid():N}";
         var user = User.Create(
             id ?? Guid.NewGuid(),
-            username ?? $"user_{Guid.NewGuid():N}",
-            "hashedpwd",
-            DateTime.UtcNow);
+            username: uname,
+            email: $"{uname}@example.com",
+            googleId: $"google_{Guid.NewGuid():N}",
+            createdAt: DateTime.UtcNow);
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
         return user;
