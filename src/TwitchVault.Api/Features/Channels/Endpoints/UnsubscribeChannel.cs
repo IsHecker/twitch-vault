@@ -11,7 +11,7 @@ public class UnsubscribeChannel : IEndpoint
             IChannelService channelService,
             CancellationToken ct) =>
         {
-            var result = await channelService.UnsubscribeChannelAsync(principal.GetUserId(), channelId, ct);
+            var result = await channelService.UnsubscribeChannelAsync(channelId, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization()

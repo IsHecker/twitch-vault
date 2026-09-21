@@ -5,7 +5,7 @@ public class UnbanChannel : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapDelete("/api/admin/channels/banned/{channelId}", async (
             string channelId,
-            IChannelService channelService,
+            IChannelBanService channelService,
             CancellationToken ct) =>
         {
             var result = await channelService.UnbanChannelAsync(channelId, ct);

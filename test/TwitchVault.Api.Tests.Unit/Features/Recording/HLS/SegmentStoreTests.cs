@@ -4,7 +4,7 @@ using NSubstitute;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 
-namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
+namespace TwitchVault.Api.Tests.Unit.Features.Recording.HLS;
 
 public class SegmentStoreTests
 {

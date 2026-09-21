@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -90,8 +91,12 @@ public static class DependencyInjection
     private static IServiceCollection AddChannelsFeature(this IServiceCollection services)
     {
         services.AddScoped<IChannelService, ChannelService>();
-        services.ConfigureOptions<ChannelMonitorJobConfiguration>();
+        services.AddScoped<IChannelBanService, ChannelBanService>();
 
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
+        services.ConfigureOptions<ChannelMonitorJobConfiguration>();
         return services;
     }
 
@@ -331,4 +336,14 @@ public static class DependencyInjection
 
         return services;
     }
+}
+
+public sealed class HttpContextCurrentUser(IHttpContextAccessor httpContextAccessor) : ICurrentUser
+{
+    private ClaimsPrincipal Principal =>
+        httpContextAccessor.HttpContext?.User
+        ?? throw new InvalidOperationException("No authenticated user in scope.");
+
+    public Guid Id => Principal.GetUserId();
+    public bool IsAdmin => Principal.IsInRole("Admin");
 }

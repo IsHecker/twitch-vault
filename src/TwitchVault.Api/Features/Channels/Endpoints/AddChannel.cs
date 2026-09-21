@@ -13,11 +13,9 @@ public class AddChannel : IEndpoint
             CancellationToken ct) =>
         {
             var result = await channelService.AddChannelAsync(
-                principal.GetUserId(),
                 request.ChannelName,
                 request.QualityRank,
                 request.IsArchived,
-                principal.IsInRole("Admin"),
                 ct);
 
             return result.ToHttpResult(channel => Results.Created($"/api/channels/{channel.Id}", ChannelResponse.FromDomain(channel)));

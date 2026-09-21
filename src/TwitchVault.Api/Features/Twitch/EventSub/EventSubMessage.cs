@@ -3,13 +3,13 @@ using System.Text.Json.Serialization;
 namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public record struct EventSubSubscriptionResponse(
-    [property: JsonPropertyName("data")] Subscription[] Data,
+    [property: JsonPropertyName("data")] EventSubSubscription[] Data,
     [property: JsonPropertyName("total")] int Total,
     [property: JsonPropertyName("total_cost")] int TotalCost,
     [property: JsonPropertyName("max_total_cost")] int MaxTotalCost,
     [property: JsonPropertyName("pagination")] PaginationInfo? Pagination);
 
-public record struct Subscription(
+public record struct EventSubSubscription(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("type")] string Type,

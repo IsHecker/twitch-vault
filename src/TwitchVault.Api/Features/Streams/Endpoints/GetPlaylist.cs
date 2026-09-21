@@ -27,11 +27,11 @@ public class GetPlaylist : IEndpoint
                     return Results.NotFound();
 
                 var userId = principal.GetUserId();
-                var userChannel = await db.UserChannels
+                var subscription = await db.Subscriptions
                     .AsNoTracking()
                     .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == stream.ChannelId);
 
-                if (userChannel is null || stream.StartedAt < userChannel.AddedAt)
+                if (subscription is null || stream.StartedAt < subscription.AddedAt)
                     return Results.NotFound();
             }
 

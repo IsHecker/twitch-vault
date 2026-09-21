@@ -14,7 +14,7 @@ public sealed class TwitchSubscriptionService(
     private const int TotalEventsPerChannel = 2;
     private const int MaxRetries = 3;
 
-    private readonly ConcurrentDictionary<string, List<Subscription>> _channelSubscriptions = [];
+    private readonly ConcurrentDictionary<string, List<EventSubSubscription>> _channelSubscriptions = [];
 
     public async Task InitializeSubscriptionsAsync(CancellationToken cancellationToken)
     {
@@ -161,7 +161,7 @@ public sealed class TwitchSubscriptionService(
         }
     }
 
-    private async Task<Subscription?> CreateEventSubscriptionAsync(
+    private async Task<EventSubSubscription?> CreateEventSubscriptionAsync(
         string channelId,
         string type,
         string version,

@@ -26,7 +26,7 @@ public sealed class TwitchHelixClient(
     private string? _appAccessToken;
     private DateTime _tokenExpiresAt = DateTime.UtcNow.AddMinutes(-60);
 
-    public async IAsyncEnumerable<Subscription> GetEventSubSubscriptionsAsync(
+    public async IAsyncEnumerable<EventSubSubscription> GetEventSubSubscriptionsAsync(
         string status = "",
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {

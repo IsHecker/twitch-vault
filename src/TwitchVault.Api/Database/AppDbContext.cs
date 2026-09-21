@@ -8,7 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users { get; init; }
     public DbSet<Channel> Channels { get; init; }
     public DbSet<TwitchVault.Api.Features.Streams.Stream> Streams { get; init; }
-    public DbSet<UserChannel> UserChannels { get; init; }
+    public DbSet<Subscription> Subscriptions { get; init; }
     public DbSet<BannedChannel> BannedChannels { get; init; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

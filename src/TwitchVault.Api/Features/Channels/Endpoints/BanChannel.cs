@@ -5,7 +5,7 @@ public class BanChannel : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapPost("/api/admin/channels/ban", async (
             Request request,
-            IChannelService channelService,
+            IChannelBanService channelService,
             CancellationToken ct) =>
         {
             var result = await channelService.BanChannelAsync(request.ChannelName, request.Reason, ct);

@@ -5,7 +5,7 @@ using TwitchVault.Api.Configuration;
 using FluentAssertions;
 using DomainStream = TwitchVault.Api.Features.Streams.Stream;
 
-namespace TwitchVault.Api.Tests.Unit.Recording;
+namespace TwitchVault.Api.Tests.Unit.Features.Streams;
 
 public class StreamServiceTests
 {

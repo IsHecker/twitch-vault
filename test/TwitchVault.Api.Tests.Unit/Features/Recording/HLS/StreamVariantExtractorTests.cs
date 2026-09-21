@@ -1,6 +1,6 @@
 using FluentAssertions;
 
-namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
+namespace TwitchVault.Api.Tests.Unit.Features.Recording.HLS;
 
 public class StreamVariantExtractorTests
 {

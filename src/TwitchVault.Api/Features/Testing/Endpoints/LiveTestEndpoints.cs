@@ -62,7 +62,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
                     await dataStore.ExecuteAsync(async () =>
                     {
                         await dataStore.AddAsync(channel);
-                        await dataStore.AddAsync(UserChannel.Create(userId, twitchUserId, DateTime.UtcNow));
+                        await dataStore.AddAsync(Subscription.Create(userId, twitchUserId, DateTime.UtcNow));
                         return Task.CompletedTask;
                     });
 
@@ -219,16 +219,16 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
 
                     if (channel is null)
                     {
-                        await dataStore.QueryAsync<UserChannel, int>(
+                        await dataStore.QueryAsync<Subscription, int>(
                             q => q.Where(uc => uc.UserId == sessionUserId && uc.ChannelId == channelId).ExecuteDeleteAsync());
                         deletedChannels.Add($"{channelName} (already removed from DB)");
                         continue;
                     }
 
-                    await dataStore.QueryAsync<UserChannel, int>(
+                    await dataStore.QueryAsync<Subscription, int>(
                         q => q.Where(uc => uc.UserId == sessionUserId && uc.ChannelId == channelId).ExecuteDeleteAsync());
 
-                    var remainingUsers = await dataStore.QueryAsync<UserChannel, int>(
+                    var remainingUsers = await dataStore.QueryAsync<Subscription, int>(
                         q => q.CountAsync(uc => uc.ChannelId == channelId));
 
                     if (remainingUsers > 0)

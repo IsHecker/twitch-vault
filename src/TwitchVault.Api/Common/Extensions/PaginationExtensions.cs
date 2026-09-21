@@ -16,10 +16,11 @@ public static class PaginationExtensions
 
     public static async Task<PagedResponse<T>> ToPagedResponseAsync<T>(
         this IQueryable<T> source,
-        Pagination pagination)
+        Pagination pagination,
+        CancellationToken ct = default)
     {
-        var items = await source.Paginate(pagination).ToListAsync();
-        var totalCount = await source.CountAsync();
+        var items = await source.Paginate(pagination).ToListAsync(ct);
+        var totalCount = await source.CountAsync(ct);
 
         return new PagedResponse<T>
         {

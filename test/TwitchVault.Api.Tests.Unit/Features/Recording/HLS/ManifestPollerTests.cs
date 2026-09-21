@@ -3,7 +3,7 @@ using NSubstitute;
 using FluentAssertions;
 using System.Text;
 
-namespace TwitchVault.Api.Tests.Unit.Recording.HLS;
+namespace TwitchVault.Api.Tests.Unit.Features.Recording.HLS;
 
 public class ManifestPollerTests
 {

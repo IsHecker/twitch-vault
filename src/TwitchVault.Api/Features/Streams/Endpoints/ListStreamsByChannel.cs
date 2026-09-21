@@ -30,14 +30,14 @@ public class ListStreamsByChannel : IEndpoint
                     return Results.NotFound();
 
                 var userId = principal.GetUserId();
-                var userChannel = await db.UserChannels
+                var subscription = await db.Subscriptions
                     .AsNoTracking()
                     .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
 
-                if (userChannel is null)
+                if (subscription is null)
                     return Results.NotFound();
 
-                subscribedAt = userChannel.AddedAt;
+                subscribedAt = subscription.AddedAt;
             }
 
             var query = db.Streams

@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
-namespace TwitchVault.Api.Tests.Unit.Recording;
+namespace TwitchVault.Api.Tests.Unit.Features.Recording;
 
 public class ChapterTrackerTests
 {
@@ -15,13 +15,13 @@ public class ChapterTrackerTests
     private readonly IDataStore _dataStore;
 
     private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
-    private readonly TwitchVault.Api.Features.Streams.Stream _stream;
+    private readonly Api.Features.Streams.Stream _stream;
 
     public ChapterTrackerTests()
     {
         _dataStore = new EfDataStore(_factory);
 
-        _stream = TwitchVault.Api.Features.Streams.Stream.Create(
+        _stream = Api.Features.Streams.Stream.Create(
             "ts_1", ChannelId, StreamFolder.Create("streams_root", ChannelName),
             new DateTime(2026, 1, 1), "Some Title", "Some Category");
 

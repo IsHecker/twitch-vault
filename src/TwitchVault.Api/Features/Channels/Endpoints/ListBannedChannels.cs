@@ -5,10 +5,10 @@ public class ListBannedChannels : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/channels/banned", async (
             [AsParameters] Pagination pagination,
-            IChannelService channelService,
+            IChannelBanService channelService,
             CancellationToken ct) =>
         {
-            var paged = await channelService.GetBannedChannelsAsync(pagination, ct);
+            var paged = await channelService.ListBannedChannelsAsync(pagination, ct);
             return Results.Ok(paged);
         })
         .RequireAuthorization("Admin")

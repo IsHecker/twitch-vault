@@ -22,10 +22,10 @@ public static class ChannelQueries
     public static IQueryable<Channel> Offline(this IQueryable<Channel> query) =>
         query.Where(c => !c.IsLive);
 
-    public static IQueryable<UserChannel> ForUser(this IQueryable<UserChannel> query, Guid userId) =>
+    public static IQueryable<Subscription> ForUser(this IQueryable<Subscription> query, Guid userId) =>
         query.Where(uc => uc.UserId == userId);
 
-    public static IQueryable<UserChannel> ForChannel(this IQueryable<UserChannel> query, string channelId) =>
+    public static IQueryable<Subscription> ForChannel(this IQueryable<Subscription> query, string channelId) =>
         query.Where(uc => uc.ChannelId == channelId);
 
 

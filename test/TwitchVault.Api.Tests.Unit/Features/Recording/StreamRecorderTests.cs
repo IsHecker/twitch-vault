@@ -6,7 +6,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using TwitchVault.Api.Configuration;
 
-namespace TwitchVault.Api.Tests.Unit.Recording;
+namespace TwitchVault.Api.Tests.Unit.Features.Recording;
 
 using Microsoft.Extensions.Time.Testing;
 

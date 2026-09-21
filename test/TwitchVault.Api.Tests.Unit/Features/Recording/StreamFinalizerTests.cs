@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
-namespace TwitchVault.Api.Tests.Unit.Recording;
+namespace TwitchVault.Api.Tests.Unit.Features.Recording;
 
 public class StreamFinalizerTests
 {

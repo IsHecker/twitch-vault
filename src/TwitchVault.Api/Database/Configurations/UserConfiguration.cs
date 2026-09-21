@@ -7,14 +7,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        // builder.HasIndex(u => u.GoogleId)
-        //     .IsUnique();
+        builder.HasIndex(u => u.GoogleId)
+            .IsUnique();
 
         builder.Property(u => u.GoogleId)
-            .IsRequired(false);
+            .IsRequired();
 
         builder.Property(u => u.Email)
-            .IsRequired(false);
+            .IsRequired();
 
         builder.Property(u => u.Username)
             .HasMaxLength(100)
@@ -22,7 +22,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasMany(x => x.Channels)
             .WithMany(x => x.Users)
-            .UsingEntity<UserChannel>(
+            .UsingEntity<Subscription>(
                 uc => uc
                     .HasOne(x => x.Channel)
                     .WithMany()
@@ -35,6 +35,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
                 uc =>
                 {
+                    uc.ToTable("Subscriptions");
                     uc.HasKey(x => new { x.UserId, x.ChannelId });
 
                     uc.Property(x => x.AddedAt)
