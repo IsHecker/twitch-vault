@@ -27,7 +27,7 @@ public enum StorageOperationStatus
 
 public sealed class Stream : Entity<string>
 {
-    public string ChannelId { get; init; } = null!;
+    public string? ChannelId { get; init; }
 
     public StreamFolder Folder { get; init; } = null!;
     public StreamStatus Status { get; private set; }

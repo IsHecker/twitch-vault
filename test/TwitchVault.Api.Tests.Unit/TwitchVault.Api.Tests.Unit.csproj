@@ -33,6 +33,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="PolyStore.Abstractions">
+      <HintPath>..\..\src\TwitchVault.Api\lib\PolyStore.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="PolyStore.Core">
+      <HintPath>..\..\src\TwitchVault.Api\lib\PolyStore.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="PolyStore.Providers">
+      <HintPath>..\..\src\TwitchVault.Api\lib\PolyStore.Providers.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
   <None Update="Samples\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

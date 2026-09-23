@@ -3,7 +3,7 @@ namespace TwitchVault.Api.Features.Channels.Endpoints;
 public class ListAllChannels : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/admin/channels", async (
+        app.MapGet("/api/channels", async (
             [AsParameters] Pagination pagination,
             IChannelService channelService,
             CancellationToken ct) =>

@@ -6,7 +6,7 @@ namespace TwitchVault.Api.Features.Auth.Endpoints;
 public class ListAllUsers : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/admin/users", async (
+        app.MapGet("/api/users", async (
             [AsParameters] Pagination pagination,
             AppDbContext db) =>
         {

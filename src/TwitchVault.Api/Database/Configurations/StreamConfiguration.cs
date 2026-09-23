@@ -12,7 +12,8 @@ public class StreamConfiguration : IEntityTypeConfiguration<TwitchVault.Api.Feat
         builder.HasOne<Channel>()
             .WithMany()
             .HasForeignKey(s => s.ChannelId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.Property(s => s.Folder)
             .HasValueJsonConverter()

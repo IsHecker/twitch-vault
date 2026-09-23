@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using TwitchVault.Api.Features.Streams;
 
 namespace TwitchVault.Api.Tests.Unit.Features.Channels;
 
@@ -16,14 +17,14 @@ public class ChannelServiceTests : ChannelTestBase
     [InlineData("bad name")]
     [InlineData("_leadingunderscore")]
     [InlineData("../../etc/passwd")]
-    public async Task AddChannelAsync_ShouldReturnValidation_WhenChannelNameIsNotAValidTwitchLogin(string channelName)
+    public async Task SubscribeToChannelAsync_ShouldReturnValidation_WhenChannelNameIsNotAValidTwitchLogin(string channelName)
     {
         // Arrange
         await CreateCurrentUserAsync();
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync(channelName, null, null);
+        var result = await sut.SubscribeToChannelAsync(channelName, null, null);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -32,7 +33,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldNormalizeChannelName_BeforeLookupAndPersistence()
+    public async Task SubscribeToChannelAsync_ShouldNormalizeChannelName_BeforeLookupAndPersistence()
     {
         // Arrange
         await CreateCurrentUserAsync();
@@ -40,7 +41,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("  TestStreamer  ", null, null);
+        var result = await sut.SubscribeToChannelAsync("  TestStreamer  ", null, null);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -48,7 +49,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldReturnNotFound_WhenChannelNotFoundOnTwitch()
+    public async Task SubscribeToChannelAsync_ShouldReturnNotFound_WhenChannelNotFoundOnTwitch()
     {
         // Arrange
         await CreateCurrentUserAsync();
@@ -58,7 +59,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("unknown_channel", null, null);
+        var result = await sut.SubscribeToChannelAsync("unknown_channel", null, null);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -66,7 +67,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldReturnConflict_WhenUserAlreadySubscribed()
+    public async Task SubscribeToChannelAsync_ShouldReturnConflict_WhenUserAlreadySubscribed()
     {
         // Arrange
         var user = await CreateCurrentUserAsync();
@@ -79,7 +80,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("teststreamer", null, null);
+        var result = await sut.SubscribeToChannelAsync("teststreamer", null, null);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -87,7 +88,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldReturnValidation_WhenSubscriptionLimitReached()
+    public async Task SubscribeToChannelAsync_ShouldReturnValidation_WhenSubscriptionLimitReached()
     {
         // Arrange
         var user = await CreateCurrentUserAsync();
@@ -104,8 +105,8 @@ public class ChannelServiceTests : ChannelTestBase
         ChannelExistsOnTwitch("ch3", "c3");
         var sut = CreateSut();
 
-        // Act - attempt to add 3rd channel
-        var result = await sut.AddChannelAsync("ch3", null, null);
+        // Act - attempt to subscribe to a 3rd channel
+        var result = await sut.SubscribeToChannelAsync("ch3", null, null);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -114,7 +115,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldIgnoreSubscriptionLimit_WhenUserIsAdmin()
+    public async Task SubscribeToChannelAsync_ShouldIgnoreSubscriptionLimit_WhenUserIsAdmin()
     {
         // Arrange
         var admin = await CreateCurrentUserAsync(isAdmin: true);
@@ -132,7 +133,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("ch3", null, null);
+        var result = await sut.SubscribeToChannelAsync("ch3", null, null);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -142,7 +143,7 @@ public class ChannelServiceTests : ChannelTestBase
     [Theory]
     [InlineData(-1)]
     [InlineData(99)]
-    public async Task AddChannelAsync_ShouldReturnValidation_WhenAdminRequestsQualityRankOutOfRange(int qualityRank)
+    public async Task SubscribeToChannelAsync_ShouldReturnValidation_WhenAdminRequestsQualityRankOutOfRange(int qualityRank)
     {
         // Arrange
         await CreateCurrentUserAsync(isAdmin: true);
@@ -150,7 +151,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("teststreamer", qualityRank, isArchived: null);
+        var result = await sut.SubscribeToChannelAsync("teststreamer", qualityRank, isArchived: null);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -159,7 +160,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldLinkSubscription_WhenChannelAlreadyExistsInDb()
+    public async Task SubscribeToChannelAsync_ShouldLinkSubscription_WhenChannelAlreadyExistsInDb()
     {
         // Arrange
         var user = await CreateCurrentUserAsync();
@@ -171,7 +172,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("teststreamer", null, null);
+        var result = await sut.SubscribeToChannelAsync("teststreamer", null, null);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -187,7 +188,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldCreateNewChannel_WithNonAdminDefaults()
+    public async Task SubscribeToChannelAsync_ShouldCreateNewChannel_WithNonAdminDefaults()
     {
         // Arrange
         await CreateCurrentUserAsync();
@@ -195,7 +196,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("newstreamer", qualityRank: 0, isArchived: true);
+        var result = await sut.SubscribeToChannelAsync("newstreamer", qualityRank: 0, isArchived: true);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -210,7 +211,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldRespectAdminOptions_WhenCurrentUserIsAdmin()
+    public async Task SubscribeToChannelAsync_ShouldRespectAdminOptions_WhenCurrentUserIsAdmin()
     {
         // Arrange
         await CreateCurrentUserAsync(isAdmin: true);
@@ -218,7 +219,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act - admin requests quality 0 and archived true
-        var result = await sut.AddChannelAsync("adminstreamer", qualityRank: 0, isArchived: true);
+        var result = await sut.SubscribeToChannelAsync("adminstreamer", qualityRank: 0, isArchived: true);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -231,7 +232,7 @@ public class ChannelServiceTests : ChannelTestBase
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldReturnForbidden_WhenChannelIsBannedAndUserIsNotAdmin()
+    public async Task SubscribeToChannelAsync_ShouldReturnValidation_WhenChannelIsBannedAndUserIsNotAdmin()
     {
         // Arrange
         await CreateCurrentUserAsync();
@@ -243,15 +244,15 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("bannedchannel", null, null);
+        var result = await sut.SubscribeToChannelAsync("bannedchannel", null, null);
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.Forbidden);
+        result.Error.Type.Should().Be(ErrorType.Validation);
     }
 
     [Fact]
-    public async Task AddChannelAsync_ShouldSucceed_WhenChannelIsBannedAndUserIsAdmin()
+    public async Task SubscribeToChannelAsync_ShouldSucceed_WhenChannelIsBannedAndUserIsAdmin()
     {
         // Arrange
         await CreateCurrentUserAsync(isAdmin: true);
@@ -263,7 +264,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.AddChannelAsync("adminallowedchannel", null, null);
+        var result = await sut.SubscribeToChannelAsync("adminallowedchannel", null, null);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -390,50 +391,6 @@ public class ChannelServiceTests : ChannelTestBase
         await TwitchSubscription.Received(1).RemoveChannelAsync(
             Arg.Is<Channel>(c => c.Id == channelId), Arg.Any<CancellationToken>());
     }
-
-
-    [Fact]
-    public async Task DeleteChannelAsync_ShouldReturnNotFound_WhenChannelDoesNotExist()
-    {
-        // Arrange
-        var sut = CreateSut();
-
-        // Act
-        var result = await sut.DeleteChannelAsync("non_existent_channel");
-
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.NotFound);
-    }
-
-    [Fact]
-    public async Task DeleteChannelAsync_ShouldDeleteChannelAndSubscriptions_WhenChannelExists()
-    {
-        // Arrange
-        var user = await CreateUserAsync();
-        var channelId = "direct_delete";
-        var channel = Channel.Create(channelId, "directchan", 2, isArchived: false);
-        channel.SetLive(true);
-
-        Db.Channels.Add(channel);
-        Db.Subscriptions.Add(Subscription.Create(user.Id, channelId, DateTime.UtcNow));
-        await Db.SaveChangesAsync();
-
-        var sut = CreateSut();
-
-        // Act
-        var result = await sut.DeleteChannelAsync(channelId);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        (await Db.Channels.AnyAsync(c => c.Id == channelId)).Should().BeFalse();
-        (await Db.Subscriptions.AnyAsync(uc => uc.ChannelId == channelId)).Should().BeFalse();
-
-        await RecordingOrchestrator.Received(1).StopRecordingAsync(channelId);
-        await TwitchSubscription.Received(1).RemoveChannelAsync(
-            Arg.Is<Channel>(c => c.Id == channelId), Arg.Any<CancellationToken>());
-    }
-
 
     [Fact]
     public async Task SetArchiveStatusAsync_ShouldReturnNotFound_WhenChannelDoesNotExist()
@@ -565,93 +522,6 @@ public class ChannelServiceTests : ChannelTestBase
         unchanged!.QualityRank.Should().Be(2);
     }
 
-
-    [Fact]
-    public async Task GetChannelsForCurrentUserAsync_ShouldReturnEmpty_WhenUserHasNoSubscriptions()
-    {
-        // Arrange - previously covered "user does not exist"; the service no longer looks the
-        // user up, so the observable behaviour for an unknown/unsubscribed caller is an empty page
-        CurrentUser.Id = Guid.NewGuid();
-        var sut = CreateSut();
-
-        // Act
-        var result = await sut.GetChannelsForCurrentUserAsync(Pagination.Default);
-
-        // Assert
-        result.Items.Should().BeEmpty();
-        result.TotalCount.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task GetChannelsForCurrentUserAsync_ShouldReturnSubscribedChannels()
-    {
-        // Arrange
-        var user = await CreateCurrentUserAsync();
-        Db.Channels.AddRange(
-            Channel.Create("ch1", "chan1", 2, isArchived: false),
-            Channel.Create("ch2", "chan2", 1, isArchived: true));
-        Db.Subscriptions.AddRange(
-            Subscription.Create(user.Id, "ch1", DateTime.UtcNow),
-            Subscription.Create(user.Id, "ch2", DateTime.UtcNow));
-        await Db.SaveChangesAsync();
-
-        var sut = CreateSut();
-
-        // Act
-        var result = await sut.GetChannelsForCurrentUserAsync(Pagination.Default);
-
-        // Assert
-        result.Items.Should().HaveCount(2);
-        result.Items.Select(c => c.Id).Should().Contain(["ch1", "ch2"]);
-    }
-
-    [Fact]
-    public async Task GetChannelsForCurrentUserAsync_ShouldExcludeBannedChannels_ForNonAdmin()
-    {
-        // Arrange
-        var user = await CreateCurrentUserAsync();
-        Db.Channels.AddRange(
-            Channel.Create("ok_chan", "okchan", 2, isArchived: false),
-            Channel.Create("banned_chan", "bannedchan", 2, isArchived: false));
-        Db.BannedChannels.Add(BannedChannel.Create("banned_chan", "bannedchan", DateTime.UtcNow));
-        Db.Subscriptions.AddRange(
-            Subscription.Create(user.Id, "ok_chan", DateTime.UtcNow),
-            Subscription.Create(user.Id, "banned_chan", DateTime.UtcNow));
-        await Db.SaveChangesAsync();
-
-        var sut = CreateSut();
-
-        // Act
-        var result = await sut.GetChannelsForCurrentUserAsync(Pagination.Default);
-
-        // Assert
-        result.Items.Should().HaveCount(1);
-        result.Items.Single().Id.Should().Be("ok_chan");
-    }
-
-    [Fact]
-    public async Task GetChannelsForCurrentUserAsync_ShouldIncludeBannedChannels_ForAdmin()
-    {
-        // Arrange
-        var admin = await CreateCurrentUserAsync(isAdmin: true);
-        Db.Channels.AddRange(
-            Channel.Create("ok_chan_admin", "okchanadmin", 2, isArchived: false),
-            Channel.Create("banned_chan_admin", "bannedchanadmin", 2, isArchived: false));
-        Db.BannedChannels.Add(BannedChannel.Create("banned_chan_admin", "bannedchanadmin", DateTime.UtcNow));
-        Db.Subscriptions.AddRange(
-            Subscription.Create(admin.Id, "ok_chan_admin", DateTime.UtcNow),
-            Subscription.Create(admin.Id, "banned_chan_admin", DateTime.UtcNow));
-        await Db.SaveChangesAsync();
-
-        var sut = CreateSut();
-
-        // Act
-        var result = await sut.GetChannelsForCurrentUserAsync(Pagination.Default);
-
-        // Assert
-        result.Items.Should().HaveCount(2);
-    }
-
     [Fact]
     public async Task GetAllChannelsAsync_ShouldReturnAllChannelsInDatabase()
     {
@@ -669,5 +539,92 @@ public class ChannelServiceTests : ChannelTestBase
         // Assert
         result.TotalCount.Should().Be(2);
         result.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task GetChannelsForUserAsync_ShouldReturnNotFound_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetChannelsForUserAsync(Guid.NewGuid(), Pagination.Default);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task GetChannelsForUserAsync_ShouldReturnSubscribedChannels_WhenUserExists()
+    {
+        // Arrange
+        var user = await CreateUserAsync();
+        Db.Channels.AddRange(
+            Channel.Create("ch1", "chan1", 2, isArchived: false),
+            Channel.Create("ch2", "chan2", 1, isArchived: true));
+        Db.Subscriptions.AddRange(
+            Subscription.Create(user.Id, "ch1", DateTime.UtcNow),
+            Subscription.Create(user.Id, "ch2", DateTime.UtcNow));
+        await Db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetChannelsForUserAsync(user.Id, Pagination.Default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.Items.Select(c => c.Id).Should().Contain(["ch1", "ch2"]);
+    }
+
+    [Fact]
+    public async Task GetChannelsForUserAsync_ShouldExcludeBannedChannels_WhenUserIsNotAdmin()
+    {
+        // Arrange
+        var user = await CreateUserAsync(isAdmin: false);
+        Db.Channels.AddRange(
+            Channel.Create("ok_chan", "okchan", 2, isArchived: false),
+            Channel.Create("banned_chan", "bannedchan", 2, isArchived: false));
+        Db.BannedChannels.Add(BannedChannel.Create("banned_chan", "bannedchan", DateTime.UtcNow));
+        Db.Subscriptions.AddRange(
+            Subscription.Create(user.Id, "ok_chan", DateTime.UtcNow),
+            Subscription.Create(user.Id, "banned_chan", DateTime.UtcNow));
+        await Db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetChannelsForUserAsync(user.Id, Pagination.Default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(1);
+        result.Value.Items.Single().Id.Should().Be("ok_chan");
+    }
+
+    [Fact]
+    public async Task GetChannelsForUserAsync_ShouldIncludeBannedChannels_WhenUserIsAdmin()
+    {
+        // Arrange
+        var admin = await CreateUserAsync(isAdmin: true);
+        Db.Channels.AddRange(
+            Channel.Create("ok_chan_admin", "okchanadmin", 2, isArchived: false),
+            Channel.Create("banned_chan_admin", "bannedchanadmin", 2, isArchived: false));
+        Db.BannedChannels.Add(BannedChannel.Create("banned_chan_admin", "bannedchanadmin", DateTime.UtcNow));
+        Db.Subscriptions.AddRange(
+            Subscription.Create(admin.Id, "ok_chan_admin", DateTime.UtcNow),
+            Subscription.Create(admin.Id, "banned_chan_admin", DateTime.UtcNow));
+        await Db.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetChannelsForUserAsync(admin.Id, Pagination.Default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
     }
 }

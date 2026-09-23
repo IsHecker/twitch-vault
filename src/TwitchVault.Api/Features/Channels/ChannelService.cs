@@ -15,7 +15,7 @@ public sealed class ChannelService(
     ICurrentUser currentUser,
     IOptionsMonitor<VaultOptions> vaultOptions) : IChannelService
 {
-    public async Task<Result<Channel>> AddChannelAsync(
+    public async Task<Result<Channel>> SubscribeToChannelAsync(
         string channelName,
         int? qualityRank,
         bool? isArchived,
@@ -34,24 +34,24 @@ public sealed class ChannelService(
         if (qualityRankResult.IsFailure)
             return qualityRankResult.Error;
 
+        var bannedChannel = await db.BannedChannels.FirstOrDefaultAsync(b => b.ChannelName == login, cancellationToken);
+        if (bannedChannel is not null && !currentUser.IsAdmin)
+            return Error.Validation($"This channel has been banned. Reason: '{bannedChannel.Reason}'");
+
         var channelId = await twitchGqlClient.GetChannelIdAsync(login, cancellationToken);
         if (string.IsNullOrWhiteSpace(channelId))
             return Error.NotFound("Channel doesn't exist on Twitch.");
 
-        var isBanned = await db.BannedChannels.AnyAsync(b => b.Id == channelId, cancellationToken);
-        if (isBanned && !currentUser.IsAdmin)
-            return Error.Forbidden("This channel has been banned by an administrator.");
+        var alreadySubscribed = await db.Subscriptions
+            .AnyAsync(s => s.UserId == currentUser.Id && s.ChannelId == channelId, cancellationToken);
 
-        var alreadyMonitoring = await db.Subscriptions
-            .AnyAsync(uc => uc.UserId == currentUser.Id && uc.ChannelId == channelId, cancellationToken);
-
-        if (alreadyMonitoring)
+        if (alreadySubscribed)
             return Error.Conflict("You are already subscribed to this channel.");
 
         if (!currentUser.IsAdmin)
         {
             var currentSubscriptions = await db.Subscriptions
-                .CountAsync(uc => uc.UserId == currentUser.Id, cancellationToken);
+                .CountAsync(s => s.UserId == currentUser.Id, cancellationToken);
 
             if (currentSubscriptions >= options.MaxSubscriptionsPerUser)
                 return Error.Validation(
@@ -60,24 +60,17 @@ public sealed class ChannelService(
 
         db.Subscriptions.Add(Subscription.Create(currentUser.Id, channelId, dateTimeProvider.DateTimeNow));
 
-        var existingChannel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
-        if (existingChannel is not null)
-        {
-            await db.SaveChangesAsync(cancellationToken);
-            return existingChannel;
-        }
+        var (channel, isNew) = await GetOrCreateChannelAsync(
+            channelId, login, effectiveQualityRank, isArchived, cancellationToken);
 
-        var effectiveIsArchived = currentUser.IsAdmin && (isArchived ?? false);
-        var channel = Channel.Create(channelId, login, effectiveQualityRank, effectiveIsArchived);
-
-        db.Channels.Add(channel);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (effectiveIsArchived)
-            return channel;
+        if (isNew && !channel.IsArchived)
+        {
+            await twitchSubscription.AddChannelsAsync([channel], cancellationToken);
+            await recordingOrchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
+        }
 
-        await twitchSubscription.AddChannelsAsync([channel], cancellationToken);
-        await recordingOrchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
         return channel;
     }
 
@@ -96,21 +89,9 @@ public sealed class ChannelService(
             .CountAsync(uc => uc.ChannelId == channelId && uc.UserId != currentUser.Id, cancellationToken);
 
         if (otherSubscribers == 0)
-            await TeardownAsync(subscription.Channel, cancellationToken);
+            await DeleteChannelAsync(subscription.Channel, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
-        return Result.Success;
-    }
-
-    public async Task<Result> DeleteChannelAsync(string channelId, CancellationToken cancellationToken = default)
-    {
-        var channel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
-        if (channel is null)
-            return Error.NotFound($"Channel '{channelId}' was not found.");
-
-        await TeardownAsync(channel, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-
         return Result.Success;
     }
 
@@ -155,22 +136,27 @@ public sealed class ChannelService(
         return channel;
     }
 
-    public async Task<PagedResponse<ChannelResponse>> GetChannelsForCurrentUserAsync(
+    public async Task<Result<PagedResponse<ChannelResponse>>> GetChannelsForUserAsync(
+        Guid userId,
         Pagination pagination,
         CancellationToken cancellationToken = default)
     {
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+            return Error.NotFound($"User '{userId}' not found.");
+
         var query = db.Subscriptions
             .AsNoTracking()
-            .ForUser(currentUser.Id);
+            .ForUser(userId);
 
-        if (!currentUser.IsAdmin)
+        if (!user.IsAdmin)
             query = query.Where(uc => !db.BannedChannels.Any(b => b.Id == uc.ChannelId));
 
         return await query
             .Select(uc => uc.Channel)
             .OrderByDescending(c => c.Name)
             .Select(ChannelResponse.Projection)
-            .ToPagedResponseAsync(pagination);
+            .ToPagedResponseAsync(pagination, cancellationToken);
     }
 
     public async Task<PagedResponse<ChannelResponse>> GetAllChannelsAsync(
@@ -182,15 +168,44 @@ public sealed class ChannelService(
             .Select(ChannelResponse.Projection)
             .ToPagedResponseAsync(pagination, cancellationToken);
 
-    private async Task TeardownAsync(Channel channel, CancellationToken cancellationToken)
+    private async Task<(Channel Channel, bool IsNew)> GetOrCreateChannelAsync(
+        string channelId,
+        string login,
+        int qualityRank,
+        bool? isArchived,
+        CancellationToken cancellationToken)
+    {
+        var existingChannel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
+        if (existingChannel is not null)
+            return (existingChannel, false);
+
+        var effectiveIsArchived = currentUser.IsAdmin && (isArchived ?? false);
+        var channel = Channel.Create(channelId, login, qualityRank, effectiveIsArchived);
+
+        db.Channels.Add(channel);
+
+        return (channel, true);
+    }
+
+    private async Task DeleteChannelAsync(Channel channel, CancellationToken cancellationToken)
     {
         if (channel.IsLive)
             await recordingOrchestrator.StopRecordingAsync(channel.Id);
 
-        db.Channels.Remove(channel);
+        await db.Streams
+            .Where(s => s.ChannelId == channel.Id)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(x => x.StorageOperationStatus, StorageOperationStatus.DeleteRequest),
+                cancellationToken);
 
+        db.Channels.Remove(channel);
         await twitchSubscription.RemoveChannelAsync(channel, cancellationToken);
-        await IOUtils.DeleteDirectoryAsync(Path.Combine(pathsOptions.Value.Streams, channel.Name));
+
+        var channelDir = Path.Combine(pathsOptions.Value.Streams, channel.Name);
+        if (Directory.Exists(channelDir) && !Directory.EnumerateFileSystemEntries(channelDir).Any())
+        {
+            await IOUtils.DeleteDirectoryAsync(channelDir);
+        }
     }
 
     private Result ValidateQualityRank(int qualityRank)

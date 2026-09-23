@@ -1,17 +1,15 @@
-using System.Security.Claims;
-
 namespace TwitchVault.Api.Features.Channels.Endpoints;
 
 public class ListUserChannels : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
         app.MapGet("/api/users/me/channels", async (
-            ClaimsPrincipal principal,
+            ICurrentUser user,
             [AsParameters] Pagination pagination,
             IChannelService channelService,
             CancellationToken ct) =>
         {
-            var response = await channelService.GetChannelsForCurrentUserAsync(pagination, ct);
+            var response = await channelService.GetChannelsForUserAsync(user.Id, pagination, ct);
             return Results.Ok(response);
         })
         .RequireAuthorization()

@@ -18,7 +18,7 @@ public record ChapterResponse(
 
 public record StreamResponse(
     string TwitchStreamId,
-    string ChannelId,
+    string? ChannelId,
     string ThumbnailUrl,
     StreamStatus Status,
     DateTime StartedAt,

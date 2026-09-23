@@ -55,7 +55,7 @@ public sealed class ChannelBanService(
             .AnyAsync(uc => uc.ChannelId == channelId && uc.User.IsAdmin, cancellationToken);
 
         if (!hasAdminSubscriber && existingChannel is not null)
-            await TeardownAsync(existingChannel, cancellationToken);
+            await DeleteChannelAsync(existingChannel, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
         return bannedChannel;
@@ -84,7 +84,7 @@ public sealed class ChannelBanService(
             .AsNoTracking()
             .OrderByDescending(b => b.BannedAt)
             .Select(BannedChannelResponse.Projection)
-            .ToPagedResponseAsync(pagination);
+            .ToPagedResponseAsync(pagination, cancellationToken);
 
     private async Task<Result<(string ChannelId, string login, Channel? ExistingChannel)>> ResolveAsync(
         string channelName,
@@ -110,14 +110,25 @@ public sealed class ChannelBanService(
         return (channelId, login, null);
     }
 
-    private async Task TeardownAsync(Channel channel, CancellationToken cancellationToken)
+    private async Task DeleteChannelAsync(Channel channel, CancellationToken cancellationToken)
     {
         if (channel.IsLive)
             await recordingOrchestrator.StopRecordingAsync(channel.Id);
 
+        await db.Streams
+            .Where(s => s.ChannelId == channel.Id)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(x => x.StorageOperationStatus, StorageOperationStatus.DeleteRequest),
+                cancellationToken);
+
         db.Channels.Remove(channel);
 
         await twitchSubscription.RemoveChannelAsync(channel, cancellationToken);
-        await IOUtils.DeleteDirectoryAsync(Path.Combine(pathsOptions.Value.Streams, channel.Name));
+
+        var channelDir = Path.Combine(pathsOptions.Value.Streams, channel.Name);
+        if (Directory.Exists(channelDir) && !Directory.EnumerateFileSystemEntries(channelDir).Any())
+        {
+            await IOUtils.DeleteDirectoryAsync(channelDir);
+        }
     }
 }

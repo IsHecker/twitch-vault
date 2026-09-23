@@ -44,8 +44,9 @@ public sealed class RecordingLifecycleService(
             var interruptedChannelIds = await dataStore.QueryAsync<TwitchVault.Api.Features.Streams.Stream, List<string>>(
                 streams => streams
                     .Where(s => (s.Status == StreamStatus.Interrupted || s.Status == StreamStatus.Recording)
-                                && s.FinishedAt == null)
-                    .Select(s => s.ChannelId)
+                                && s.FinishedAt == null
+                                && s.ChannelId != null)
+                    .Select(s => s.ChannelId!)
                     .Distinct()
                     .ToListAsync(cancellationToken));
 

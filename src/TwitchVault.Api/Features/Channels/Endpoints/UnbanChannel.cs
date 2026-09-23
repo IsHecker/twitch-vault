@@ -3,12 +3,12 @@ namespace TwitchVault.Api.Features.Channels.Endpoints;
 public class UnbanChannel : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapDelete("/api/admin/channels/banned/{channelId}", async (
-            string channelId,
+        app.MapDelete("/api/channels/banned/{channelName}", async (
+            string channelName,
             IChannelBanService channelService,
             CancellationToken ct) =>
         {
-            var result = await channelService.UnbanChannelAsync(channelId, ct);
+            var result = await channelService.UnbanChannelAsync(channelName, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization("Admin")

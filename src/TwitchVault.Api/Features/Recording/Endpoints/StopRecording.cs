@@ -17,7 +17,8 @@ public class StopRecording : IEndpoint
             if (stream.Status != StreamStatus.Recording)
                 return Results.BadRequest("Stream is not currently recording.");
 
-            await recordingOrchestrator.StopRecordingAsync(stream.ChannelId);
+            if (stream.ChannelId is not null)
+                await recordingOrchestrator.StopRecordingAsync(stream.ChannelId);
             return Results.NoContent();
         })
         .RequireAuthorization("Admin")

@@ -1,29 +1,26 @@
-using System.Security.Claims;
-
 namespace TwitchVault.Api.Features.Channels.Endpoints;
 
-public class AddChannel : IEndpoint
+public class SubscribeChannel : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/channels", async (
+        app.MapPost("/api/users/me/channels", async (
             Request request,
-            ClaimsPrincipal principal,
             IChannelService channelService,
             CancellationToken ct) =>
         {
-            var result = await channelService.AddChannelAsync(
+            var result = await channelService.SubscribeToChannelAsync(
                 request.ChannelName,
                 request.QualityRank,
                 request.IsArchived,
                 ct);
 
-            return result.ToHttpResult(channel => Results.Created($"/api/channels/{channel.Id}", ChannelResponse.FromDomain(channel)));
+            return result.ToHttpResult(channel => Results.Created($"/api/users/me/channels/{channel.Id}", ChannelResponse.FromDomain(channel)));
         })
         .RequireAuthorization()
-        .WithName(nameof(AddChannel))
+        .WithName(nameof(SubscribeChannel))
         .WithTags("Channels")
-        .WithSummary("Add a channel to monitor.")
+        .WithSummary("Subscribe to a channel to monitor.")
         .Accepts<Request>("application/json")
         .Produces<ChannelResponse>(StatusCodes.Status201Created)
         .Produces(StatusCodes.Status400BadRequest)

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using TwitchVault.Api.Features.Streams;
 
 namespace TwitchVault.Api.Tests.Unit.Features.Channels;
 
@@ -259,5 +260,60 @@ public class ChannelBanServiceTests : ChannelTestBase
         // Assert
         result.TotalCount.Should().Be(2);
         result.Items.First().Id.Should().Be("b2");
+    }
+
+    [Fact]
+    public async Task BanChannelAsync_ShouldMarkStreamsForDeletion_AndPreserveDirectory_WhenStreamsExist()
+    {
+        // Arrange
+        var user = await CreateUserAsync(isAdmin: false);
+        var channelId = "ban_with_streams";
+        var login = "banstreamchan";
+        var channel = Channel.Create(channelId, login, 2, isArchived: false);
+        Db.Channels.Add(channel);
+        Db.Subscriptions.Add(Subscription.Create(user.Id, channelId, DateTime.UtcNow));
+
+        var streamFolder = StreamFolder.Create(PathsOptions.Value.Streams, channel.Name);
+        var stream = TwitchVault.Api.Features.Streams.Stream.Create(
+            "stream_ban_1",
+            channelId,
+            streamFolder,
+            DateTime.UtcNow,
+            "Title",
+            "Category");
+        Db.Streams.Add(stream);
+        await Db.SaveChangesAsync();
+
+        var channelDir = Path.Combine(PathsOptions.Value.Streams, channel.Name);
+        var streamDir = streamFolder.GetAbsolutePath(Directory.GetCurrentDirectory());
+        Directory.CreateDirectory(streamDir);
+        var urlsFile = Path.Combine(streamDir, StreamFolder.RemoteUrlsFile);
+        await File.WriteAllTextAsync(urlsFile, "http://remote/ban");
+
+        ChannelExistsOnTwitch(login, channelId);
+
+        try
+        {
+            var sut = CreateSut();
+
+            // Act
+            var result = await sut.BanChannelAsync(login, "Violated TOS");
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            (await Db.Channels.AnyAsync(c => c.Id == channelId)).Should().BeFalse();
+
+            var updatedStream = await Db.Streams.AsNoTracking().FirstOrDefaultAsync(s => s.Id == "stream_ban_1");
+            updatedStream.Should().NotBeNull();
+            updatedStream!.StorageOperationStatus.Should().Be(StorageOperationStatus.DeleteRequest);
+
+            Directory.Exists(channelDir).Should().BeTrue();
+            File.Exists(urlsFile).Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(channelDir))
+                Directory.Delete(channelDir, recursive: true);
+        }
     }
 }

@@ -3,13 +3,13 @@ namespace TwitchVault.Api.Features.Channels.Endpoints;
 public class BanChannel : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app) =>
-        app.MapPost("/api/admin/channels/ban", async (
+        app.MapPost("/api/channels/ban", async (
             Request request,
             IChannelBanService channelService,
             CancellationToken ct) =>
         {
             var result = await channelService.BanChannelAsync(request.ChannelName, request.Reason, ct);
-            return result.ToHttpResult(banned => Results.Created($"/api/admin/channels/banned/{banned.Id}", BannedChannelResponse.FromDomain(banned)));
+            return result.ToHttpResult(banned => Results.Created($"/api/channels/banned/{banned.Id}", BannedChannelResponse.FromDomain(banned)));
         })
         .RequireAuthorization("Admin")
         .WithName("AdminBanChannel")

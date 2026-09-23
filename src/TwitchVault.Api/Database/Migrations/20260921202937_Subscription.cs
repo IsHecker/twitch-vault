@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -11,9 +10,6 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "UserChannels");
-
             migrationBuilder.AlterColumn<string>(
                 name: "GoogleId",
                 table: "Users",
@@ -52,30 +48,17 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
                 oldType: "nvarchar(100)",
                 oldMaxLength: 100);
 
-            migrationBuilder.CreateTable(
-                name: "Subscriptions",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ChannelId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    AddedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Subscriptions", x => new { x.UserId, x.ChannelId });
-                    table.ForeignKey(
-                        name: "FK_Subscriptions_Channels_ChannelId",
-                        column: x => x.ChannelId,
-                        principalTable: "Channels",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Subscriptions_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            migrationBuilder.RenameTable(
+                name: "UserChannels",
+                newName: "Subscriptions");
+
+            migrationBuilder.RenameIndex(
+                name: "IX_UserChannels_ChannelId",
+                table: "Subscriptions",
+                newName: "IX_Subscriptions_ChannelId");
+
+            migrationBuilder.Sql("EXEC sp_rename 'FK_UserChannels_Channels_ChannelId', 'FK_Subscriptions_Channels_ChannelId'");
+            migrationBuilder.Sql("EXEC sp_rename 'FK_UserChannels_Users_UserId', 'FK_Subscriptions_Users_UserId'");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_GoogleId",
@@ -87,19 +70,11 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
                 name: "IX_BannedChannels_ChannelName",
                 table: "BannedChannels",
                 column: "ChannelName");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Subscriptions_ChannelId",
-                table: "Subscriptions",
-                column: "ChannelId");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Subscriptions");
-
             migrationBuilder.DropIndex(
                 name: "IX_Users_GoogleId",
                 table: "Users");
@@ -107,6 +82,19 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
             migrationBuilder.DropIndex(
                 name: "IX_BannedChannels_ChannelName",
                 table: "BannedChannels");
+
+            migrationBuilder.Sql("EXEC sp_rename 'PK_Subscriptions', 'PK_UserChannels'");
+            migrationBuilder.Sql("EXEC sp_rename 'FK_Subscriptions_Channels_ChannelId', 'FK_UserChannels_Channels_ChannelId'");
+            migrationBuilder.Sql("EXEC sp_rename 'FK_Subscriptions_Users_UserId', 'FK_UserChannels_Users_UserId'");
+
+            migrationBuilder.RenameIndex(
+                name: "IX_Subscriptions_ChannelId",
+                table: "UserChannels",
+                newName: "IX_UserChannels_ChannelId");
+
+            migrationBuilder.RenameTable(
+                name: "Subscriptions",
+                newName: "UserChannels");
 
             migrationBuilder.AlterColumn<string>(
                 name: "GoogleId",
@@ -141,36 +129,6 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "nvarchar(450)");
-
-            migrationBuilder.CreateTable(
-                name: "UserChannels",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ChannelId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    AddedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserChannels", x => new { x.UserId, x.ChannelId });
-                    table.ForeignKey(
-                        name: "FK_UserChannels_Channels_ChannelId",
-                        column: x => x.ChannelId,
-                        principalTable: "Channels",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UserChannels_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserChannels_ChannelId",
-                table: "UserChannels",
-                column: "ChannelId");
         }
     }
 }
