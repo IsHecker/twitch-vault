@@ -7,7 +7,6 @@ namespace TwitchVault.Api.Tests.Unit.Features.Recording;
 public class RecordingLifecycleServiceTests
 {
     private readonly IRecordingOrchestrator _orchestrator = Substitute.For<IRecordingOrchestrator>();
-    private readonly IStreamService _streamService = Substitute.For<IStreamService>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly ILogger<RecordingLifecycleService> _logger = Substitute.For<ILogger<RecordingLifecycleService>>();
     private readonly TestDbContextFactory _factory = new();
@@ -19,7 +18,7 @@ public class RecordingLifecycleServiceTests
     }
 
     private RecordingLifecycleService CreateSut() =>
-        new(_orchestrator, _dataStore, _streamService, _twitchGqlClient, _logger);
+        new(_orchestrator, _dataStore, _twitchGqlClient, _logger);
 
     private Channel SeedChannel(string id, string name, bool isLive = false, bool isArchived = false)
     {
@@ -31,10 +30,10 @@ public class RecordingLifecycleServiceTests
         return channel;
     }
 
-    private TwitchVault.Api.Features.Streams.Stream SeedStream(string id, string channelId, StreamStatus status, DateTime? finishedAt = null)
+    private Api.Features.Streams.Stream SeedStream(string id, string channelId, StreamStatus status, DateTime? finishedAt = null)
     {
         using var db = _factory.CreateDbContext();
-        var stream = TwitchVault.Api.Features.Streams.Stream.Create(
+        var stream = Api.Features.Streams.Stream.Create(
             id,
             channelId,
             StreamFolder.Create("streams_root", "testchannel"),
@@ -72,6 +71,7 @@ public class RecordingLifecycleServiceTests
     {
         // Arrange
         var channel = SeedChannel("chan_1", "live_channel", isLive: true);
+        SeedStream("stream_1", channel.Id, StreamStatus.Interrupted, finishedAt: null);
         _twitchGqlClient.IsChannelLiveAsync(Arg.Any<List<Channel>>(), Arg.Any<CancellationToken>())
             .Returns(args =>
             {
@@ -86,7 +86,6 @@ public class RecordingLifecycleServiceTests
 
         // Assert
         await _orchestrator.Received(1).TryStartRecordingAsync(channel.Id, channel.Name);
-        await _streamService.DidNotReceive().ResetStaleStreamsAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -117,6 +116,7 @@ public class RecordingLifecycleServiceTests
     {
         // Arrange
         var channel = SeedChannel("chan_1", "offline_candidate", isLive: true);
+        SeedStream("stream_1", channel.Id, StreamStatus.Interrupted, finishedAt: null);
         _twitchGqlClient.IsChannelLiveAsync(Arg.Any<List<Channel>>(), Arg.Any<CancellationToken>())
             .Returns(args =>
             {
@@ -131,7 +131,6 @@ public class RecordingLifecycleServiceTests
 
         // Assert
         await _orchestrator.DidNotReceive().TryStartRecordingAsync(Arg.Any<string>(), Arg.Any<string>());
-        await _streamService.Received(1).ResetStaleStreamsAsync(channel.Id);
 
         using var db = _factory.CreateDbContext();
         var refreshedChannel = db.Channels.First(c => c.Id == channel.Id);
@@ -144,6 +143,8 @@ public class RecordingLifecycleServiceTests
         // Arrange
         var channel1 = SeedChannel("chan_1", "live_chan_1", isLive: true);
         var channel2 = SeedChannel("chan_2", "live_chan_2", isLive: true);
+        SeedStream("stream_1", channel1.Id, StreamStatus.Interrupted, finishedAt: null);
+        SeedStream("stream_2", channel2.Id, StreamStatus.Interrupted, finishedAt: null);
 
         _twitchGqlClient.IsChannelLiveAsync(Arg.Any<List<Channel>>(), Arg.Any<CancellationToken>())
             .Returns(args =>
@@ -175,6 +176,6 @@ public class RecordingLifecycleServiceTests
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        await _orchestrator.Received(1).ShutdownAllRecordingsAsync();
+        await _orchestrator.Received(1).StopAllRecordingsAsync();
     }
 }

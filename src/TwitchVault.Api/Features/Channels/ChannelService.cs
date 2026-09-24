@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Common.Extensions;
@@ -15,6 +16,8 @@ public sealed class ChannelService(
     ICurrentUser currentUser,
     IOptionsMonitor<VaultOptions> vaultOptions) : IChannelService
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _channelLocks = new();
+
     public async Task<Result<Channel>> SubscribeToChannelAsync(
         string channelName,
         int? qualityRank,
@@ -42,28 +45,39 @@ public sealed class ChannelService(
         if (string.IsNullOrWhiteSpace(channelId))
             return Error.NotFound("Channel doesn't exist on Twitch.");
 
-        var alreadySubscribed = await db.Subscriptions
-            .AnyAsync(s => s.UserId == currentUser.Id && s.ChannelId == channelId, cancellationToken);
+        var channelLock = _channelLocks.GetOrAdd(channelId, _ => new SemaphoreSlim(1, 1));
+        await channelLock.WaitAsync(cancellationToken);
 
-        if (alreadySubscribed)
-            return Error.Conflict("You are already subscribed to this channel.");
-
-        if (!currentUser.IsAdmin)
+        Channel channel;
+        bool isNew;
+        try
         {
-            var currentSubscriptions = await db.Subscriptions
-                .CountAsync(s => s.UserId == currentUser.Id, cancellationToken);
+            var alreadySubscribed = await db.Subscriptions
+                .AnyAsync(s => s.UserId == currentUser.Id && s.ChannelId == channelId, cancellationToken);
 
-            if (currentSubscriptions >= options.MaxSubscriptionsPerUser)
-                return Error.Validation(
-                    $"Subscription limit reached. You cannot subscribe to more than {options.MaxSubscriptionsPerUser} channels.");
+            if (alreadySubscribed)
+                return Error.Conflict("You are already subscribed to this channel.");
+
+            if (!currentUser.IsAdmin)
+            {
+                var currentSubscriptions = await db.Subscriptions
+                    .CountAsync(s => s.UserId == currentUser.Id, cancellationToken);
+
+                if (currentSubscriptions >= options.MaxSubscriptionsPerUser)
+                    return Error.Validation(
+                        $"Subscription limit reached. You cannot subscribe to more than {options.MaxSubscriptionsPerUser} channels.");
+            }
+
+            db.Subscriptions.Add(Subscription.Create(currentUser.Id, channelId, dateTimeProvider.DateTimeNow));
+            (channel, isNew) = await GetOrCreateChannelAsync(
+                channelId, login, effectiveQualityRank, isArchived, cancellationToken);
+
+            await db.SaveChangesAsync(cancellationToken);
         }
-
-        db.Subscriptions.Add(Subscription.Create(currentUser.Id, channelId, dateTimeProvider.DateTimeNow));
-
-        var (channel, isNew) = await GetOrCreateChannelAsync(
-            channelId, login, effectiveQualityRank, isArchived, cancellationToken);
-
-        await db.SaveChangesAsync(cancellationToken);
+        finally
+        {
+            channelLock.Release();
+        }
 
         if (isNew && !channel.IsArchived)
         {
@@ -85,13 +99,23 @@ public sealed class ChannelService(
 
         db.Subscriptions.Remove(subscription);
 
-        var otherSubscribers = await db.Subscriptions
-            .CountAsync(uc => uc.ChannelId == channelId && uc.UserId != currentUser.Id, cancellationToken);
+        var channelLock = _channelLocks.GetOrAdd(channelId, _ => new SemaphoreSlim(1, 1));
+        await channelLock.WaitAsync(cancellationToken);
+        try
+        {
+            var otherSubscribers = await db.Subscriptions
+                .CountAsync(uc => uc.ChannelId == channelId && uc.UserId != currentUser.Id, cancellationToken);
 
-        if (otherSubscribers == 0)
-            await DeleteChannelAsync(subscription.Channel, cancellationToken);
+            if (otherSubscribers == 0)
+                await DeleteChannelAsync(subscription.Channel, cancellationToken);
 
-        await db.SaveChangesAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            channelLock.Release();
+        }
+
         return Result.Success;
     }
 

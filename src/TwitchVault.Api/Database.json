@@ -1,1907 +1,1718 @@
-{
-  "Channels": [
-    {
-      "Id": "54507525",
-      "Name": "pisty",
-      "QualityRank": 2,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T22:29:12"
-    },
-    {
-      "Id": "153423171",
-      "Name": "vnnh_",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T06:29:07"
-    },
-    {
-      "Id": "151283108",
-      "Name": "gothamchess",
-      "QualityRank": 2,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-27T21:22:14"
-    },
-    {
-      "Id": "451544676",
-      "Name": "dream",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "38632829",
-      "Name": "ocmz",
-      "QualityRank": 2,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "195366842",
-      "Name": "huskpm",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": null
-    },
-    {
-      "Id": "500840753",
-      "Name": "svetastream",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-27T19:19:09"
-    },
-    {
-      "Id": "440608207",
-      "Name": "snapsizzle",
-      "QualityRank": 3,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T20:06:31"
-    },
-    {
-      "Id": "198758158",
-      "Name": "parkenharbor",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-31T03:04:54"
-    },
-    {
-      "Id": "1303435602",
-      "Name": "laurenandersx",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T23:18:28"
-    },
-    {
-      "Id": "90222378",
-      "Name": "kruzadar",
-      "QualityRank": 3,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T23:03:15"
-    },
-    {
-      "Id": "37427818",
-      "Name": "lindsayelyse",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-28T22:45:27"
-    },
-    {
-      "Id": "1365153688",
-      "Name": "mandybloom311",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-30T01:30:32"
-    },
-    {
-      "Id": "1093541726",
-      "Name": "onlylizards",
-      "QualityRank": 1,
-      "IsLive": false,
-      "IsArchived": true,
-      "LastStreamedAt": "2026-08-31T01:33:26"
-    }
-  ],
-  "Streams": [
-    {
-      "Id": "317685522520",
-      "ChannelId": "153423171",
-      "Folder": {
-        "RelativePath": "Streams\\vnnh_\\2026-07-21 04-22-32",
-        "ThumbnailPath": "Streams/vnnh_/2026-07-21 04-22-32/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": null,
-      "StartedAt": "2026-07-21T04:22:32.5897392+02:00",
-      "FinishedAt": "2026-07-21T07:17:30.4123534+02:00",
-      "Chapters": [
-        {
-          "Title": "Drunk, Drunk, Drunk, and Stuck in Canada",
-          "CategoryId": null,
-          "StartedAt": "2026-07-21T04:22:32.5897392+02:00",
-          "FinishedAt": "2026-07-21T07:17:30.4123534+02:00"
-        }
-      ]
-    },
-    {
-      "Id": "320488618073",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-07-24 23-13-46",
-        "ThumbnailPath": "Streams/pisty/2026-07-24 23-13-46/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-07-25T00:13:46.9407098",
-      "FinishedAt": "2026-07-25T02:16:42.1186317",
-      "Chapters": [
-        {
-          "Title": "دردشة مع المتابعين و روقان",
-          "CategoryId": "509658",
-          "StartedAt": "2026-07-25T00:13:46.9407098",
-          "FinishedAt": "2026-07-25T02:16:42.1186317"
-        }
-      ]
-    },
-    {
-      "Id": "320600085850",
-      "ChannelId": "151283108",
-      "Folder": {
-        "RelativePath": "Streams\\gothamchess\\2026-07-27 17-59-10",
-        "ThumbnailPath": "Streams/gothamchess/2026-07-27 17-59-10/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-07-27T18:59:10.1735777",
-      "FinishedAt": "2026-07-27T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "1000 Elo Chess Lesson | !autograph !omega",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        },
-        {
-          "Title": "1000 Elo Chess Lesson | !autograph",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T20:51:24.4189771",
-          "FinishedAt": "2026-07-27T21:35:29.8137444"
-        },
-        {
-          "Title": "Dont click | !autograph",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T21:35:29.8137444",
-          "FinishedAt": "2026-07-27T21:41:56.8350353"
-        }
-      ]
-    },
-    {
-      "Id": "1",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-24 22-14-14/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-24 22-14-14/1/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-05-24T18:59:10.1735777",
-      "FinishedAt": "2026-05-24T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "Id": "11",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-21 23-57-28/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-21 23-57-28/1/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "Id": "111",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-21 23-09-23/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-21 23-09-23/1/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "Id": "11111",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-05-08 01-12-32/1",
-        "ThumbnailPath": "Streams/pisty/2026-05-08 01-12-32/1/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-05-21T18:59:10.1735777",
-      "FinishedAt": "2026-05-21T21:41:56.8350353",
-      "Chapters": [
-        {
-          "Title": "temp",
-          "CategoryId": "743",
-          "StartedAt": "2026-07-27T18:59:10.1735777",
-          "FinishedAt": "2026-07-27T20:51:24.4189771"
-        }
-      ]
-    },
-    {
-      "Id": "320913023579",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-07 21-59-12",
-        "ThumbnailPath": "Streams/pisty/2026-08-07 21-59-12/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-08-07T22:58:59",
-      "FinishedAt": "2026-08-08T00:45:11.7501421",
-      "Chapters": [
-        {
-          "Title": "انت جبان اوووووي يعععع 🤢 | Creepy Shift: Roadside Diner",
-          "CategoryId": "449935491",
-          "StartedAt": "2026-08-07T22:58:59",
-          "FinishedAt": "2026-08-08T00:29:05.1973051"
-        },
-        {
-          "Title": "انت جبان اوووووي يعععع 🤢 | Dreamless",
-          "CategoryId": "432578399",
-          "StartedAt": "2026-08-08T00:29:05.1973051",
-          "FinishedAt": "2026-08-08T00:45:11.7501421"
-        }
-      ]
-    },
-    {
-      "Id": "319963708892",
-      "ChannelId": "500840753",
-      "Folder": {
-        "RelativePath": "Streams\\svetastream\\2026-08-19 00-30-10",
-        "ThumbnailPath": "Streams/svetastream/2026-08-19 00-30-10/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1067274872,
-      "StorageInstanceName": "Discord-Main",
-      "StartedAt": "2026-08-19T01:29:54",
-      "FinishedAt": "2026-08-19T04:14:34.6193402",
-      "Chapters": [
-        {
-          "Title": "EVENING BULLET & TOURNAMENT STORYTIME!!",
-          "CategoryId": "743",
-          "StartedAt": "2026-08-19T01:29:54",
-          "FinishedAt": "2026-08-19T04:14:34.6193402"
-        }
-      ]
-    },
-    {
-      "Id": "315954120659",
-      "ChannelId": "1303435602",
-      "Folder": {
-        "RelativePath": "Streams\\laurenandersx\\2026-08-22 01-52-36",
-        "ThumbnailPath": "Streams/laurenandersx/2026-08-22 01-52-36/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 12453684,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-21T23:26:33",
-      "FinishedAt": "2026-08-22T02:54:16.82715",
-      "Chapters": [
-        {
-          "Title": "🟣 Laurenandersx 🟣 Outlast 2 🟣",
-          "CategoryId": "510117",
-          "StartedAt": "2026-08-21T23:26:33",
-          "FinishedAt": "2026-08-22T02:54:16.82715"
-        }
-      ]
-    },
-    {
-      "Id": "321044900058",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-22 01-57-54",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-22 01-57-54/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 652290064,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-21T23:44:22",
-      "FinishedAt": "2026-08-22T04:36:43.529328",
-      "Chapters": [
-        {
-          "Title": "State Farm Gamerhood Season 5 Watch Party #StateFarmPartner !statefarm 🟠BLUNT review🟠MW4 Beta + DBD-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-21T23:44:22",
-          "FinishedAt": "2026-08-22T03:17:43.5126912"
-        },
-        {
-          "Title": "🟠Sub DROPS🟠 MW4 Beta + DBD-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-22T03:17:43.5126912",
-          "FinishedAt": "2026-08-22T03:17:59.13721"
-        },
-        {
-          "Title": "🟠Sub DROPS🟠 nibblin ankles -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-22T03:17:59.13721",
-          "FinishedAt": "2026-08-22T04:36:43.529328"
-        }
-      ]
-    },
-    {
-      "Id": "321063906906",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-22 23-45-50",
-        "ThumbnailPath": "Streams/pisty/2026-08-22 23-45-50/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2745739576,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-23T00:45:34",
-      "FinishedAt": "2026-08-23T03:54:37.9024288",
-      "Chapters": [
-        {
-          "Title": "مين رجع نااااااو و معايا هدايا و رسايل المتابعين من مصر",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-23T00:45:34",
-          "FinishedAt": "2026-08-23T02:17:53.1513457"
-        },
-        {
-          "Title": "مين رجع نااااااو و معايا هدايا و رسايل المتابعين من مصر",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-23T02:17:53.1513457",
-          "FinishedAt": "2026-08-23T03:54:37.9024288"
-        }
-      ]
-    },
-    {
-      "Id": "321078528602",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-23 20-27-59",
-        "ThumbnailPath": "Streams/pisty/2026-08-23 20-27-59/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 4170860048,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-23T21:27:43",
-      "FinishedAt": "2026-08-24T02:14:23.6530185",
-      "Chapters": [
-        {
-          "Title": "صيادين الهبل المجانين مع اسماعيلز و نينجا 😂🎣 | How to Fish",
-          "CategoryId": "1898040946",
-          "StartedAt": "2026-08-23T21:27:43",
-          "FinishedAt": "2026-08-24T02:14:23.6530185"
-        }
-      ]
-    },
-    {
-      "Id": "321082596314",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-24 00-38-57",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-24 00-38-57/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 8593799976,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-24T01:38:42",
-      "FinishedAt": "2026-08-24T05:45:48.10132",
-      "Chapters": [
-        {
-          "Title": "🟠Sub DROPS🟠yappin + Far Cry 4-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-24T01:38:42",
-          "FinishedAt": "2026-08-24T03:11:38.8665445"
-        },
-        {
-          "Title": "🟠Sub DROPS🟠Far Cry 4-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "460384",
-          "StartedAt": "2026-08-24T03:11:38.8665445",
-          "FinishedAt": "2026-08-24T05:45:48.10132"
-        }
-      ]
-    },
-    {
-      "Id": "320042472412",
-      "ChannelId": "151283108",
-      "Folder": {
-        "RelativePath": "Streams\\gothamchess\\2026-08-24 20-50-19",
-        "ThumbnailPath": "Streams/gothamchess/2026-08-24 20-50-19/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3968584308,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-24T21:49:59",
-      "FinishedAt": "2026-08-25T01:59:09.3078679",
-      "Chapters": [
-        {
-          "Title": "8M SUBS WATCH | !autograph",
-          "CategoryId": "743",
-          "StartedAt": "2026-08-24T21:49:59",
-          "FinishedAt": "2026-08-25T01:59:09.3078679"
-        }
-      ]
-    },
-    {
-      "Id": "321194409563",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-24 22-01-59",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-24 22-01-59/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 14734233416,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-24T23:01:45",
-      "FinishedAt": "2026-08-25T06:03:06.4382468",
-      "Chapters": [
-        {
-          "Title": "🟠Sub DROPS🟠 How to Fish + more!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-24T23:01:45",
-          "FinishedAt": "2026-08-24T23:18:18.1779494"
-        },
-        {
-          "Title": "🟠Sub DROPS🟠 How to Fish + more!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "1898040946",
-          "StartedAt": "2026-08-24T23:18:18.1779494",
-          "FinishedAt": "2026-08-25T01:03:11.6434671"
-        },
-        {
-          "Title": "🟠Sub DROPS🟠 How to Fish + Moo Who!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "66082",
-          "StartedAt": "2026-08-25T01:03:11.6434671",
-          "FinishedAt": "2026-08-25T02:02:16.4770217"
-        },
-        {
-          "Title": "🟠Sub DROPS🟠 How to Fish + Moo Who!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "460384",
-          "StartedAt": "2026-08-25T02:02:16.4770217",
-          "FinishedAt": "2026-08-25T06:03:06.4382468"
-        }
-      ]
-    },
-    {
-      "Id": "321194552155",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-24 22-13-47",
-        "ThumbnailPath": "Streams/pisty/2026-08-24 22-13-47/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 8279282182,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-24T23:13:33",
-      "FinishedAt": "2026-08-25T08:42:02.098369",
-      "Chapters": [
-        {
-          "Title": "جرا ايه يا بطة؟ 🦆 | PROJECT P.I.T.T.",
-          "CategoryId": "698700926",
-          "StartedAt": "2026-08-24T23:13:33",
-          "FinishedAt": "2026-08-25T08:42:02.098369"
-        }
-      ]
-    },
-    {
-      "Id": "319959476446",
-      "ChannelId": "500840753",
-      "Folder": {
-        "RelativePath": "Streams\\svetastream\\2026-08-25 18-41-08",
-        "ThumbnailPath": "Streams/svetastream/2026-08-25 18-41-08/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 744186344,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-25T19:40:55",
-      "FinishedAt": "2026-08-25T21:36:17.3420062",
-      "Chapters": [
-        {
-          "Title": "GETTING 2600 TODAY | new !lesson out",
-          "CategoryId": "743",
-          "StartedAt": "2026-08-25T19:40:55",
-          "FinishedAt": "2026-08-25T19:45:25.0944685"
-        },
-        {
-          "Title": "GETTING 2600 TODAY | !MATCH SOON | new !lesson out",
-          "CategoryId": "743",
-          "StartedAt": "2026-08-25T19:45:25.0944685",
-          "FinishedAt": "2026-08-25T21:36:17.3420062"
-        }
-      ]
-    },
-    {
-      "Id": "321211047387",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-25 22-00-49",
-        "ThumbnailPath": "Streams/pisty/2026-08-25 22-00-49/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2097003409,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-25T23:00:34",
-      "FinishedAt": "2026-08-26T01:24:20.1079657",
-      "Chapters": [
-        {
-          "Title": "محاكي مفرمة اللحمة و ساندوتشات الهوت دوج 🌭 | Meat Grinder",
-          "CategoryId": "793000569",
-          "StartedAt": "2026-08-25T23:00:34",
-          "FinishedAt": "2026-08-26T01:21:38.922553"
-        },
-        {
-          "Title": "محاكي مفرمة اللحمة و ساندوتشات الهوت دوج 🌭 | Meat Grinder",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-26T01:21:38.922553",
-          "FinishedAt": "2026-08-26T01:22:13.1678412"
-        },
-        {
-          "Title": "قاعد مع الشات لحد ما نقرر هنلعب ايه",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-26T01:22:13.1678412",
-          "FinishedAt": "2026-08-26T01:24:12.8820017"
-        },
-        {
-          "Title": "توت",
-          "CategoryId": "814316764",
-          "StartedAt": "2026-08-26T01:24:12.8820017",
-          "FinishedAt": "2026-08-26T01:24:20.1079657"
-        }
-      ]
-    },
-    {
-      "Id": "321110540378",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-25 23-31-52",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-25 23-31-52/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 11909135796,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-26T00:31:39",
-      "FinishedAt": "2026-08-26T06:13:12.7339798",
-      "Chapters": [
-        {
-          "Title": "🟠GamesCon🟠 REACT + DBD update!!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-26T00:31:39",
-          "FinishedAt": "2026-08-26T00:46:13.9663292"
-        },
-        {
-          "Title": "🟠GamesCom🟠 REACT + DBD update!!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-26T00:46:13.9663292",
-          "FinishedAt": "2026-08-26T04:22:02.2932878"
-        },
-        {
-          "Title": "🟠Subs Drops🟠DBD update!!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-26T04:22:02.2932878",
-          "FinishedAt": "2026-08-26T04:22:38.2792841"
-        },
-        {
-          "Title": "🟠Drops🟠DBD update!!-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-26T04:22:38.2792841",
-          "FinishedAt": "2026-08-26T06:13:12.7339798"
-        }
-      ]
-    },
-    {
-      "Id": "321213186139",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-26 00-28-47",
-        "ThumbnailPath": "Streams/pisty/2026-08-26 00-28-47/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 4766993929,
-      "StorageInstanceName": "discord-main",
-      "StartedAt": "2026-08-26T01:24:15",
-      "FinishedAt": "2026-08-26T06:55:08.7342308",
-      "Chapters": [
-        {
-          "Title": "توت بيري",
-          "CategoryId": "814316764",
-          "StartedAt": "2026-08-26T01:24:15",
-          "FinishedAt": "2026-08-26T06:55:08.7342308"
-        }
-      ]
-    },
-    {
-      "Id": "321226912475",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-26 20-34-45",
-        "ThumbnailPath": "Streams/pisty/2026-08-26 20-34-45/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3561263757,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-26T21:34:32",
-      "FinishedAt": "2026-08-27T01:39:01.2190672",
-      "Chapters": [
-        {
-          "Title": "عودة الطاعون 🐀 | تختيم احتمال مينزلش يوتيوب | Resonance: A Plague Tale Legacy",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-26T21:34:32",
-          "FinishedAt": "2026-08-27T01:39:01.2190672"
-        }
-      ]
-    },
-    {
-      "Id": "321063659481",
-      "ChannelId": "1365153688",
-      "Folder": {
-        "RelativePath": "Streams\\mandybloom311\\2026-08-27 00-02-31",
-        "ThumbnailPath": "Streams/mandybloom311/2026-08-27 00-02-31/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2384080264,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T01:02:12",
-      "FinishedAt": "2026-08-27T07:05:02.2176523",
-      "Chapters": [
-        {
-          "Title": "Who will take home the most trauma Leon, Clare or sherri?Road to 100 !widget !confetti",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-27T01:02:12",
-          "FinishedAt": "2026-08-27T01:14:52.6943972"
-        },
-        {
-          "Title": "Who will take home the most trauma Leon, Clare or sherri?Road to 100 !widget !confetti",
-          "CategoryId": "293693714",
-          "StartedAt": "2026-08-27T01:14:52.6943972",
-          "FinishedAt": "2026-08-27T07:05:02.2176523"
-        }
-      ]
-    },
-    {
-      "Id": "317321954039",
-      "ChannelId": "1093541726",
-      "Folder": {
-        "RelativePath": "Streams\\onlylizards\\2026-08-27 00-39-43",
-        "ThumbnailPath": "Streams/onlylizards/2026-08-27 00-39-43/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1069287553,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T01:39:25",
-      "FinishedAt": "2026-08-27T04:47:55.7905149",
-      "Chapters": [
-        {
-          "Title": "Wheelpin Wednesday! | 5 subs = wheelspin | MON-SUN CHARITY STREAMS THIS WEEK | !campweek !donate !merch !throne",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-27T01:39:25",
-          "FinishedAt": "2026-08-27T04:47:55.7905149"
-        }
-      ]
-    },
-    {
-      "Id": "321129179994",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 02-17-16",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 02-17-16/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 26840008,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T03:17:01",
-      "FinishedAt": "2026-08-27T03:23:20.0508474",
-      "Chapters": [
-        {
-          "Title": "test stream lol ignore",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T03:17:01",
-          "FinishedAt": "2026-08-27T03:23:20.0508474"
-        }
-      ]
-    },
-    {
-      "Id": "321129325786",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 02-23-42",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 02-23-42/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3441716,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T03:23:25",
-      "FinishedAt": "2026-08-27T03:24:20.2946037",
-      "Chapters": [
-        {
-          "Title": "test stream lol ignore",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T03:23:25",
-          "FinishedAt": "2026-08-27T03:24:20.2946037"
-        }
-      ]
-    },
-    {
-      "Id": "321129363418",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 02-25-11",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 02-25-11/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 81353428,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T03:24:56",
-      "FinishedAt": "2026-08-27T03:29:13.2993559",
-      "Chapters": [
-        {
-          "Title": "test stream lol ignore",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T03:24:56",
-          "FinishedAt": "2026-08-27T03:29:13.2993559"
-        }
-      ]
-    },
-    {
-      "Id": "321129463002",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 02-29-22",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 02-29-22/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 12779254880,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T03:29:07",
-      "FinishedAt": "2026-08-27T10:08:28.2821032",
-      "Chapters": [
-        {
-          "Title": "test stream lol ignore",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T03:29:07",
-          "FinishedAt": "2026-08-27T10:08:28.2821032"
-        }
-      ]
-    },
-    {
-      "Id": "321130984666",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-27 03-31-34",
-        "ThumbnailPath": "Streams/pisty/2026-08-27 03-31-34/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1496920283,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T04:31:15",
-      "FinishedAt": "2026-08-27T06:14:45.2175303",
-      "Chapters": [
-        {
-          "Title": "محطة البنزين المرعبة و الزباين المجنونة ⛽😂",
-          "CategoryId": "339050343",
-          "StartedAt": "2026-08-27T04:31:15",
-          "FinishedAt": "2026-08-27T06:14:45.2175303"
-        }
-      ]
-    },
-    {
-      "Id": "321072463833",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 09-08-55",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 09-08-55/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 65557856,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T10:08:37",
-      "FinishedAt": "2026-08-27T10:11:38.5916161",
-      "Chapters": [
-        {
-          "Title": "test stream lol ignore",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T10:08:37",
-          "FinishedAt": "2026-08-27T10:11:38.5916161"
-        }
-      ]
-    },
-    {
-      "Id": "320120256864",
-      "ChannelId": "500840753",
-      "Folder": {
-        "RelativePath": "Streams\\svetastream\\2026-08-27 18-19-22",
-        "ThumbnailPath": "Streams/svetastream/2026-08-27 18-19-22/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1024343756,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T19:19:09",
-      "FinishedAt": "2026-08-27T21:58:45.1878693",
-      "Chapters": [
-        {
-          "Title": "!MATCH VS @KantannaChess TODAY | Streamers Speed Championship",
-          "CategoryId": "743",
-          "StartedAt": "2026-08-27T19:19:09",
-          "FinishedAt": "2026-08-27T21:58:45.1878693"
-        }
-      ]
-    },
-    {
-      "Id": "321138798938",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 18-29-25",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 18-29-25/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3495040884,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T19:29:06",
-      "FinishedAt": "2026-08-27T21:16:55.5440412",
-      "Chapters": [
-        {
-          "Title": "jesus loves you!",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T19:29:06",
-          "FinishedAt": "2026-08-27T21:16:55.5440412"
-        }
-      ]
-    },
-    {
-      "Id": "321244935259",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-27 20-17-06",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-27 20-17-06/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3805002500,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T21:16:51",
-      "FinishedAt": "2026-08-27T23:13:27.0347899",
-      "Chapters": [
-        {
-          "Title": "jesus loves you!",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-27T21:16:51",
-          "FinishedAt": "2026-08-27T23:13:27.0347899"
-        }
-      ]
-    },
-    {
-      "Id": "321076082009",
-      "ChannelId": "151283108",
-      "Folder": {
-        "RelativePath": "Streams\\gothamchess\\2026-08-27 20-22-29",
-        "ThumbnailPath": "Streams/gothamchess/2026-08-27 20-22-29/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1664382612,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T21:22:14",
-      "FinishedAt": "2026-08-27T23:07:17.3184456",
-      "Chapters": [
-        {
-          "Title": "lesson with squishymuffinz and more | !autograph",
-          "CategoryId": "743",
-          "StartedAt": "2026-08-27T21:22:14",
-          "FinishedAt": "2026-08-27T23:07:17.3184456"
-        }
-      ]
-    },
-    {
-      "Id": "321141535322",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-27 22-51-22",
-        "ThumbnailPath": "Streams/pisty/2026-08-27 22-51-22/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 947508170,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-27T23:51:06",
-      "FinishedAt": "2026-08-28T00:56:14.5116159",
-      "Chapters": [
-        {
-          "Title": "الممثل الصوتي و المغني البستوت 😂 | The Choice Voicer",
-          "CategoryId": "884569009",
-          "StartedAt": "2026-08-27T23:51:06",
-          "FinishedAt": "2026-08-28T00:53:16.9185198"
-        },
-        {
-          "Title": "عودة الطاعون 🐀 | تختيم | Resonance: A Plague Tale Legacy",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-28T00:53:16.9185198",
-          "FinishedAt": "2026-08-28T00:56:14.5116159"
-        }
-      ]
-    },
-    {
-      "Id": "321078038873",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-27 23-03-36",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-27 23-03-36/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 13057124708,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T00:03:17",
-      "FinishedAt": "2026-08-28T06:16:39.9316162",
-      "Chapters": [
-        {
-          "Title": "🐟How to Fish🎣+ DBD w/ Platy after! -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "1898040946",
-          "StartedAt": "2026-08-28T00:03:17",
-          "FinishedAt": "2026-08-28T02:21:42.8475076"
-        },
-        {
-          "Title": "🐟DROPS🎣NEW KILLER -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-28T02:21:42.8475076",
-          "FinishedAt": "2026-08-28T06:16:39.9316162"
-        }
-      ]
-    },
-    {
-      "Id": "317988173784",
-      "ChannelId": "37427818",
-      "Folder": {
-        "RelativePath": "Streams\\lindsayelyse\\2026-08-27 23-14-32",
-        "ThumbnailPath": "Streams/lindsayelyse/2026-08-27 23-14-32/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1072073008,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T00:14:16",
-      "FinishedAt": "2026-08-28T02:57:07.319899",
-      "Chapters": [
-        {
-          "Title": "new AC who dis",
-          "CategoryId": "1832841853",
-          "StartedAt": "2026-08-28T00:14:16",
-          "FinishedAt": "2026-08-28T02:57:07.319899"
-        }
-      ]
-    },
-    {
-      "Id": "317328606199",
-      "ChannelId": "1093541726",
-      "Folder": {
-        "RelativePath": "Streams\\onlylizards\\2026-08-27 23-49-41",
-        "ThumbnailPath": "Streams/onlylizards/2026-08-27 23-49-41/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2067874087,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T00:49:27",
-      "FinishedAt": "2026-08-28T06:53:47.2373098",
-      "Chapters": [
-        {
-          "Title": "wigging out | CHARITY STREAMS ALL WEEK! Lots of fun incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-28T00:49:27",
-          "FinishedAt": "2026-08-28T02:28:21.060771"
-        },
-        {
-          "Title": "wigging out | CHARITY STREAMS ALL WEEK! Lots of fun incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "1115711128",
-          "StartedAt": "2026-08-28T02:28:21.060771",
-          "FinishedAt": "2026-08-28T05:25:03.9532168"
-        },
-        {
-          "Title": "wigging out | CHARITY STREAMS ALL WEEK! Lots of fun incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-28T05:25:03.9532168",
-          "FinishedAt": "2026-08-28T06:53:47.2373098"
-        }
-      ]
-    },
-    {
-      "Id": "321142563674",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-27 23-56-31",
-        "ThumbnailPath": "Streams/pisty/2026-08-27 23-56-31/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 339656275,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T00:56:13",
-      "FinishedAt": "2026-08-28T01:19:38.5511826",
-      "Chapters": [
-        {
-          "Title": "عودة الطاعون 🐀 | تختيم | Resonance: A Plague Tale Legacy",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-28T00:56:13",
-          "FinishedAt": "2026-08-28T01:19:38.5511826"
-        }
-      ]
-    },
-    {
-      "Id": "321259938907",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-28 19-06-45",
-        "ThumbnailPath": "Streams/pisty/2026-08-28 19-06-45/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2560351523,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T20:06:24",
-      "FinishedAt": "2026-08-28T23:03:17.943235",
-      "Chapters": [
-        {
-          "Title": "رعب سفاح المعادي 👹🔪 | The Skin Stapler",
-          "CategoryId": "318184140",
-          "StartedAt": "2026-08-28T20:06:24",
-          "FinishedAt": "2026-08-28T23:03:01.3790698"
-        },
-        {
-          "Title": "عودة الطاعون 🐀 | تختيم | Resonance: A Plague Tale Legacy",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-28T23:03:01.3790698",
-          "FinishedAt": "2026-08-28T23:03:17.943235"
-        }
-      ]
-    },
-    {
-      "Id": "321261337435",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-28 21-07-48",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-28 21-07-48/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 5444174876,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T22:07:32",
-      "FinishedAt": "2026-08-29T00:54:25.2172666",
-      "Chapters": [
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "No Game!",
-          "StartedAt": "2026-08-28T22:07:32",
-          "FinishedAt": "2026-08-28T22:52:33.9870456"
-        },
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-28T22:52:33.9870456",
-          "FinishedAt": "2026-08-29T00:54:25.2172666"
-        }
-      ]
-    },
-    {
-      "Id": "317334780535",
-      "ChannelId": "37427818",
-      "Folder": {
-        "RelativePath": "Streams\\lindsayelyse\\2026-08-28 21-45-46",
-        "ThumbnailPath": "Streams/lindsayelyse/2026-08-28 21-45-46/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2786466628,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T22:45:27",
-      "FinishedAt": "2026-08-29T05:47:58.8854183",
-      "Chapters": [
-        {
-          "Title": "friday is for gaming",
-          "CategoryId": "1832841853",
-          "StartedAt": "2026-08-28T22:45:27",
-          "FinishedAt": "2026-08-29T05:47:58.8854183"
-        }
-      ]
-    },
-    {
-      "Id": "321262037083",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-28 22-03-27",
-        "ThumbnailPath": "Streams/pisty/2026-08-28 22-03-27/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3260758977,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T23:03:14",
-      "FinishedAt": "2026-08-29T02:48:33.2942547",
-      "Chapters": [
-        {
-          "Title": "عودة الطاعون 🐀 | تختيم | Resonance: A Plague Tale Legacy",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-28T23:03:14",
-          "FinishedAt": "2026-08-29T02:48:33.2942547"
-        }
-      ]
-    },
-    {
-      "Id": "321092989145",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-28 22-39-18",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-28 22-39-18/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 7635685048,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-28T23:39:03",
-      "FinishedAt": "2026-08-29T03:18:13.149406",
-      "Chapters": [
-        {
-          "Title": "🟡REACT DAY🟡GTA6, new Pokemon show, and more! -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-28T23:39:03",
-          "FinishedAt": "2026-08-29T00:57:27.4453351"
-        },
-        {
-          "Title": "🟡REACT DAY🟡State Farm Gamerhood Season 5 Watch Party #StateFarmPartner !statefarm  -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-29T00:57:27.4453351",
-          "FinishedAt": "2026-08-29T02:30:38.0016741"
-        },
-        {
-          "Title": "🟡REACT DAY🟡-- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-29T02:30:38.0016741",
-          "FinishedAt": "2026-08-29T03:18:13.149406"
-        }
-      ]
-    },
-    {
-      "Id": "321159090394",
-      "ChannelId": "1365153688",
-      "Folder": {
-        "RelativePath": "Streams\\mandybloom311\\2026-08-29 00-09-53",
-        "ThumbnailPath": "Streams/mandybloom311/2026-08-29 00-09-53/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1846796944,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-29T01:09:33",
-      "FinishedAt": "2026-08-29T05:50:22.727173",
-      "Chapters": [
-        {
-          "Title": "Happy SUBtember! Announcements NEW game Road to 100 !widget !confetti",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-29T01:09:33",
-          "FinishedAt": "2026-08-29T01:43:19.7044647"
-        },
-        {
-          "Title": "Happy SUBtember! Announcements NEW game Road to 100 !widget !confetti",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-29T01:43:19.7044647",
-          "FinishedAt": "2026-08-29T05:50:22.727173"
-        }
-      ]
-    },
-    {
-      "Id": "317335692407",
-      "ChannelId": "1093541726",
-      "Folder": {
-        "RelativePath": "Streams\\onlylizards\\2026-08-29 00-49-37",
-        "ThumbnailPath": "Streams/onlylizards/2026-08-29 00-49-37/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3066778799,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-29T01:49:21",
-      "FinishedAt": "2026-08-29T10:49:35.9304712",
-      "Chapters": [
-        {
-          "Title": "walkin and talkin! | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-29T01:49:21",
-          "FinishedAt": "2026-08-29T06:42:35.4149476"
-        },
-        {
-          "Title": "walkin and talkin! | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "14842174",
-          "StartedAt": "2026-08-29T06:42:35.4149476",
-          "FinishedAt": "2026-08-29T10:49:35.9304712"
-        }
-      ]
-    },
-    {
-      "Id": "321159747802",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-29 00-50-34",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-29 00-50-34/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 9035352004,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-29T01:50:18",
-      "FinishedAt": "2026-08-29T06:27:08.738772",
-      "Chapters": [
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-29T01:50:18",
-          "FinishedAt": "2026-08-29T06:27:08.738772"
-        }
-      ]
-    },
-    {
-      "Id": "321171724890",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-29 17-50-22",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-29 17-50-22/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 5681177640,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-29T18:50:07",
-      "FinishedAt": "2026-08-29T21:43:58.520466",
-      "Chapters": [
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-29T18:50:07",
-          "FinishedAt": "2026-08-29T21:43:58.520466"
-        }
-      ]
-    },
-    {
-      "Id": "321110128857",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-29 21-21-47",
-        "ThumbnailPath": "Streams/pisty/2026-08-29 21-21-47/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 3226231,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-29T22:21:25",
-      "FinishedAt": "2026-08-29T22:22:05.8227577",
-      "Chapters": [
-        {
-          "Title": "مجرم الفندق 🔪 | Dead Stop: No Vacancy",
-          "CategoryId": "765882992",
-          "StartedAt": "2026-08-29T22:21:25",
-          "FinishedAt": "2026-08-29T22:22:05.8227577"
-        }
-      ]
-    },
-    {
-      "Id": "321110143193",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-29 21-22-19",
-        "ThumbnailPath": "Streams/pisty/2026-08-29 21-22-19/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 806705983,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-29T22:22:01",
-      "FinishedAt": "2026-08-29T23:17:50.6203924",
-      "Chapters": [
-        {
-          "Title": "مجرم الفندق 🔪 | Dead Stop: No Vacancy",
-          "CategoryId": "765882992",
-          "StartedAt": "2026-08-29T22:22:01",
-          "FinishedAt": "2026-08-29T23:17:50.6203924"
-        }
-      ]
-    },
-    {
-      "Id": "321113978457",
-      "ChannelId": "1365153688",
-      "Folder": {
-        "RelativePath": "Streams\\mandybloom311\\2026-08-30 00-30-50",
-        "ThumbnailPath": "Streams/mandybloom311/2026-08-30 00-30-50/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1405410168,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T01:30:32",
-      "FinishedAt": "2026-08-30T05:04:08.5722981",
-      "Chapters": [
-        {
-          "Title": "cozy stream day grab you Pj's and your cozy blankets !widget !confetti",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-30T01:30:32",
-          "FinishedAt": "2026-08-30T01:54:26.3434077"
-        },
-        {
-          "Title": "cozy stream day grab you Pj's and your cozy blankets !widget !confetti",
-          "CategoryId": "509511",
-          "StartedAt": "2026-08-30T01:54:26.3434077",
-          "FinishedAt": "2026-08-30T02:30:17.2119633"
-        },
-        {
-          "Title": "cozy stream day grab you Pj's and your cozy blankets !widget !confetti",
-          "CategoryId": "512923",
-          "StartedAt": "2026-08-30T02:30:17.2119633",
-          "FinishedAt": "2026-08-30T05:04:08.5722981"
-        }
-      ]
-    },
-    {
-      "Id": "319035595095",
-      "ChannelId": "1093541726",
-      "Folder": {
-        "RelativePath": "Streams\\onlylizards\\2026-08-30 00-44-39",
-        "ThumbnailPath": "Streams/onlylizards/2026-08-30 00-44-39/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2219478129,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T01:44:19",
-      "FinishedAt": "2026-08-30T08:15:55.6852007",
-      "Chapters": [
-        {
-          "Title": "day 6/7 of campweek  | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-30T01:44:19",
-          "FinishedAt": "2026-08-30T05:13:00.7568912"
-        },
-        {
-          "Title": "day 6/7 of campweek  | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
-          "CategoryId": "762292943",
-          "StartedAt": "2026-08-30T05:13:00.7568912",
-          "FinishedAt": "2026-08-30T08:15:55.6852007"
-        }
-      ]
-    },
-    {
-      "Id": "320112410332",
-      "ChannelId": "198758158",
-      "Folder": {
-        "RelativePath": "Streams\\parkenharbor\\2026-08-30 01-03-20",
-        "ThumbnailPath": "Streams/parkenharbor/2026-08-30 01-03-20/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2184015364,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T02:03:06",
-      "FinishedAt": "2026-08-30T07:38:45.0670756",
-      "Chapters": [
-        {
-          "Title": "⭐MORTAL SHELL 2 BETTER IMPRESS ME OR ELSE",
-          "CategoryId": "1832841853",
-          "StartedAt": "2026-08-30T02:03:06",
-          "FinishedAt": "2026-08-30T07:38:45.0670756"
-        }
-      ]
-    },
-    {
-      "Id": "321288361819",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-30 03-42-22",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-30 03-42-22/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 8946162548,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T04:42:04",
-      "FinishedAt": "2026-08-30T09:17:21.2849171",
-      "Chapters": [
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-30T04:42:04",
-          "FinishedAt": "2026-08-30T09:17:21.2849171"
-        }
-      ]
-    },
-    {
-      "Id": "321184439258",
-      "ChannelId": "153423171",
-      "Folder": {
-        "RelativePath": "Streams\\vnnh_\\2026-08-30 05-29-25",
-        "ThumbnailPath": "Streams/vnnh_/2026-08-30 05-29-25/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 781222908,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T06:29:07",
-      "FinishedAt": "2026-08-30T08:29:56.1614452",
-      "Chapters": [
-        {
-          "Title": "Playing scary game and every time i get scared i get put in time-out",
-          "CategoryId": "27127",
-          "StartedAt": "2026-08-30T06:29:07",
-          "FinishedAt": "2026-08-30T08:29:56.1614452"
-        }
-      ]
-    },
-    {
-      "Id": "321191375322",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-30 17-44-45",
-        "ThumbnailPath": "Streams/pisty/2026-08-30 17-44-45/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 943471031,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T18:44:29",
-      "FinishedAt": "2026-08-30T19:49:42.5909917",
-      "Chapters": [
-        {
-          "Title": "الكابتن بيستي ⚽ نجم الملعب 🥅 | CAPTAIN TSUBASA 2",
-          "CategoryId": "1804441102",
-          "StartedAt": "2026-08-30T18:44:29",
-          "FinishedAt": "2026-08-30T19:49:38.4481856"
-        },
-        {
-          "Title": "احرف واحد في اللعبة دي ❌ USE CODE BYSTY | FORTNITE",
-          "CategoryId": "33214",
-          "StartedAt": "2026-08-30T19:49:38.4481856",
-          "FinishedAt": "2026-08-30T19:49:42.5909917"
-        }
-      ]
-    },
-    {
-      "Id": "321192222426",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-30 18-49-57",
-        "ThumbnailPath": "Streams/pisty/2026-08-30 18-49-57/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2327257736,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T19:49:41",
-      "FinishedAt": "2026-08-30T22:29:22.0749192",
-      "Chapters": [
-        {
-          "Title": "احرف واحد في اللعبة دي ❌ USE CODE BYSTY | FORTNITE",
-          "CategoryId": "33214",
-          "StartedAt": "2026-08-30T19:49:41",
-          "FinishedAt": "2026-08-30T22:25:19.3028974"
-        },
-        {
-          "Title": "بيو بيو مع الصحاب",
-          "CategoryId": "33214",
-          "StartedAt": "2026-08-30T22:25:19.3028974",
-          "FinishedAt": "2026-08-30T22:26:13.0789337"
-        },
-        {
-          "Title": "بيو بيو مع الصحاب",
-          "CategoryId": "7228",
-          "StartedAt": "2026-08-30T22:26:13.0789337",
-          "FinishedAt": "2026-08-30T22:26:36.5691179"
-        },
-        {
-          "Title": "بيو بيو مع الصحاب",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-30T22:26:36.5691179",
-          "FinishedAt": "2026-08-30T22:28:45.5966138"
-        },
-        {
-          "Title": "بيو بيو مع الصحاب و خبر جامد جداً! Rainbow Six Siege",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-30T22:28:45.5966138",
-          "FinishedAt": "2026-08-30T22:29:22.0749192"
-        }
-      ]
-    },
-    {
-      "Id": "321297847771",
-      "ChannelId": "440608207",
-      "Folder": {
-        "RelativePath": "Streams\\snapsizzle\\2026-08-30 19-06-44",
-        "ThumbnailPath": "Streams/snapsizzle/2026-08-30 19-06-44/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 10266737340,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T20:06:31",
-      "FinishedAt": "2026-08-31T01:23:53.6749106",
-      "Chapters": [
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-30T20:06:31",
-          "FinishedAt": "2026-08-30T20:14:21.469778"
-        },
-        {
-          "Title": "Jesus loves you & so do I!",
-          "CategoryId": "1953774734",
-          "StartedAt": "2026-08-30T20:14:21.469778",
-          "FinishedAt": "2026-08-31T01:23:53.6749106"
-        }
-      ]
-    },
-    {
-      "Id": "321195058010",
-      "ChannelId": "54507525",
-      "Folder": {
-        "RelativePath": "Streams\\pisty\\2026-08-30 21-29-28",
-        "ThumbnailPath": "Streams/pisty/2026-08-30 21-29-28/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1838066602,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T22:29:12",
-      "FinishedAt": "2026-08-31T00:35:29.360179",
-      "Chapters": [
-        {
-          "Title": "بيو بيو مع الصحاب و خبر جامد جداً! Rainbow Six Siege",
-          "CategoryId": "460630",
-          "StartedAt": "2026-08-30T22:29:12",
-          "FinishedAt": "2026-08-31T00:35:29.360179"
-        }
-      ]
-    },
-    {
-      "Id": "321132441945",
-      "ChannelId": "90222378",
-      "Folder": {
-        "RelativePath": "Streams\\kruzadar\\2026-08-30 22-03-29",
-        "ThumbnailPath": "Streams/kruzadar/2026-08-30 22-03-29/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 21120136012,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T23:03:15",
-      "FinishedAt": "2026-08-31T09:10:21.4991584",
-      "Chapters": [
-        {
-          "Title": "🟡10hr🟡finish Far Cry 4 + legos + DBD! -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-30T23:03:15",
-          "FinishedAt": "2026-08-30T23:33:58.461532"
-        },
-        {
-          "Title": "🟡10hr🟡finish Far Cry 4 + legos + DBD! -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "460384",
-          "StartedAt": "2026-08-30T23:33:58.461532",
-          "FinishedAt": "2026-08-31T01:36:51.1862441"
-        },
-        {
-          "Title": "🟡10hr🟡finish Far Cry 4 + legos + DBD! -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-31T01:36:51.1862441",
-          "FinishedAt": "2026-08-31T04:37:58.2148872"
-        },
-        {
-          "Title": "🟡10hr🟡DROPS🟡 finished Far Cry 4 + legos + now DBD! -- 🐉YouTube vids daily: @Kruzadar",
-          "CategoryId": "491487",
-          "StartedAt": "2026-08-31T04:37:58.2148872",
-          "FinishedAt": "2026-08-31T09:10:21.4991584"
-        }
-      ]
-    },
-    {
-      "Id": "315991666899",
-      "ChannelId": "1303435602",
-      "Folder": {
-        "RelativePath": "Streams\\laurenandersx\\2026-08-30 22-18-46",
-        "ThumbnailPath": "Streams/laurenandersx/2026-08-30 22-18-46/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 884772556,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-30T23:18:28",
-      "FinishedAt": "2026-08-31T01:33:27.5260069",
-      "Chapters": [
-        {
-          "Title": "🟣 Laurenandersx 🟣 Visage First Playthrough 🟣 Chat and Chill🟣",
-          "CategoryId": "494082",
-          "StartedAt": "2026-08-30T23:18:28",
-          "FinishedAt": "2026-08-31T01:33:27.5260069"
-        }
-      ]
-    },
-    {
-      "Id": "317350305655",
-      "ChannelId": "1093541726",
-      "Folder": {
-        "RelativePath": "Streams\\onlylizards\\2026-08-31 00-33-41",
-        "ThumbnailPath": "Streams/onlylizards/2026-08-31 00-33-41/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 2982170061,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-31T01:33:26",
-      "FinishedAt": "2026-08-31T10:18:10.1708709",
-      "Chapters": [
-        {
-          "Title": "LAST DAY TO DONATE! supporting our vets :D | !campweek !donate !merch !throne",
-          "CategoryId": "509658",
-          "StartedAt": "2026-08-31T01:33:26",
-          "FinishedAt": "2026-08-31T10:18:10.1708709"
-        }
-      ]
-    },
-    {
-      "Id": "320171359968",
-      "ChannelId": "198758158",
-      "Folder": {
-        "RelativePath": "Streams\\parkenharbor\\2026-08-31 02-05-12",
-        "ThumbnailPath": "Streams/parkenharbor/2026-08-31 02-05-12/thumbnail.jpg"
-      },
-      "Status": "Finished",
-      "StorageLocation": "Remote",
-      "StorageOperationStatus": "Uploaded",
-      "SizeBytes": 1669574044,
-      "StorageInstanceName": "discord-second",
-      "StartedAt": "2026-08-31T03:04:54",
-      "FinishedAt": "2026-08-31T07:19:00.9833667",
-      "Chapters": [
-        {
-          "Title": "⭐MORTAL SHELL 2 BETTER IMPRESS ME OR ELSE",
-          "CategoryId": "1832841853",
-          "StartedAt": "2026-08-31T03:04:54",
-          "FinishedAt": "2026-08-31T05:05:48.8917233"
-        },
-        {
-          "Title": "⭐SO EXCITED FOR THIS GAME | PLAGUE TALE !RESONANCE #AD",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-31T05:05:48.8917233",
-          "FinishedAt": "2026-08-31T05:25:47.2796641"
-        },
-        {
-          "Title": "⭐[DROPS ON] SO EXCITED FOR THIS GAME | PLAGUE TALE !RESONANCE #AD",
-          "CategoryId": "570615518",
-          "StartedAt": "2026-08-31T05:25:47.2796641",
-          "FinishedAt": "2026-08-31T07:19:00.9833667"
-        }
-      ]
-    }
-  ],
-  "Users": [
-    {
-      "Id": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "Username": "hecker",
-      "Password": "password",
-      "IsAdmin": true,
-      "CreatedAt": "2026-08-02T16:18:07.2833315+02:00"
-    },
-    {
-      "Id": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
-      "Username": "ypro",
-      "Password": "YPRO1368=yasser",
-      "IsAdmin": false,
-      "CreatedAt": "2026-08-03T00:43:50.9834605"
-    }
-  ],
-  "UserChannels": [
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "54507525",
-      "AddedAt": "2026-08-02T16:18:07.2833315+02:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "153423171",
-      "AddedAt": "2026-08-02T16:18:07.2833315+02:00"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "151283108",
-      "AddedAt": "2026-08-02T16:18:07.2833315+02:00"
-    },
-    {
-      "UserId": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
-      "ChannelId": "451544676",
-      "AddedAt": "2026-08-02T21:46:38.3443403Z"
-    },
-    {
-      "UserId": "07ee6b3f-0bdd-4d80-9251-5184683787ce",
-      "ChannelId": "38632829",
-      "AddedAt": "2026-08-02T21:50:01.6192844Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "195366842",
-      "AddedAt": "2026-08-09T17:11:12.2681216Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "500840753",
-      "AddedAt": "2026-08-09T17:22:20.2781606Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "440608207",
-      "AddedAt": "2026-08-21T22:33:46.6283843Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "198758158",
-      "AddedAt": "2026-08-21T22:34:54.3252379Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "1303435602",
-      "AddedAt": "2026-08-21T23:52:28.2242835Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "90222378",
-      "AddedAt": "2026-08-21T23:57:47.0684619Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "37427818",
-      "AddedAt": "2026-08-22T00:00:56.29089Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "1365153688",
-      "AddedAt": "2026-08-22T00:02:56.7275766Z"
-    },
-    {
-      "UserId": "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
-      "ChannelId": "1093541726",
-      "AddedAt": "2026-08-22T00:05:18.1951009Z"
-    }
-  ]
+﻿{
+    "Channels":  [
+                     {
+                         "Id":  "54507525",
+                         "Name":  "pisty",
+                         "QualityRank":  2,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-30T22:29:12"
+                     },
+                     {
+                         "Id":  "153423171",
+                         "Name":  "vnnh_",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-30T06:29:07"
+                     },
+                     {
+                         "Id":  "151283108",
+                         "Name":  "gothamchess",
+                         "QualityRank":  2,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-27T21:22:14"
+                     },
+                     {
+                         "Id":  "451544676",
+                         "Name":  "dream",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  null
+                     },
+                     {
+                         "Id":  "38632829",
+                         "Name":  "ocmz",
+                         "QualityRank":  2,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  null
+                     },
+                     {
+                         "Id":  "195366842",
+                         "Name":  "huskpm",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  null
+                     },
+                     {
+                         "Id":  "500840753",
+                         "Name":  "svetastream",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-27T19:19:09"
+                     },
+                     {
+                         "Id":  "440608207",
+                         "Name":  "snapsizzle",
+                         "QualityRank":  3,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-30T20:06:31"
+                     },
+                     {
+                         "Id":  "198758158",
+                         "Name":  "parkenharbor",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-31T03:04:54"
+                     },
+                     {
+                         "Id":  "1303435602",
+                         "Name":  "laurenandersx",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-30T23:18:28"
+                     },
+                     {
+                         "Id":  "90222378",
+                         "Name":  "kruzadar",
+                         "QualityRank":  3,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-30T23:03:15"
+                     },
+                     {
+                         "Id":  "37427818",
+                         "Name":  "lindsayelyse",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-28T22:45:27"
+                     },
+                     {
+                         "Id":  "1365153688",
+                         "Name":  "mandybloom311",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-30T01:30:32"
+                     },
+                     {
+                         "Id":  "1093541726",
+                         "Name":  "onlylizards",
+                         "QualityRank":  1,
+                         "IsLive":  false,
+                         "IsArchived":  true,
+                         "LastStreamedAt":  "2026-08-31T01:33:26"
+                     }
+                 ],
+    "Streams":  [
+                    {
+                        "Id":  "317685522520",
+                        "ChannelId":  "153423171",
+                        "Folder":  "Streams/vnnh_/2026-07-21 04-22-32",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  null,
+                        "StartedAt":  "2026-07-21T04:22:32.5897392+02:00",
+                        "FinishedAt":  "2026-07-21T07:17:30.4123534+02:00",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Drunk, Drunk, Drunk, and Stuck in Canada",
+                                             "CategoryId":  null,
+                                             "StartedAt":  "2026-07-21T04:22:32.5897392+02:00",
+                                             "FinishedAt":  "2026-07-21T07:17:30.4123534+02:00"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320488618073",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-07-24 23-13-46",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-07-25T00:13:46.9407098",
+                        "FinishedAt":  "2026-07-25T02:16:42.1186317",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø¯Ø±Ø¯Ø´Ø© Ù…Ø¹ Ø§Ù„Ù…ØªØ§Ø¨Ø¹ÙŠÙ† Ùˆ Ø±ÙˆÙ‚Ø§Ù†",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-07-25T00:13:46.9407098",
+                                             "FinishedAt":  "2026-07-25T02:16:42.1186317"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320600085850",
+                        "ChannelId":  "151283108",
+                        "Folder":  "Streams/gothamchess/2026-07-27 17-59-10",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-07-27T18:59:10.1735777",
+                        "FinishedAt":  "2026-07-27T21:41:56.8350353",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "1000 Elo Chess Lesson | !autograph !omega",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T18:59:10.1735777",
+                                             "FinishedAt":  "2026-07-27T20:51:24.4189771"
+                                         },
+                                         {
+                                             "Title":  "1000 Elo Chess Lesson | !autograph",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T20:51:24.4189771",
+                                             "FinishedAt":  "2026-07-27T21:35:29.8137444"
+                                         },
+                                         {
+                                             "Title":  "Dont click | !autograph",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T21:35:29.8137444",
+                                             "FinishedAt":  "2026-07-27T21:41:56.8350353"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "1",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-05-24 22-14-14/1",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-05-24T18:59:10.1735777",
+                        "FinishedAt":  "2026-05-24T21:41:56.8350353",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "temp",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T18:59:10.1735777",
+                                             "FinishedAt":  "2026-07-27T20:51:24.4189771"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "11",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-05-21 23-57-28/1",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-05-21T18:59:10.1735777",
+                        "FinishedAt":  "2026-05-21T21:41:56.8350353",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "temp",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T18:59:10.1735777",
+                                             "FinishedAt":  "2026-07-27T20:51:24.4189771"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "111",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-05-21 23-09-23/1",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-05-21T18:59:10.1735777",
+                        "FinishedAt":  "2026-05-21T21:41:56.8350353",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "temp",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T18:59:10.1735777",
+                                             "FinishedAt":  "2026-07-27T20:51:24.4189771"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "11111",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-05-08 01-12-32/1",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-05-21T18:59:10.1735777",
+                        "FinishedAt":  "2026-05-21T21:41:56.8350353",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "temp",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-07-27T18:59:10.1735777",
+                                             "FinishedAt":  "2026-07-27T20:51:24.4189771"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320913023579",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-07 21-59-12",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-08-07T22:58:59",
+                        "FinishedAt":  "2026-08-08T00:45:11.7501421",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø§Ù†Øª Ø¬Ø¨Ø§Ù† Ø§ÙˆÙˆÙˆÙˆÙˆÙŠ ÙŠØ¹Ø¹Ø¹Ø¹ ðŸ¤¢ | Creepy Shift: Roadside Diner",
+                                             "CategoryId":  "449935491",
+                                             "StartedAt":  "2026-08-07T22:58:59",
+                                             "FinishedAt":  "2026-08-08T00:29:05.1973051"
+                                         },
+                                         {
+                                             "Title":  "Ø§Ù†Øª Ø¬Ø¨Ø§Ù† Ø§ÙˆÙˆÙˆÙˆÙˆÙŠ ÙŠØ¹Ø¹Ø¹Ø¹ ðŸ¤¢ | Dreamless",
+                                             "CategoryId":  "432578399",
+                                             "StartedAt":  "2026-08-08T00:29:05.1973051",
+                                             "FinishedAt":  "2026-08-08T00:45:11.7501421"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "319963708892",
+                        "ChannelId":  "500840753",
+                        "Folder":  "Streams/svetastream/2026-08-19 00-30-10",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1067274872,
+                        "StorageInstanceName":  "Discord-Main",
+                        "StartedAt":  "2026-08-19T01:29:54",
+                        "FinishedAt":  "2026-08-19T04:14:34.6193402",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "EVENING BULLET \u0026 TOURNAMENT STORYTIME!!",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-08-19T01:29:54",
+                                             "FinishedAt":  "2026-08-19T04:14:34.6193402"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "315954120659",
+                        "ChannelId":  "1303435602",
+                        "Folder":  "Streams/laurenandersx/2026-08-22 01-52-36",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  12453684,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-21T23:26:33",
+                        "FinishedAt":  "2026-08-22T02:54:16.82715",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ£ Laurenandersx ðŸŸ£ Outlast 2 ðŸŸ£",
+                                             "CategoryId":  "510117",
+                                             "StartedAt":  "2026-08-21T23:26:33",
+                                             "FinishedAt":  "2026-08-22T02:54:16.82715"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321044900058",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-22 01-57-54",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  652290064,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-21T23:44:22",
+                        "FinishedAt":  "2026-08-22T04:36:43.529328",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "State Farm Gamerhood Season 5 Watch Party #StateFarmPartner !statefarm ðŸŸ BLUNT reviewðŸŸ MW4 Beta + DBD-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-21T23:44:22",
+                                             "FinishedAt":  "2026-08-22T03:17:43.5126912"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ  MW4 Beta + DBD-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-22T03:17:43.5126912",
+                                             "FinishedAt":  "2026-08-22T03:17:59.13721"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ  nibblin ankles -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-22T03:17:59.13721",
+                                             "FinishedAt":  "2026-08-22T04:36:43.529328"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321063906906",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-22 23-45-50",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2745739576,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-23T00:45:34",
+                        "FinishedAt":  "2026-08-23T03:54:37.9024288",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ù…ÙŠÙ† Ø±Ø¬Ø¹ Ù†Ø§Ø§Ø§Ø§Ø§Ø§Ùˆ Ùˆ Ù…Ø¹Ø§ÙŠØ§ Ù‡Ø¯Ø§ÙŠØ§ Ùˆ Ø±Ø³Ø§ÙŠÙ„ Ø§Ù„Ù…ØªØ§Ø¨Ø¹ÙŠÙ† Ù…Ù† Ù…ØµØ±",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-23T00:45:34",
+                                             "FinishedAt":  "2026-08-23T02:17:53.1513457"
+                                         },
+                                         {
+                                             "Title":  "Ù…ÙŠÙ† Ø±Ø¬Ø¹ Ù†Ø§Ø§Ø§Ø§Ø§Ø§Ùˆ Ùˆ Ù…Ø¹Ø§ÙŠØ§ Ù‡Ø¯Ø§ÙŠØ§ Ùˆ Ø±Ø³Ø§ÙŠÙ„ Ø§Ù„Ù…ØªØ§Ø¨Ø¹ÙŠÙ† Ù…Ù† Ù…ØµØ±",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-23T02:17:53.1513457",
+                                             "FinishedAt":  "2026-08-23T03:54:37.9024288"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321078528602",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-23 20-27-59",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  4170860048,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-23T21:27:43",
+                        "FinishedAt":  "2026-08-24T02:14:23.6530185",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ØµÙŠØ§Ø¯ÙŠÙ† Ø§Ù„Ù‡Ø¨Ù„ Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠÙ† Ù…Ø¹ Ø§Ø³Ù…Ø§Ø¹ÙŠÙ„Ø² Ùˆ Ù†ÙŠÙ†Ø¬Ø§ ðŸ˜‚ðŸŽ£ | How to Fish",
+                                             "CategoryId":  "1898040946",
+                                             "StartedAt":  "2026-08-23T21:27:43",
+                                             "FinishedAt":  "2026-08-24T02:14:23.6530185"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321082596314",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-24 00-38-57",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  8593799976,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-24T01:38:42",
+                        "FinishedAt":  "2026-08-24T05:45:48.10132",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ yappin + Far Cry 4-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-24T01:38:42",
+                                             "FinishedAt":  "2026-08-24T03:11:38.8665445"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ Far Cry 4-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "460384",
+                                             "StartedAt":  "2026-08-24T03:11:38.8665445",
+                                             "FinishedAt":  "2026-08-24T05:45:48.10132"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320042472412",
+                        "ChannelId":  "151283108",
+                        "Folder":  "Streams/gothamchess/2026-08-24 20-50-19",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3968584308,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-24T21:49:59",
+                        "FinishedAt":  "2026-08-25T01:59:09.3078679",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "8M SUBS WATCH | !autograph",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-08-24T21:49:59",
+                                             "FinishedAt":  "2026-08-25T01:59:09.3078679"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321194409563",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-24 22-01-59",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  14734233416,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-24T23:01:45",
+                        "FinishedAt":  "2026-08-25T06:03:06.4382468",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ  How to Fish + more!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-24T23:01:45",
+                                             "FinishedAt":  "2026-08-24T23:18:18.1779494"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ  How to Fish + more!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "1898040946",
+                                             "StartedAt":  "2026-08-24T23:18:18.1779494",
+                                             "FinishedAt":  "2026-08-25T01:03:11.6434671"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ  How to Fish + Moo Who!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "66082",
+                                             "StartedAt":  "2026-08-25T01:03:11.6434671",
+                                             "FinishedAt":  "2026-08-25T02:02:16.4770217"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Sub DROPSðŸŸ  How to Fish + Moo Who!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "460384",
+                                             "StartedAt":  "2026-08-25T02:02:16.4770217",
+                                             "FinishedAt":  "2026-08-25T06:03:06.4382468"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321194552155",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-24 22-13-47",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  8279282182,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-24T23:13:33",
+                        "FinishedAt":  "2026-08-25T08:42:02.098369",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø¬Ø±Ø§ Ø§ÙŠÙ‡ ÙŠØ§ Ø¨Ø·Ø©ØŸ ðŸ¦† | PROJECT P.I.T.T.",
+                                             "CategoryId":  "698700926",
+                                             "StartedAt":  "2026-08-24T23:13:33",
+                                             "FinishedAt":  "2026-08-25T08:42:02.098369"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "319959476446",
+                        "ChannelId":  "500840753",
+                        "Folder":  "Streams/svetastream/2026-08-25 18-41-08",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  744186344,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-25T19:40:55",
+                        "FinishedAt":  "2026-08-25T21:36:17.3420062",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "GETTING 2600 TODAY | new !lesson out",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-08-25T19:40:55",
+                                             "FinishedAt":  "2026-08-25T19:45:25.0944685"
+                                         },
+                                         {
+                                             "Title":  "GETTING 2600 TODAY | !MATCH SOON | new !lesson out",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-08-25T19:45:25.0944685",
+                                             "FinishedAt":  "2026-08-25T21:36:17.3420062"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321211047387",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-25 22-00-49",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2097003409,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-25T23:00:34",
+                        "FinishedAt":  "2026-08-26T01:24:20.1079657",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ù…Ø­Ø§ÙƒÙŠ Ù…ÙØ±Ù…Ø© Ø§Ù„Ù„Ø­Ù…Ø© Ùˆ Ø³Ø§Ù†Ø¯ÙˆØªØ´Ø§Øª Ø§Ù„Ù‡ÙˆØª Ø¯ÙˆØ¬ ðŸŒ­ | Meat Grinder",
+                                             "CategoryId":  "793000569",
+                                             "StartedAt":  "2026-08-25T23:00:34",
+                                             "FinishedAt":  "2026-08-26T01:21:38.922553"
+                                         },
+                                         {
+                                             "Title":  "Ù…Ø­Ø§ÙƒÙŠ Ù…ÙØ±Ù…Ø© Ø§Ù„Ù„Ø­Ù…Ø© Ùˆ Ø³Ø§Ù†Ø¯ÙˆØªØ´Ø§Øª Ø§Ù„Ù‡ÙˆØª Ø¯ÙˆØ¬ ðŸŒ­ | Meat Grinder",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-26T01:21:38.922553",
+                                             "FinishedAt":  "2026-08-26T01:22:13.1678412"
+                                         },
+                                         {
+                                             "Title":  "Ù‚Ø§Ø¹Ø¯ Ù…Ø¹ Ø§Ù„Ø´Ø§Øª Ù„Ø­Ø¯ Ù…Ø§ Ù†Ù‚Ø±Ø± Ù‡Ù†Ù„Ø¹Ø¨ Ø§ÙŠÙ‡",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-26T01:22:13.1678412",
+                                             "FinishedAt":  "2026-08-26T01:24:12.8820017"
+                                         },
+                                         {
+                                             "Title":  "ØªÙˆØª",
+                                             "CategoryId":  "814316764",
+                                             "StartedAt":  "2026-08-26T01:24:12.8820017",
+                                             "FinishedAt":  "2026-08-26T01:24:20.1079657"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321110540378",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-25 23-31-52",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  11909135796,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-26T00:31:39",
+                        "FinishedAt":  "2026-08-26T06:13:12.7339798",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ GamesConðŸŸ  REACT + DBD update!!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-26T00:31:39",
+                                             "FinishedAt":  "2026-08-26T00:46:13.9663292"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ GamesComðŸŸ  REACT + DBD update!!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-26T00:46:13.9663292",
+                                             "FinishedAt":  "2026-08-26T04:22:02.2932878"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ Subs DropsðŸŸ DBD update!!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-26T04:22:02.2932878",
+                                             "FinishedAt":  "2026-08-26T04:22:38.2792841"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ DropsðŸŸ DBD update!!-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-26T04:22:38.2792841",
+                                             "FinishedAt":  "2026-08-26T06:13:12.7339798"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321213186139",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-26 00-28-47",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  4766993929,
+                        "StorageInstanceName":  "discord-main",
+                        "StartedAt":  "2026-08-26T01:24:15",
+                        "FinishedAt":  "2026-08-26T06:55:08.7342308",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ØªÙˆØª Ø¨ÙŠØ±ÙŠ",
+                                             "CategoryId":  "814316764",
+                                             "StartedAt":  "2026-08-26T01:24:15",
+                                             "FinishedAt":  "2026-08-26T06:55:08.7342308"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321226912475",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-26 20-34-45",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3561263757,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-26T21:34:32",
+                        "FinishedAt":  "2026-08-27T01:39:01.2190672",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø¹ÙˆØ¯Ø© Ø§Ù„Ø·Ø§Ø¹ÙˆÙ† ðŸ€ | ØªØ®ØªÙŠÙ… Ø§Ø­ØªÙ…Ø§Ù„ Ù…ÙŠÙ†Ø²Ù„Ø´ ÙŠÙˆØªÙŠÙˆØ¨ | Resonance: A Plague Tale Legacy",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-26T21:34:32",
+                                             "FinishedAt":  "2026-08-27T01:39:01.2190672"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321063659481",
+                        "ChannelId":  "1365153688",
+                        "Folder":  "Streams/mandybloom311/2026-08-27 00-02-31",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2384080264,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T01:02:12",
+                        "FinishedAt":  "2026-08-27T07:05:02.2176523",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Who will take home the most trauma Leon, Clare or sherri?Road to 100 !widget !confetti",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-27T01:02:12",
+                                             "FinishedAt":  "2026-08-27T01:14:52.6943972"
+                                         },
+                                         {
+                                             "Title":  "Who will take home the most trauma Leon, Clare or sherri?Road to 100 !widget !confetti",
+                                             "CategoryId":  "293693714",
+                                             "StartedAt":  "2026-08-27T01:14:52.6943972",
+                                             "FinishedAt":  "2026-08-27T07:05:02.2176523"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "317321954039",
+                        "ChannelId":  "1093541726",
+                        "Folder":  "Streams/onlylizards/2026-08-27 00-39-43",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1069287553,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T01:39:25",
+                        "FinishedAt":  "2026-08-27T04:47:55.7905149",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Wheelpin Wednesday! | 5 subs = wheelspin | MON-SUN CHARITY STREAMS THIS WEEK | !campweek !donate !merch !throne",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-27T01:39:25",
+                                             "FinishedAt":  "2026-08-27T04:47:55.7905149"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321129179994",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 02-17-16",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  26840008,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T03:17:01",
+                        "FinishedAt":  "2026-08-27T03:23:20.0508474",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "test stream lol ignore",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T03:17:01",
+                                             "FinishedAt":  "2026-08-27T03:23:20.0508474"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321129325786",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 02-23-42",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3441716,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T03:23:25",
+                        "FinishedAt":  "2026-08-27T03:24:20.2946037",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "test stream lol ignore",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T03:23:25",
+                                             "FinishedAt":  "2026-08-27T03:24:20.2946037"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321129363418",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 02-25-11",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  81353428,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T03:24:56",
+                        "FinishedAt":  "2026-08-27T03:29:13.2993559",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "test stream lol ignore",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T03:24:56",
+                                             "FinishedAt":  "2026-08-27T03:29:13.2993559"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321129463002",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 02-29-22",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  12779254880,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T03:29:07",
+                        "FinishedAt":  "2026-08-27T10:08:28.2821032",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "test stream lol ignore",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T03:29:07",
+                                             "FinishedAt":  "2026-08-27T10:08:28.2821032"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321130984666",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-27 03-31-34",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1496920283,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T04:31:15",
+                        "FinishedAt":  "2026-08-27T06:14:45.2175303",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ù…Ø­Ø·Ø© Ø§Ù„Ø¨Ù†Ø²ÙŠÙ† Ø§Ù„Ù…Ø±Ø¹Ø¨Ø© Ùˆ Ø§Ù„Ø²Ø¨Ø§ÙŠÙ† Ø§Ù„Ù…Ø¬Ù†ÙˆÙ†Ø© â›½ðŸ˜‚",
+                                             "CategoryId":  "339050343",
+                                             "StartedAt":  "2026-08-27T04:31:15",
+                                             "FinishedAt":  "2026-08-27T06:14:45.2175303"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321072463833",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 09-08-55",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  65557856,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T10:08:37",
+                        "FinishedAt":  "2026-08-27T10:11:38.5916161",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "test stream lol ignore",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T10:08:37",
+                                             "FinishedAt":  "2026-08-27T10:11:38.5916161"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320120256864",
+                        "ChannelId":  "500840753",
+                        "Folder":  "Streams/svetastream/2026-08-27 18-19-22",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1024343756,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T19:19:09",
+                        "FinishedAt":  "2026-08-27T21:58:45.1878693",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "!MATCH VS @KantannaChess TODAY | Streamers Speed Championship",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-08-27T19:19:09",
+                                             "FinishedAt":  "2026-08-27T21:58:45.1878693"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321138798938",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 18-29-25",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3495040884,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T19:29:06",
+                        "FinishedAt":  "2026-08-27T21:16:55.5440412",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "jesus loves you!",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T19:29:06",
+                                             "FinishedAt":  "2026-08-27T21:16:55.5440412"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321244935259",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-27 20-17-06",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3805002500,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T21:16:51",
+                        "FinishedAt":  "2026-08-27T23:13:27.0347899",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "jesus loves you!",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-27T21:16:51",
+                                             "FinishedAt":  "2026-08-27T23:13:27.0347899"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321076082009",
+                        "ChannelId":  "151283108",
+                        "Folder":  "Streams/gothamchess/2026-08-27 20-22-29",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1664382612,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T21:22:14",
+                        "FinishedAt":  "2026-08-27T23:07:17.3184456",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "lesson with squishymuffinz and more | !autograph",
+                                             "CategoryId":  "743",
+                                             "StartedAt":  "2026-08-27T21:22:14",
+                                             "FinishedAt":  "2026-08-27T23:07:17.3184456"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321141535322",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-27 22-51-22",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  947508170,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-27T23:51:06",
+                        "FinishedAt":  "2026-08-28T00:56:14.5116159",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø§Ù„Ù…Ù…Ø«Ù„ Ø§Ù„ØµÙˆØªÙŠ Ùˆ Ø§Ù„Ù…ØºÙ†ÙŠ Ø§Ù„Ø¨Ø³ØªÙˆØª ðŸ˜‚ | The Choice Voicer",
+                                             "CategoryId":  "884569009",
+                                             "StartedAt":  "2026-08-27T23:51:06",
+                                             "FinishedAt":  "2026-08-28T00:53:16.9185198"
+                                         },
+                                         {
+                                             "Title":  "Ø¹ÙˆØ¯Ø© Ø§Ù„Ø·Ø§Ø¹ÙˆÙ† ðŸ€ | ØªØ®ØªÙŠÙ… | Resonance: A Plague Tale Legacy",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-28T00:53:16.9185198",
+                                             "FinishedAt":  "2026-08-28T00:56:14.5116159"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321078038873",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-27 23-03-36",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  13057124708,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T00:03:17",
+                        "FinishedAt":  "2026-08-28T06:16:39.9316162",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸHow to FishðŸŽ£+ DBD w/ Platy after! -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "1898040946",
+                                             "StartedAt":  "2026-08-28T00:03:17",
+                                             "FinishedAt":  "2026-08-28T02:21:42.8475076"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸDROPSðŸŽ£NEW KILLER -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-28T02:21:42.8475076",
+                                             "FinishedAt":  "2026-08-28T06:16:39.9316162"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "317988173784",
+                        "ChannelId":  "37427818",
+                        "Folder":  "Streams/lindsayelyse/2026-08-27 23-14-32",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1072073008,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T00:14:16",
+                        "FinishedAt":  "2026-08-28T02:57:07.319899",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "new AC who dis",
+                                             "CategoryId":  "1832841853",
+                                             "StartedAt":  "2026-08-28T00:14:16",
+                                             "FinishedAt":  "2026-08-28T02:57:07.319899"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "317328606199",
+                        "ChannelId":  "1093541726",
+                        "Folder":  "Streams/onlylizards/2026-08-27 23-49-41",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2067874087,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T00:49:27",
+                        "FinishedAt":  "2026-08-28T06:53:47.2373098",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "wigging out | CHARITY STREAMS ALL WEEK! Lots of fun incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-28T00:49:27",
+                                             "FinishedAt":  "2026-08-28T02:28:21.060771"
+                                         },
+                                         {
+                                             "Title":  "wigging out | CHARITY STREAMS ALL WEEK! Lots of fun incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "1115711128",
+                                             "StartedAt":  "2026-08-28T02:28:21.060771",
+                                             "FinishedAt":  "2026-08-28T05:25:03.9532168"
+                                         },
+                                         {
+                                             "Title":  "wigging out | CHARITY STREAMS ALL WEEK! Lots of fun incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-28T05:25:03.9532168",
+                                             "FinishedAt":  "2026-08-28T06:53:47.2373098"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321142563674",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-27 23-56-31",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  339656275,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T00:56:13",
+                        "FinishedAt":  "2026-08-28T01:19:38.5511826",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø¹ÙˆØ¯Ø© Ø§Ù„Ø·Ø§Ø¹ÙˆÙ† ðŸ€ | ØªØ®ØªÙŠÙ… | Resonance: A Plague Tale Legacy",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-28T00:56:13",
+                                             "FinishedAt":  "2026-08-28T01:19:38.5511826"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321259938907",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-28 19-06-45",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2560351523,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T20:06:24",
+                        "FinishedAt":  "2026-08-28T23:03:17.943235",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø±Ø¹Ø¨ Ø³ÙØ§Ø­ Ø§Ù„Ù…Ø¹Ø§Ø¯ÙŠ ðŸ‘¹ðŸ”ª | The Skin Stapler",
+                                             "CategoryId":  "318184140",
+                                             "StartedAt":  "2026-08-28T20:06:24",
+                                             "FinishedAt":  "2026-08-28T23:03:01.3790698"
+                                         },
+                                         {
+                                             "Title":  "Ø¹ÙˆØ¯Ø© Ø§Ù„Ø·Ø§Ø¹ÙˆÙ† ðŸ€ | ØªØ®ØªÙŠÙ… | Resonance: A Plague Tale Legacy",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-28T23:03:01.3790698",
+                                             "FinishedAt":  "2026-08-28T23:03:17.943235"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321261337435",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-28 21-07-48",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  5444174876,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T22:07:32",
+                        "FinishedAt":  "2026-08-29T00:54:25.2172666",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "No Game!",
+                                             "StartedAt":  "2026-08-28T22:07:32",
+                                             "FinishedAt":  "2026-08-28T22:52:33.9870456"
+                                         },
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-28T22:52:33.9870456",
+                                             "FinishedAt":  "2026-08-29T00:54:25.2172666"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "317334780535",
+                        "ChannelId":  "37427818",
+                        "Folder":  "Streams/lindsayelyse/2026-08-28 21-45-46",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2786466628,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T22:45:27",
+                        "FinishedAt":  "2026-08-29T05:47:58.8854183",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "friday is for gaming",
+                                             "CategoryId":  "1832841853",
+                                             "StartedAt":  "2026-08-28T22:45:27",
+                                             "FinishedAt":  "2026-08-29T05:47:58.8854183"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321262037083",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-28 22-03-27",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3260758977,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T23:03:14",
+                        "FinishedAt":  "2026-08-29T02:48:33.2942547",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø¹ÙˆØ¯Ø© Ø§Ù„Ø·Ø§Ø¹ÙˆÙ† ðŸ€ | ØªØ®ØªÙŠÙ… | Resonance: A Plague Tale Legacy",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-28T23:03:14",
+                                             "FinishedAt":  "2026-08-29T02:48:33.2942547"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321092989145",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-28 22-39-18",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  7635685048,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-28T23:39:03",
+                        "FinishedAt":  "2026-08-29T03:18:13.149406",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ¡REACT DAYðŸŸ¡GTA6, new Pokemon show, and more! -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-28T23:39:03",
+                                             "FinishedAt":  "2026-08-29T00:57:27.4453351"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ¡REACT DAYðŸŸ¡State Farm Gamerhood Season 5 Watch Party #StateFarmPartner !statefarm  -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-29T00:57:27.4453351",
+                                             "FinishedAt":  "2026-08-29T02:30:38.0016741"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ¡REACT DAYðŸŸ¡-- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-29T02:30:38.0016741",
+                                             "FinishedAt":  "2026-08-29T03:18:13.149406"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321159090394",
+                        "ChannelId":  "1365153688",
+                        "Folder":  "Streams/mandybloom311/2026-08-29 00-09-53",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1846796944,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-29T01:09:33",
+                        "FinishedAt":  "2026-08-29T05:50:22.727173",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Happy SUBtember! Announcements NEW game Road to 100 !widget !confetti",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-29T01:09:33",
+                                             "FinishedAt":  "2026-08-29T01:43:19.7044647"
+                                         },
+                                         {
+                                             "Title":  "Happy SUBtember! Announcements NEW game Road to 100 !widget !confetti",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-29T01:43:19.7044647",
+                                             "FinishedAt":  "2026-08-29T05:50:22.727173"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "317335692407",
+                        "ChannelId":  "1093541726",
+                        "Folder":  "Streams/onlylizards/2026-08-29 00-49-37",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3066778799,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-29T01:49:21",
+                        "FinishedAt":  "2026-08-29T10:49:35.9304712",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "walkin and talkin! | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-29T01:49:21",
+                                             "FinishedAt":  "2026-08-29T06:42:35.4149476"
+                                         },
+                                         {
+                                             "Title":  "walkin and talkin! | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "14842174",
+                                             "StartedAt":  "2026-08-29T06:42:35.4149476",
+                                             "FinishedAt":  "2026-08-29T10:49:35.9304712"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321159747802",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-29 00-50-34",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  9035352004,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-29T01:50:18",
+                        "FinishedAt":  "2026-08-29T06:27:08.738772",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-29T01:50:18",
+                                             "FinishedAt":  "2026-08-29T06:27:08.738772"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321171724890",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-29 17-50-22",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  5681177640,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-29T18:50:07",
+                        "FinishedAt":  "2026-08-29T21:43:58.520466",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-29T18:50:07",
+                                             "FinishedAt":  "2026-08-29T21:43:58.520466"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321110128857",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-29 21-21-47",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  3226231,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-29T22:21:25",
+                        "FinishedAt":  "2026-08-29T22:22:05.8227577",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ù…Ø¬Ø±Ù… Ø§Ù„ÙÙ†Ø¯Ù‚ ðŸ”ª | Dead Stop: No Vacancy",
+                                             "CategoryId":  "765882992",
+                                             "StartedAt":  "2026-08-29T22:21:25",
+                                             "FinishedAt":  "2026-08-29T22:22:05.8227577"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321110143193",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-29 21-22-19",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  806705983,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-29T22:22:01",
+                        "FinishedAt":  "2026-08-29T23:17:50.6203924",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ù…Ø¬Ø±Ù… Ø§Ù„ÙÙ†Ø¯Ù‚ ðŸ”ª | Dead Stop: No Vacancy",
+                                             "CategoryId":  "765882992",
+                                             "StartedAt":  "2026-08-29T22:22:01",
+                                             "FinishedAt":  "2026-08-29T23:17:50.6203924"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321113978457",
+                        "ChannelId":  "1365153688",
+                        "Folder":  "Streams/mandybloom311/2026-08-30 00-30-50",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1405410168,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T01:30:32",
+                        "FinishedAt":  "2026-08-30T05:04:08.5722981",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "cozy stream day grab you Pj\u0027s and your cozy blankets !widget !confetti",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-30T01:30:32",
+                                             "FinishedAt":  "2026-08-30T01:54:26.3434077"
+                                         },
+                                         {
+                                             "Title":  "cozy stream day grab you Pj\u0027s and your cozy blankets !widget !confetti",
+                                             "CategoryId":  "509511",
+                                             "StartedAt":  "2026-08-30T01:54:26.3434077",
+                                             "FinishedAt":  "2026-08-30T02:30:17.2119633"
+                                         },
+                                         {
+                                             "Title":  "cozy stream day grab you Pj\u0027s and your cozy blankets !widget !confetti",
+                                             "CategoryId":  "512923",
+                                             "StartedAt":  "2026-08-30T02:30:17.2119633",
+                                             "FinishedAt":  "2026-08-30T05:04:08.5722981"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "319035595095",
+                        "ChannelId":  "1093541726",
+                        "Folder":  "Streams/onlylizards/2026-08-30 00-44-39",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2219478129,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T01:44:19",
+                        "FinishedAt":  "2026-08-30T08:15:55.6852007",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "day 6/7 of campweek  | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-30T01:44:19",
+                                             "FinishedAt":  "2026-08-30T05:13:00.7568912"
+                                         },
+                                         {
+                                             "Title":  "day 6/7 of campweek  | CHARITY STREAMS ALL WEEK! Lots of fun NEW incentives to donate to a great cause c: | !campweek !donate !merch !throne",
+                                             "CategoryId":  "762292943",
+                                             "StartedAt":  "2026-08-30T05:13:00.7568912",
+                                             "FinishedAt":  "2026-08-30T08:15:55.6852007"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320112410332",
+                        "ChannelId":  "198758158",
+                        "Folder":  "Streams/parkenharbor/2026-08-30 01-03-20",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2184015364,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T02:03:06",
+                        "FinishedAt":  "2026-08-30T07:38:45.0670756",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "â­MORTAL SHELL 2 BETTER IMPRESS ME OR ELSE",
+                                             "CategoryId":  "1832841853",
+                                             "StartedAt":  "2026-08-30T02:03:06",
+                                             "FinishedAt":  "2026-08-30T07:38:45.0670756"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321288361819",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-30 03-42-22",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  8946162548,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T04:42:04",
+                        "FinishedAt":  "2026-08-30T09:17:21.2849171",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-30T04:42:04",
+                                             "FinishedAt":  "2026-08-30T09:17:21.2849171"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321184439258",
+                        "ChannelId":  "153423171",
+                        "Folder":  "Streams/vnnh_/2026-08-30 05-29-25",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  781222908,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T06:29:07",
+                        "FinishedAt":  "2026-08-30T08:29:56.1614452",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Playing scary game and every time i get scared i get put in time-out",
+                                             "CategoryId":  "27127",
+                                             "StartedAt":  "2026-08-30T06:29:07",
+                                             "FinishedAt":  "2026-08-30T08:29:56.1614452"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321191375322",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-30 17-44-45",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  943471031,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T18:44:29",
+                        "FinishedAt":  "2026-08-30T19:49:42.5909917",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø§Ù„ÙƒØ§Ø¨ØªÙ† Ø¨ÙŠØ³ØªÙŠ âš½ Ù†Ø¬Ù… Ø§Ù„Ù…Ù„Ø¹Ø¨ ðŸ¥… | CAPTAIN TSUBASA 2",
+                                             "CategoryId":  "1804441102",
+                                             "StartedAt":  "2026-08-30T18:44:29",
+                                             "FinishedAt":  "2026-08-30T19:49:38.4481856"
+                                         },
+                                         {
+                                             "Title":  "Ø§Ø­Ø±Ù ÙˆØ§Ø­Ø¯ ÙÙŠ Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¯ÙŠ âŒ USE CODE BYSTY | FORTNITE",
+                                             "CategoryId":  "33214",
+                                             "StartedAt":  "2026-08-30T19:49:38.4481856",
+                                             "FinishedAt":  "2026-08-30T19:49:42.5909917"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321192222426",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-30 18-49-57",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2327257736,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T19:49:41",
+                        "FinishedAt":  "2026-08-30T22:29:22.0749192",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø§Ø­Ø±Ù ÙˆØ§Ø­Ø¯ ÙÙŠ Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¯ÙŠ âŒ USE CODE BYSTY | FORTNITE",
+                                             "CategoryId":  "33214",
+                                             "StartedAt":  "2026-08-30T19:49:41",
+                                             "FinishedAt":  "2026-08-30T22:25:19.3028974"
+                                         },
+                                         {
+                                             "Title":  "Ø¨ÙŠÙˆ Ø¨ÙŠÙˆ Ù…Ø¹ Ø§Ù„ØµØ­Ø§Ø¨",
+                                             "CategoryId":  "33214",
+                                             "StartedAt":  "2026-08-30T22:25:19.3028974",
+                                             "FinishedAt":  "2026-08-30T22:26:13.0789337"
+                                         },
+                                         {
+                                             "Title":  "Ø¨ÙŠÙˆ Ø¨ÙŠÙˆ Ù…Ø¹ Ø§Ù„ØµØ­Ø§Ø¨",
+                                             "CategoryId":  "7228",
+                                             "StartedAt":  "2026-08-30T22:26:13.0789337",
+                                             "FinishedAt":  "2026-08-30T22:26:36.5691179"
+                                         },
+                                         {
+                                             "Title":  "Ø¨ÙŠÙˆ Ø¨ÙŠÙˆ Ù…Ø¹ Ø§Ù„ØµØ­Ø§Ø¨",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-30T22:26:36.5691179",
+                                             "FinishedAt":  "2026-08-30T22:28:45.5966138"
+                                         },
+                                         {
+                                             "Title":  "Ø¨ÙŠÙˆ Ø¨ÙŠÙˆ Ù…Ø¹ Ø§Ù„ØµØ­Ø§Ø¨ Ùˆ Ø®Ø¨Ø± Ø¬Ø§Ù…Ø¯ Ø¬Ø¯Ø§Ù‹! Rainbow Six Siege",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-30T22:28:45.5966138",
+                                             "FinishedAt":  "2026-08-30T22:29:22.0749192"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321297847771",
+                        "ChannelId":  "440608207",
+                        "Folder":  "Streams/snapsizzle/2026-08-30 19-06-44",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  10266737340,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T20:06:31",
+                        "FinishedAt":  "2026-08-31T01:23:53.6749106",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-30T20:06:31",
+                                             "FinishedAt":  "2026-08-30T20:14:21.469778"
+                                         },
+                                         {
+                                             "Title":  "Jesus loves you \u0026 so do I!",
+                                             "CategoryId":  "1953774734",
+                                             "StartedAt":  "2026-08-30T20:14:21.469778",
+                                             "FinishedAt":  "2026-08-31T01:23:53.6749106"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321195058010",
+                        "ChannelId":  "54507525",
+                        "Folder":  "Streams/pisty/2026-08-30 21-29-28",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1838066602,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T22:29:12",
+                        "FinishedAt":  "2026-08-31T00:35:29.360179",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "Ø¨ÙŠÙˆ Ø¨ÙŠÙˆ Ù…Ø¹ Ø§Ù„ØµØ­Ø§Ø¨ Ùˆ Ø®Ø¨Ø± Ø¬Ø§Ù…Ø¯ Ø¬Ø¯Ø§Ù‹! Rainbow Six Siege",
+                                             "CategoryId":  "460630",
+                                             "StartedAt":  "2026-08-30T22:29:12",
+                                             "FinishedAt":  "2026-08-31T00:35:29.360179"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "321132441945",
+                        "ChannelId":  "90222378",
+                        "Folder":  "Streams/kruzadar/2026-08-30 22-03-29",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  21120136012,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T23:03:15",
+                        "FinishedAt":  "2026-08-31T09:10:21.4991584",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ¡10hrðŸŸ¡finish Far Cry 4 + legos + DBD! -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-30T23:03:15",
+                                             "FinishedAt":  "2026-08-30T23:33:58.461532"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ¡10hrðŸŸ¡finish Far Cry 4 + legos + DBD! -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "460384",
+                                             "StartedAt":  "2026-08-30T23:33:58.461532",
+                                             "FinishedAt":  "2026-08-31T01:36:51.1862441"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ¡10hrðŸŸ¡finish Far Cry 4 + legos + DBD! -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-31T01:36:51.1862441",
+                                             "FinishedAt":  "2026-08-31T04:37:58.2148872"
+                                         },
+                                         {
+                                             "Title":  "ðŸŸ¡10hrðŸŸ¡DROPSðŸŸ¡ finished Far Cry 4 + legos + now DBD! -- ðŸ‰YouTube vids daily: @Kruzadar",
+                                             "CategoryId":  "491487",
+                                             "StartedAt":  "2026-08-31T04:37:58.2148872",
+                                             "FinishedAt":  "2026-08-31T09:10:21.4991584"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "315991666899",
+                        "ChannelId":  "1303435602",
+                        "Folder":  "Streams/laurenandersx/2026-08-30 22-18-46",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  884772556,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-30T23:18:28",
+                        "FinishedAt":  "2026-08-31T01:33:27.5260069",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "ðŸŸ£ Laurenandersx ðŸŸ£ Visage First Playthrough ðŸŸ£ Chat and ChillðŸŸ£",
+                                             "CategoryId":  "494082",
+                                             "StartedAt":  "2026-08-30T23:18:28",
+                                             "FinishedAt":  "2026-08-31T01:33:27.5260069"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "317350305655",
+                        "ChannelId":  "1093541726",
+                        "Folder":  "Streams/onlylizards/2026-08-31 00-33-41",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  2982170061,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-31T01:33:26",
+                        "FinishedAt":  "2026-08-31T10:18:10.1708709",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "LAST DAY TO DONATE! supporting our vets :D | !campweek !donate !merch !throne",
+                                             "CategoryId":  "509658",
+                                             "StartedAt":  "2026-08-31T01:33:26",
+                                             "FinishedAt":  "2026-08-31T10:18:10.1708709"
+                                         }
+                                     ]
+                    },
+                    {
+                        "Id":  "320171359968",
+                        "ChannelId":  "198758158",
+                        "Folder":  "Streams/parkenharbor/2026-08-31 02-05-12",
+                        "Status":  "Finished",
+                        "StorageLocation":  "Remote",
+                        "StorageOperationStatus":  "Uploaded",
+                        "SizeBytes":  1669574044,
+                        "StorageInstanceName":  "discord-second",
+                        "StartedAt":  "2026-08-31T03:04:54",
+                        "FinishedAt":  "2026-08-31T07:19:00.9833667",
+                        "Chapters":  [
+                                         {
+                                             "Title":  "â­MORTAL SHELL 2 BETTER IMPRESS ME OR ELSE",
+                                             "CategoryId":  "1832841853",
+                                             "StartedAt":  "2026-08-31T03:04:54",
+                                             "FinishedAt":  "2026-08-31T05:05:48.8917233"
+                                         },
+                                         {
+                                             "Title":  "â­SO EXCITED FOR THIS GAME | PLAGUE TALE !RESONANCE #AD",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-31T05:05:48.8917233",
+                                             "FinishedAt":  "2026-08-31T05:25:47.2796641"
+                                         },
+                                         {
+                                             "Title":  "â­[DROPS ON] SO EXCITED FOR THIS GAME | PLAGUE TALE !RESONANCE #AD",
+                                             "CategoryId":  "570615518",
+                                             "StartedAt":  "2026-08-31T05:25:47.2796641",
+                                             "FinishedAt":  "2026-08-31T07:19:00.9833667"
+                                         }
+                                     ]
+                    }
+                ],
+    "Users":  [
+                  {
+                      "Id":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                      "Username":  "hecker",
+                      "Password":  "password",
+                      "IsAdmin":  true,
+                      "CreatedAt":  "2026-08-02T16:18:07.2833315+02:00"
+                  },
+                  {
+                      "Id":  "07ee6b3f-0bdd-4d80-9251-5184683787ce",
+                      "Username":  "ypro",
+                      "Password":  "YPRO1368=yasser",
+                      "IsAdmin":  false,
+                      "CreatedAt":  "2026-08-03T00:43:50.9834605"
+                  }
+              ],
+    "UserChannels":  [
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "54507525",
+                             "AddedAt":  "2026-08-02T16:18:07.2833315+02:00"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "153423171",
+                             "AddedAt":  "2026-08-02T16:18:07.2833315+02:00"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "151283108",
+                             "AddedAt":  "2026-08-02T16:18:07.2833315+02:00"
+                         },
+                         {
+                             "UserId":  "07ee6b3f-0bdd-4d80-9251-5184683787ce",
+                             "ChannelId":  "451544676",
+                             "AddedAt":  "2026-08-02T21:46:38.3443403Z"
+                         },
+                         {
+                             "UserId":  "07ee6b3f-0bdd-4d80-9251-5184683787ce",
+                             "ChannelId":  "38632829",
+                             "AddedAt":  "2026-08-02T21:50:01.6192844Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "195366842",
+                             "AddedAt":  "2026-08-09T17:11:12.2681216Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "500840753",
+                             "AddedAt":  "2026-08-09T17:22:20.2781606Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "440608207",
+                             "AddedAt":  "2026-08-21T22:33:46.6283843Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "198758158",
+                             "AddedAt":  "2026-08-21T22:34:54.3252379Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "1303435602",
+                             "AddedAt":  "2026-08-21T23:52:28.2242835Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "90222378",
+                             "AddedAt":  "2026-08-21T23:57:47.0684619Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "37427818",
+                             "AddedAt":  "2026-08-22T00:00:56.29089Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "1365153688",
+                             "AddedAt":  "2026-08-22T00:02:56.7275766Z"
+                         },
+                         {
+                             "UserId":  "01ea7d7c-04fd-43c0-bf56-f30bc9c49763",
+                             "ChannelId":  "1093541726",
+                             "AddedAt":  "2026-08-22T00:05:18.1951009Z"
+                         }
+                     ]
 }

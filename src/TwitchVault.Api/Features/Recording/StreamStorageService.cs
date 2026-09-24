@@ -22,7 +22,6 @@ public interface IStreamStorageService
 public sealed class StreamStorageService(
     IPolyStore polyStore,
     IDataStore dataStore,
-    IWebHostEnvironment env,
     ILogger<StreamStorageService> logger) : IStreamStorageService
 {
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _streamLocks = new();
@@ -66,8 +65,8 @@ public sealed class StreamStorageService(
         await streamLock.WaitAsync(cancellationToken);
         try
         {
-            var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
-            var remoteUrlsFilePath = Path.Combine(localDirectory, StreamFolder.RemoteUrlsFile);
+            var localDirectory = stream.Folder.AbsolutePath;
+            var remoteUrlsFilePath = stream.Folder.RemoteUrlsPath;
             await using var remoteUrlsWriter = new StreamWriter(
                 new FileStream(remoteUrlsFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite));
 
@@ -109,7 +108,7 @@ public sealed class StreamStorageService(
 
     public async Task<bool> FinalizeStorageAsync(Streams.Stream stream, CancellationToken cancellationToken)
     {
-        var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        var localDirectory = stream.Folder.AbsolutePath;
         if (!Directory.Exists(localDirectory))
         {
             logger.LogWarning("Cannot finalize storage for stream '{StreamId}': directory '{Dir}' not found.",
@@ -126,7 +125,7 @@ public sealed class StreamStorageService(
         if (remainingSegments.Count > 0)
             return false;
 
-        var remoteUrlsFilePath = Path.Combine(localDirectory, StreamFolder.RemoteUrlsFile);
+        var remoteUrlsFilePath = stream.Folder.RemoteUrlsPath;
         if (!File.Exists(remoteUrlsFilePath))
         {
             logger.LogWarning(
@@ -135,7 +134,7 @@ public sealed class StreamStorageService(
             return false;
         }
 
-        var playlistPath = stream.Folder.GetAbsolutePlaylistPath(env.ContentRootPath);
+        var playlistPath = stream.Folder.PlaylistPath;
         if (!File.Exists(playlistPath))
         {
             logger.LogWarning(
@@ -166,7 +165,7 @@ public sealed class StreamStorageService(
         Streams.Stream stream,
         CancellationToken cancellationToken = default)
     {
-        var urlFilePath = Path.Combine(stream.Folder.GetAbsolutePath(env.ContentRootPath), StreamFolder.RemoteUrlsFile);
+        var urlFilePath = stream.Folder.RemoteUrlsPath;
         if (stream.StorageLocation == StorageLocation.Remote && File.Exists(urlFilePath))
         {
             var batch = new List<string>(200);
@@ -210,7 +209,7 @@ public sealed class StreamStorageService(
 
         await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<Streams.Stream, string>(stream.Id));
 
-        var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        var localDirectory = stream.Folder.AbsolutePath;
         await IOUtils.DeleteDirectoryAsync(localDirectory);
 
         var channelDirectory = Path.GetDirectoryName(localDirectory)!;

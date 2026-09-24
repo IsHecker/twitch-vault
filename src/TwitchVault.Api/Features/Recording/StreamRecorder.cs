@@ -6,10 +6,9 @@ namespace TwitchVault.Api.Features.Recording;
 
 public interface IStreamRecorder : IAsyncDisposable
 {
-    Task StartAsync(TwitchVault.Api.Features.Streams.Stream stream, Channel channel);
+    Task StartAsync(Streams.Stream stream, Channel channel);
     Task StopAsync();
     Task FinishAsync();
-    Task ShutdownAsync();
 }
 
 public sealed class StreamRecorder(
@@ -30,7 +29,7 @@ public sealed class StreamRecorder(
     private static readonly TimeSpan StreamEndWaitInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
 
-    private TwitchVault.Api.Features.Streams.Stream _stream = null!;
+    private Streams.Stream _stream = null!;
     private Channel _channel = null!;
     private string _streamDirectory = string.Empty;
     private long _streamSizeBytes;
@@ -41,14 +40,14 @@ public sealed class StreamRecorder(
     private SessionEndReason _endReason = new SessionEndReason.StreamEnded();
     private VaultOptions VaultOptions => vaultOptions.CurrentValue;
 
-    public async Task StartAsync(TwitchVault.Api.Features.Streams.Stream stream, Channel channel)
+    public async Task StartAsync(Streams.Stream stream, Channel channel)
     {
         logger.LogInformation("Recording started for '{Channel}'", channel.Name);
         try
         {
             _channel = channel;
             _stream = stream;
-            _streamDirectory = _stream.Folder.GetAbsolutePath(Environment.CurrentDirectory);
+            _streamDirectory = _stream.Folder.AbsolutePath;
             chapterTracker.Attach(_stream, _channel);
             segmentUploader.Attach(_stream);
 
@@ -77,12 +76,6 @@ public sealed class StreamRecorder(
     public async Task FinishAsync()
     {
         SetEndReason(new SessionEndReason.StreamEnded());
-        await _cts.CancelAsync();
-    }
-
-    public async Task ShutdownAsync()
-    {
-        SetEndReason(new SessionEndReason.ServerShutdown());
         await _cts.CancelAsync();
     }
 

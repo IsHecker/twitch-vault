@@ -30,13 +30,13 @@ public class StreamRecorderTests : IDisposable
     private readonly SemaphoreSlim _pollStarted = new(0, 1);
 
     private readonly Channel _channel = Channel.Create(ChannelId, ChannelName, 1, isArchived: false);
-    private readonly TwitchVault.Api.Features.Streams.Stream _stream;
+    private readonly Api.Features.Streams.Stream _stream;
 
     public StreamRecorderTests()
     {
         _vaultOptions.CurrentValue.Returns(new VaultOptions { MaxConsecutiveEmptyPolls = MaxConsecutiveEmptyPolls });
 
-        _stream = TwitchVault.Api.Features.Streams.Stream.Create(
+        _stream = Api.Features.Streams.Stream.Create(
             "ts_1",
             ChannelId,
             StreamFolder.Create("streams_root", ChannelName),
@@ -69,7 +69,7 @@ public class StreamRecorderTests : IDisposable
 
         _finalizer.FinalizeAsync(
             Arg.Any<Channel>(),
-            Arg.Any<TwitchVault.Api.Features.Streams.Stream>(),
+            Arg.Any<Api.Features.Streams.Stream>(),
             Arg.Any<long>(),
             Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
     }
@@ -138,12 +138,12 @@ public class StreamRecorderTests : IDisposable
         await _pollStarted.WaitAsync();
 
         // Act
-        await sut.ShutdownAsync();
+        await sut.StopAsync();
         var act = async () => await startTask;
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
-        await AssertFinalizedAsync(new SessionEndReason.ServerShutdown());
+        await AssertFinalizedAsync(new SessionEndReason.StreamStopped());
     }
 
     [Fact]

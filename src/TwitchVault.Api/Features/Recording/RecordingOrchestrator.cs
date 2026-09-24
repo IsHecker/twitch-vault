@@ -66,7 +66,7 @@ public sealed class RecordingOrchestrator(
                 return existing switch
                 {
                     null => await CreateStreamAsync(channel, metadata),
-                    { Status: StreamStatus.Interrupted } => MarkAsResuming(existing),
+                    { Status: StreamStatus.Interrupted or StreamStatus.Stopped } => MarkAsResuming(existing),
                     _ => null
                 };
             });
@@ -131,7 +131,7 @@ public sealed class RecordingOrchestrator(
         return finishedChannels;
     }
 
-    public async Task ShutdownAllRecordingsAsync()
+    public async Task StopAllRecordingsAsync()
     {
         var channelIds = streamRecorderRegistry.GetActiveChannelIds();
         if (channelIds.Count == 0)
@@ -152,7 +152,7 @@ public sealed class RecordingOrchestrator(
             if (streamRecorderRegistry.TryGetBackgroundTask(channelId, out var bgTask))
                 backgroundTasks.Add(bgTask);
 
-            await recorder.ShutdownAsync();
+            await recorder.StopAsync();
         }
 
         if (backgroundTasks.Count <= 0)
@@ -164,11 +164,14 @@ public sealed class RecordingOrchestrator(
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException)
+                return;
+
             logger.LogWarning(ex, "Error waiting for recording sessions to shut down.");
         }
     }
 
-    private async Task<TwitchVault.Api.Features.Streams.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
+    private async Task<Streams.Stream> CreateStreamAsync(Channel channel, StreamMetadata metadata)
     {
         var stream = streamService.CreateStream(channel, metadata);
         await dataStore.AddAsync(stream);
@@ -176,13 +179,13 @@ public sealed class RecordingOrchestrator(
         return stream;
     }
 
-    private static TwitchVault.Api.Features.Streams.Stream MarkAsResuming(TwitchVault.Api.Features.Streams.Stream stream)
+    private static Streams.Stream MarkAsResuming(Streams.Stream stream)
     {
         stream.MarkAsRecording();
         return stream;
     }
 
-    private async Task LaunchRecordingSessionAsync(TwitchVault.Api.Features.Streams.Stream stream, Channel channel)
+    private async Task LaunchRecordingSessionAsync(Streams.Stream stream, Channel channel)
     {
         var session = await streamRecorderFactory.CreateAsync(stream, channel, appLifetime.ApplicationStopping);
 

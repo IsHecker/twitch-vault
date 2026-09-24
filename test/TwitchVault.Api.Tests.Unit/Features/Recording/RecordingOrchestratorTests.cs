@@ -41,15 +41,15 @@ public class RecordingOrchestratorTests
     private static StreamMetadata CreateMetadata(string twitchStreamId = "ts_1") =>
         new(twitchStreamId, "Some Title", "Some Game", DateTime.Now);
 
-    private static TwitchVault.Api.Features.Streams.Stream CreateStream(string twitchStreamId, string channelId) =>
-        TwitchVault.Api.Features.Streams.Stream.Create(twitchStreamId, channelId, StreamFolder.Create("streams_root", ChannelName), DateTime.Now, "Test", "Test");
+    private static Api.Features.Streams.Stream CreateStream(string twitchStreamId, string channelId) =>
+        Api.Features.Streams.Stream.Create(twitchStreamId, channelId, StreamFolder.Create("streams_root", ChannelName), DateTime.Now, "Test", "Test");
 
     private IStreamRecorder StubFactoryReturnsRecorder()
     {
         var recorder = Substitute.For<IStreamRecorder>();
 
         _streamRecorderFactory
-            .CreateAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>(), Arg.Any<Channel>(), Arg.Any<CancellationToken>())
+            .CreateAsync(Arg.Any<Api.Features.Streams.Stream>(), Arg.Any<Channel>(), Arg.Any<CancellationToken>())
             .Returns(recorder);
 
         return recorder;
@@ -130,7 +130,7 @@ public class RecordingOrchestratorTests
 
         Channel? capturedChannel = null;
         _streamRecorderFactory
-            .CreateAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>(), Arg.Do<Channel>(c => capturedChannel = c), Arg.Any<CancellationToken>())
+            .CreateAsync(Arg.Any<Api.Features.Streams.Stream>(), Arg.Do<Channel>(c => capturedChannel = c), Arg.Any<CancellationToken>())
             .Returns(recorder);
 
         _streamRecorderRegistry.TryRegister(ChannelId).Returns(true);
@@ -212,7 +212,7 @@ public class RecordingOrchestratorTests
         _streamService.DidNotReceive().CreateStream(Arg.Any<Channel>(), Arg.Any<StreamMetadata>());
         // Match by Id, not by reference — the orchestrator loaded its own Channel instance via its own context.
         await _streamRecorderFactory.Received(1)
-            .CreateAsync(Arg.Is<TwitchVault.Api.Features.Streams.Stream>(s => s.Id == "ts_existing"), Arg.Is<Channel>(c => c.Id == channel.Id), Arg.Any<CancellationToken>());
+            .CreateAsync(Arg.Is<Api.Features.Streams.Stream>(s => s.Id == "ts_existing"), Arg.Is<Channel>(c => c.Id == channel.Id), Arg.Any<CancellationToken>());
 
         await using var verifyDb = _factory.CreateDbContext();
         var persisted = await verifyDb.Streams.GetByIdAsync("ts_existing");
@@ -257,7 +257,7 @@ public class RecordingOrchestratorTests
 
         // Assert
         _streamService.DidNotReceive().CreateStream(Arg.Any<Channel>(), Arg.Any<StreamMetadata>());
-        await _streamRecorderFactory.DidNotReceive().CreateAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>(), Arg.Any<Channel>(), Arg.Any<CancellationToken>());
+        await _streamRecorderFactory.DidNotReceive().CreateAsync(Arg.Any<Api.Features.Streams.Stream>(), Arg.Any<Channel>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public class RecordingOrchestratorTests
 
         Channel? capturedChannel = null;
         _streamRecorderFactory
-            .CreateAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>(), Arg.Do<Channel>(c => capturedChannel = c), Arg.Any<CancellationToken>())
+            .CreateAsync(Arg.Any<Api.Features.Streams.Stream>(), Arg.Do<Channel>(c => capturedChannel = c), Arg.Any<CancellationToken>())
             .Returns(Substitute.For<IStreamRecorder>());
 
         _streamRecorderRegistry.TryRegister(ChannelId).Returns(true);
@@ -333,7 +333,7 @@ public class RecordingOrchestratorTests
         var sut = CreateSut();
 
         // Act
-        await sut.ShutdownAllRecordingsAsync();
+        await sut.StopAllRecordingsAsync();
 
         // Assert
         _streamRecorderRegistry.DidNotReceive().TryGet(Arg.Any<string>(), out Arg.Any<IStreamRecorder>());
@@ -347,12 +347,12 @@ public class RecordingOrchestratorTests
         var recorder2 = Substitute.For<IStreamRecorder>();
 
         var bgTaskCompletion = new TaskCompletionSource();
-        recorder1.ShutdownAsync().Returns(_ =>
+        recorder1.StopAsync().Returns(_ =>
         {
             bgTaskCompletion.SetResult();
             return Task.CompletedTask;
         });
-        recorder2.ShutdownAsync().Returns(Task.CompletedTask);
+        recorder2.StopAsync().Returns(Task.CompletedTask);
 
         _streamRecorderRegistry.GetActiveChannelIds().Returns(["chan_1", "chan_2"]);
 
@@ -369,11 +369,11 @@ public class RecordingOrchestratorTests
         var sut = CreateSut();
 
         // Act
-        await sut.ShutdownAllRecordingsAsync();
+        await sut.StopAllRecordingsAsync();
 
         // Assert
-        await recorder1.Received(1).ShutdownAsync();
-        await recorder2.Received(1).ShutdownAsync();
+        await recorder1.Received(1).StopAsync();
+        await recorder2.Received(1).StopAsync();
         bgTaskCompletion.Task.IsCompletedSuccessfully.Should().BeTrue();
     }
 }

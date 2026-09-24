@@ -164,7 +164,7 @@ public class ManifestPollerTests
 
     private static string CreatePlaylist(int variantCount)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine("#EXTM3U");
         for (int i = 0; i < variantCount; i++)
         {

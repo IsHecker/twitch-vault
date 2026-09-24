@@ -200,7 +200,7 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
 
             modelBuilder.Entity("TwitchVault.Api.Features.Streams.Stream", b =>
                 {
-                    b.HasOne("TwitchVault.Api.Features.Channels.Channel", null)
+                    b.HasOne("TwitchVault.Api.Features.Channels.Channel", "Channel")
                         .WithMany()
                         .HasForeignKey("ChannelId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -237,6 +237,8 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("StreamId");
                         });
+
+                    b.Navigation("Channel");
 
                     b.Navigation("Chapters");
                 });

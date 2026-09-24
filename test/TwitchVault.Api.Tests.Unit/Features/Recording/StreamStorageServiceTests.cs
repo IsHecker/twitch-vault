@@ -13,14 +13,12 @@ public class StreamStorageServiceTests : IDisposable
 {
     private readonly IPolyStore _polyStore = Substitute.For<IPolyStore>();
     private readonly IDataStore _dataStore = Substitute.For<IDataStore>();
-    private readonly IWebHostEnvironment _env = Substitute.For<IWebHostEnvironment>();
     private readonly string _tempRoot;
 
     public StreamStorageServiceTests()
     {
         _tempRoot = Path.Combine(Path.GetTempPath(), $"TwitchVault_StreamStorage_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempRoot);
-        _env.ContentRootPath.Returns(_tempRoot);
 
         _dataStore.ExecuteAsync(Arg.Any<Func<Task>>())
             .Returns(call => ((Func<Task>)call[0])());
@@ -31,8 +29,8 @@ public class StreamStorageServiceTests : IDisposable
     {
         // Arrange
         var channelName = "testchannel";
-        var streamFolder = StreamFolder.Create("Streams", channelName);
-        var streamLocalDir = streamFolder.GetAbsolutePath(_tempRoot);
+        var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
+        var streamLocalDir = streamFolder.AbsolutePath;
         Directory.CreateDirectory(streamLocalDir);
 
         var parentChannelDir = Path.GetDirectoryName(streamLocalDir)!;
@@ -45,7 +43,7 @@ public class StreamStorageServiceTests : IDisposable
             "Title",
             "Category");
 
-        var sut = new StreamStorageService(_polyStore, _dataStore, _env, NullLogger<StreamStorageService>.Instance);
+        var sut = new StreamStorageService(_polyStore, _dataStore, NullLogger<StreamStorageService>.Instance);
 
         // Act
         var result = await sut.DeleteStreamAsync(stream);
@@ -61,8 +59,8 @@ public class StreamStorageServiceTests : IDisposable
     {
         // Arrange
         var channelName = "testchannel_multiple";
-        var streamFolder1 = StreamFolder.Create("Streams", channelName);
-        var streamLocalDir1 = streamFolder1.GetAbsolutePath(_tempRoot);
+        var streamFolder1 = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
+        var streamLocalDir1 = streamFolder1.AbsolutePath;
         Directory.CreateDirectory(streamLocalDir1);
 
         var parentChannelDir = Path.GetDirectoryName(streamLocalDir1)!;
@@ -77,7 +75,7 @@ public class StreamStorageServiceTests : IDisposable
             "Title",
             "Category");
 
-        var sut = new StreamStorageService(_polyStore, _dataStore, _env, NullLogger<StreamStorageService>.Instance);
+        var sut = new StreamStorageService(_polyStore, _dataStore, NullLogger<StreamStorageService>.Instance);
 
         // Act
         var result = await sut.DeleteStreamAsync(stream);

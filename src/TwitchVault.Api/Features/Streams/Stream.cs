@@ -44,6 +44,8 @@ public sealed class Stream : Entity<string>
 
     public Chapter CurrentChapter => Chapters.LastOrDefault()!;
 
+    public Channel Channel { get; init; } = null!;
+
     private Stream() { }
 
     public static Stream Create(

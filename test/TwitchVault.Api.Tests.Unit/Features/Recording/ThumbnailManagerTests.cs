@@ -6,7 +6,7 @@ namespace TwitchVault.Api.Tests.Unit.Features.Recording;
 public class ThumbnailManagerTests
 {
     private const string ChannelName = "testchannel";
-    private readonly TwitchVault.Api.Features.Streams.Stream _stream;
+    private readonly Api.Features.Streams.Stream _stream;
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
@@ -14,7 +14,7 @@ public class ThumbnailManagerTests
 
     public ThumbnailManagerTests()
     {
-        _stream = TwitchVault.Api.Features.Streams.Stream.Create(
+        _stream = Api.Features.Streams.Stream.Create(
             "test-stream",
             "channel-1",
             StreamFolder.Create("streams_root", "Test Channel"),

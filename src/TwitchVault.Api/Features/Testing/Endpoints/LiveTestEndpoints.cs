@@ -158,7 +158,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
 
             foreach (var (channelId, channelName) in createdChannels)
             {
-                var streams = await dataStore.QueryAsync<TwitchVault.Api.Features.Streams.Stream, List<TwitchVault.Api.Features.Streams.Stream>>(
+                var streams = await dataStore.QueryAsync<Streams.Stream, List<Streams.Stream>>(
                     q => q.ForChannel(channelId).ToListAsync());
 
                 foreach (var stream in streams)
@@ -241,7 +241,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
                         q => q.Where(c => c.Id == channelId).ExecuteDeleteAsync());
 
                     var rootChannelDir = Path.Combine(pathsOptions.Value.Streams, channel.Name);
-                    await Common.IOUtils.DeleteDirectoryAsync(rootChannelDir);
+                    await IOUtils.DeleteDirectoryAsync(rootChannelDir);
 
                     deletedChannels.Add(channelName);
                 }

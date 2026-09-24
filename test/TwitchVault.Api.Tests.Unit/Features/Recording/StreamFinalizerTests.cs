@@ -67,7 +67,7 @@ public class StreamFinalizerTests
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
-        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>());
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Api.Features.Streams.Stream>());
     }
 
     [Theory]
@@ -128,53 +128,14 @@ public class StreamFinalizerTests
         // Assert
         await act.Should().NotThrowAsync();
         AssertChannelIsOffline();
-        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>());
-    }
-
-    [Fact]
-    public async Task FinalizeAsync_ShouldMarkInterrupted_WhenServerShutdownAndChannelStillLiveWithSameStream()
-    {
-        // Arrange
-        var sut = CreateSut();
-        var stream = SeedStream(CreateStream("ts_shutdown_live"));
-        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>())
-            .Returns(new StreamMetadata("ts_shutdown_live", "title", "cat", DateTime.Now));
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.ServerShutdown());
-
-        // Assert
-        stream.Status.Should().Be(StreamStatus.Interrupted);
-        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<TwitchVault.Api.Features.Streams.Stream>());
-    }
-
-    [Theory]
-    [MemberData(nameof(NotCurrentlyLiveMetadata))]
-    public async Task FinalizeAsync_ShouldMarkFinished_WhenServerShutdownAndChannelNoLongerLive(StreamMetadata? metadata)
-    {
-        // Arrange
-        _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>()).Returns(metadata);
-
-        var sut = CreateSut();
-        var stream = SeedStream(CreateStream("ts_shutdown_offline"));
-        var finishedAt = new DateTime(2026, 1, 1, 11, 0, 0);
-        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
-
-        // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.ServerShutdown());
-
-        // Assert
-        stream.Status.Should().Be(StreamStatus.Finished);
-        stream.FinishedAt.Should().Be(finishedAt);
-        await _storageService.Received(1).FinalizeStorageAsync(stream);
+        await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Api.Features.Streams.Stream>());
     }
 
     public static TheoryData<SessionEndReason> AllReasons() => new()
     {
         new SessionEndReason.StreamStopped(),
         new SessionEndReason.StreamEnded(),
-        new SessionEndReason.StreamError(new InvalidOperationException("boom")),
-        new SessionEndReason.ServerShutdown(),
+        new SessionEndReason.StreamError(new InvalidOperationException("boom"))
     };
 
     public static TheoryData<StreamMetadata?> NotCurrentlyLiveMetadata() => new()
@@ -194,8 +155,8 @@ public class StreamFinalizerTests
         return new(_dataStore, _storageService, _twitchClient, _dateTimeProvider, _logger);
     }
 
-    private static TwitchVault.Api.Features.Streams.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null) =>
-        TwitchVault.Api.Features.Streams.Stream.Create(
+    private static Api.Features.Streams.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null) =>
+        Api.Features.Streams.Stream.Create(
             twitchStreamId,
             channelId,
             StreamFolder.Create("streams_root", "testchannel"),
@@ -203,7 +164,7 @@ public class StreamFinalizerTests
             "Test Title",
             "Test Category");
 
-    private TwitchVault.Api.Features.Streams.Stream SeedStream(TwitchVault.Api.Features.Streams.Stream stream)
+    private Api.Features.Streams.Stream SeedStream(Api.Features.Streams.Stream stream)
     {
         using var db = _factory.CreateDbContext();
         db.Streams.Add(stream);

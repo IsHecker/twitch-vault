@@ -10,7 +10,6 @@ public sealed class StorageUploadJob(
     IStreamStorageService storageService,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     IOptionsMonitor<VaultOptions> vaultOptions,
-    IWebHostEnvironment env,
     ILogger<StorageUploadJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
@@ -35,10 +34,10 @@ public sealed class StorageUploadJob(
         }
     }
 
-    private async Task UploadStreamAsync(TwitchVault.Api.Features.Streams.Stream stream, CancellationToken cancellationToken)
+    private async Task UploadStreamAsync(Streams.Stream stream, CancellationToken cancellationToken)
     {
         var streamTitle = stream.Chapters.FirstOrDefault()?.Title ?? stream.Id;
-        var localDirectory = stream.Folder.GetAbsolutePath(env.ContentRootPath);
+        var localDirectory = stream.Folder.AbsolutePath;
 
         if (!Directory.Exists(localDirectory))
         {
@@ -74,7 +73,7 @@ public sealed class StorageUploadJob(
 
     private async Task UploadRemainingSegmentsAsync(
         List<string> remainingSegments,
-        TwitchVault.Api.Features.Streams.Stream stream,
+        Streams.Stream stream,
         CancellationToken cancellationToken)
     {
         try

@@ -10,7 +10,7 @@ public class ListUserChannels : IEndpoint
             CancellationToken ct) =>
         {
             var response = await channelService.GetChannelsForUserAsync(user.Id, pagination, ct);
-            return Results.Ok(response);
+            return response.ToHttpResult(Results.Ok);
         })
         .RequireAuthorization()
         .WithName(nameof(ListUserChannels))

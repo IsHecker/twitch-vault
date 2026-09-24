@@ -274,7 +274,7 @@ public class ChannelBanServiceTests : ChannelTestBase
         Db.Subscriptions.Add(Subscription.Create(user.Id, channelId, DateTime.UtcNow));
 
         var streamFolder = StreamFolder.Create(PathsOptions.Value.Streams, channel.Name);
-        var stream = TwitchVault.Api.Features.Streams.Stream.Create(
+        var stream = Api.Features.Streams.Stream.Create(
             "stream_ban_1",
             channelId,
             streamFolder,
@@ -285,9 +285,9 @@ public class ChannelBanServiceTests : ChannelTestBase
         await Db.SaveChangesAsync();
 
         var channelDir = Path.Combine(PathsOptions.Value.Streams, channel.Name);
-        var streamDir = streamFolder.GetAbsolutePath(Directory.GetCurrentDirectory());
+        var streamDir = streamFolder.AbsolutePath;
         Directory.CreateDirectory(streamDir);
-        var urlsFile = Path.Combine(streamDir, StreamFolder.RemoteUrlsFile);
+        var urlsFile = streamFolder.RemoteUrlsPath;
         await File.WriteAllTextAsync(urlsFile, "http://remote/ban");
 
         ChannelExistsOnTwitch(login, channelId);

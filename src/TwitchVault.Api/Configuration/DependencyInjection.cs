@@ -244,7 +244,7 @@ public static class DependencyInjection
 
         services.AddTwitchLibEventSubWebhooks(options => { });
         services.AddSingleton<TwitchSubscriptionService>();
-        services.AddSingleton<ITwitchSubscriptionService>(sp => sp.GetRequiredService<TwitchSubscriptionService>());
+        services.AddSingleton<ITwitchSubscriptionService, TwitchSubscriptionService>();
         services.AddHostedService<TwitchWebhookStartupService>();
 
         return services;

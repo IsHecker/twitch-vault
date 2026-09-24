@@ -5,10 +5,10 @@ namespace TwitchVault.Api.Features.Recording.LiveUpload;
 
 public sealed class UploadQueue : IUploadQueue
 {
-    private readonly System.Threading.Channels.Channel<UploadBatch> _urgentChannel = System.Threading.Channels.Channel.CreateUnbounded<UploadBatch>(
+    private readonly Channel<UploadBatch> _urgentChannel = System.Threading.Channels.Channel.CreateUnbounded<UploadBatch>(
         new UnboundedChannelOptions { SingleReader = false, SingleWriter = false });
 
-    private readonly System.Threading.Channels.Channel<UploadBatch> _regularChannel = System.Threading.Channels.Channel.CreateUnbounded<UploadBatch>(
+    private readonly Channel<UploadBatch> _regularChannel = System.Threading.Channels.Channel.CreateUnbounded<UploadBatch>(
         new UnboundedChannelOptions { SingleReader = false, SingleWriter = false });
 
     private readonly SemaphoreSlim _dataAvailable = new(0, 1);

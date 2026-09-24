@@ -2,7 +2,7 @@ namespace TwitchVault.Api.Features.Recording;
 
 public interface IChapterTracker
 {
-    void Attach(TwitchVault.Api.Features.Streams.Stream stream, Channel channel);
+    void Attach(Streams.Stream stream, Channel channel);
     void Dispose();
 }
 
@@ -11,11 +11,11 @@ public sealed class ChapterTracker(
     IDataStore dataStore,
     IDateTimeProvider dateTimeProvider) : IDisposable, IChapterTracker
 {
-    private TwitchVault.Api.Features.Streams.Stream _stream = null!;
+    private Streams.Stream _stream = null!;
     private Channel _channel = null!;
     private Func<ChannelUpdateEvent, Task> _handler = null!;
 
-    public void Attach(TwitchVault.Api.Features.Streams.Stream stream, Channel channel)
+    public void Attach(Streams.Stream stream, Channel channel)
     {
         _handler = OnMetadataChangedAsync;
         _stream = stream;

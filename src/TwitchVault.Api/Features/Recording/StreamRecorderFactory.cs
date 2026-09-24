@@ -3,24 +3,23 @@ namespace TwitchVault.Api.Features.Recording;
 public interface IStreamRecorderFactory
 {
     Task<IStreamRecorder> CreateAsync(
-        TwitchVault.Api.Features.Streams.Stream stream,
+        Streams.Stream stream,
         Channel channel,
         CancellationToken cancellationToken);
 }
 
 public class StreamRecorderFactory(
     IDateTimeProvider dateTimeProvider,
-    IWebHostEnvironment env,
     IServiceProvider serviceProvider,
     IFileSystem fileSystem) : IStreamRecorderFactory
 {
     public async Task<IStreamRecorder> CreateAsync(
-        TwitchVault.Api.Features.Streams.Stream stream,
+        Streams.Stream stream,
         Channel channel,
         CancellationToken cancellationToken)
     {
 
-        stream.Folder.EnsureDirectoryExists(env.ContentRootPath);
+        stream.Folder.EnsureDirectoryExists();
 
         var playlist = await HlsPlaylistWriter.LoadOrCreateAsync(
             stream.Folder.RelativePath,
