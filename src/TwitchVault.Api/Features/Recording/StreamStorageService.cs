@@ -79,8 +79,6 @@ public sealed class StreamStorageService(
             foreach (var remoteUrl in response.RemoteUrls)
             {
                 var localPath = FindLocalPath(localPaths, remoteUrl.FileName);
-                // if (localPath is null)
-                //     continue;
 
                 try
                 {

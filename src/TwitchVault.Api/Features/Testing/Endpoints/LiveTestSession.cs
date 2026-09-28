@@ -2,12 +2,6 @@ using System.Collections.Concurrent;
 
 namespace TwitchVault.Api.Features.Testing.Endpoints;
 
-/// <summary>
-/// Singleton in-memory state shared across all live-test endpoints.
-/// Tracks which channel IDs were added by the /testing/live/start endpoint
-/// and which user kicked off the session, so stop-all and delete-all operate
-/// only on what this session created.
-/// </summary>
 public sealed class LiveTestSession
 {
     private readonly ConcurrentDictionary<string, (string Name, bool IsNewChannel)> _channels = new();

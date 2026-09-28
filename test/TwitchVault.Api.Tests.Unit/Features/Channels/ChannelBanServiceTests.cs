@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
-using TwitchVault.Api.Features.Streams;
 
 namespace TwitchVault.Api.Tests.Unit.Features.Channels;
 

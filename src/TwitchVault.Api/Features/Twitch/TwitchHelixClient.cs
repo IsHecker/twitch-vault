@@ -91,7 +91,6 @@ public sealed class TwitchHelixClient(
         string? cursor = null;
         int page = 0;
 
-        // Always request 100 per page so we can filter efficiently
         var baseUrl = $"{HelixStreamsUrl}?first=100&type=live";
         if (!string.IsNullOrWhiteSpace(language))
             baseUrl += $"&language={Uri.EscapeDataString(language)}";

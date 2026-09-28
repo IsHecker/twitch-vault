@@ -44,14 +44,6 @@ public class StreamRecorderTests : IDisposable
             "Some Title",
             "Some Category");
 
-        // IHlsPlaylistWriter must behave statefully by default -- exactly like
-        // the real implementation -- so PlaylistSegmentExtractor's dedup logic
-        // (LastTwitchMediaSequence) is genuinely exercised in every test, not
-        // just ones that remember to opt in. A frozen .Returns(0L) here is what
-        // caused segments to be re-extracted and re-added on every subsequent
-        // poll: the writer never told the extractor it had already consumed
-        // anything. Individual tests can still .Returns(...) over this to force
-        // a specific single-poll branch (e.g. HasInitSegment.Returns(false)).
         long lastSequence = 0;
         bool hasInit = true;
         string? lastSegmentFileName = null;

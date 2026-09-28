@@ -106,7 +106,6 @@ public class DiscordBulkDeleteEndpoints : IDevOnlyEndpoint
                     break;
                 }
 
-                // Strictly cap at max 100 messages (and within remaining quota)
                 var messageIds = messageElements
                     .Select(m => m.TryGetProperty("id", out var idProp) ? idProp.GetString() : null)
                     .Where(id => !string.IsNullOrEmpty(id))
@@ -121,7 +120,6 @@ public class DiscordBulkDeleteEndpoints : IDevOnlyEndpoint
                 totalFetched += messageIds.Count;
                 var highestId = messageIds.Select(ulong.Parse).Max().ToString();
 
-                // Format fake URLs for CloudStorageService: path is /{channelId}/{messageId}
                 var fakeUrls = messageIds.Select(id => $"https://fake.com/{id}/{channelId}").ToList();
 
                 var deleteResult = await polyStore.DeleteAsync(
@@ -149,7 +147,6 @@ public class DiscordBulkDeleteEndpoints : IDevOnlyEndpoint
                     break;
                 }
 
-                // 2 seconds delay between each bulk deletion
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
 

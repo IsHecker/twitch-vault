@@ -43,7 +43,6 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
 
             foreach (var (twitchUserId, userLogin, viewerCount) in liveStreams)
             {
-                // Skip if already in database (real channel) — do not touch or link real channels
                 var existingChannel = await dataStore.QueryAsync<Channel, Channel?>(
                     q => q.FirstOrDefaultAsync(c => c.Id == twitchUserId));
 
@@ -54,7 +53,6 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
                     continue;
                 }
 
-                // Brand-new channel — mirror AddChannel exactly
                 var channel = Channel.Create(twitchUserId, userLogin, request.QualityRank, request.IsArchived);
 
                 try
@@ -94,11 +92,8 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
         .WithSummary("[Admin] Fetch N live streams from Twitch and start recording them as a test session.")
         .Accepts<StartRequest>("application/json");
 
-        // ------------------------------------------------------------------ //
-        // POST /testing/live/finish-all                                       //
-        // Stops and finalizes active recordings belonging ONLY to the        //
-        // in-memory live-test session channels.                              //
-        // ------------------------------------------------------------------ //
+
+
         group.MapPost("/finish-all", async (
             IRecordingOrchestrator recordingOrchestrator,
             IDataStore dataStore,
@@ -138,11 +133,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
         .WithName("LiveTestFinishAll")
         .WithSummary("[Admin] Stop active recordings for test session channels and finalize them with Finished status.");
 
-        // ------------------------------------------------------------------ //
-        // DELETE /testing/live/streams                                        //
-        // Deletes cloud segments, local stream files, and DB stream records   //
-        // ONLY for streams belonging to test-created channels.               //
-        // ------------------------------------------------------------------ //
+
         group.MapDelete("/streams", async (
             IDataStore dataStore,
             IStreamService streamService,
@@ -189,11 +180,8 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
         .WithName("LiveTestDeleteStreams")
         .WithSummary("[Admin] Delete cloud segments and local stream folders ONLY for test-created channels.");
 
-        // ------------------------------------------------------------------ //
-        // DELETE /testing/live/channels                                       //
-        // Deletes test-created channels from DB & disk, and unlinks           //
-        // pre-existing authentic channels without touching their data.       //
-        // ------------------------------------------------------------------ //
+
+
         group.MapDelete("/channels", async (
             IDataStore dataStore,
             IStreamService streamService,

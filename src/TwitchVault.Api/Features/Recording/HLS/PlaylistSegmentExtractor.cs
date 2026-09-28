@@ -66,14 +66,6 @@ public static class PlaylistSegmentExtractor
         return lineSplitter.Position;
     }
 
-    // private static ReadOnlySpan<byte> TrimTrailingCr(ReadOnlySpan<byte> line)
-    // {
-    //     // Handles CRLF playlists without allocating.
-    //     if (!line.IsEmpty && line[^1] == (byte)'\r')
-    //         line = line[..^1];
-    //     return line;
-    // }
-
     private static void ProcessLine(ReadOnlySpan<byte> line, ref ParsingState state)
     {
         if (line.IsEmpty)

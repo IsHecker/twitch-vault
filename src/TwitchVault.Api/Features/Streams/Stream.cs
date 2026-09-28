@@ -1,30 +1,5 @@
 namespace TwitchVault.Api.Features.Streams;
 
-public enum StreamStatus
-{
-    Recording,
-    Finished,
-    Interrupted,
-    Stopped
-}
-
-public enum StorageLocation
-{
-    Local,
-    Remote
-}
-
-public enum StorageOperationStatus
-{
-    None,
-    Uploading,
-    Uploaded,
-    UploadFailed,
-    DeleteRequest,
-    Deleting,
-    DeleteFailed
-}
-
 public sealed class Stream : Entity<string>
 {
     public string? ChannelId { get; init; }
@@ -36,6 +11,9 @@ public sealed class Stream : Entity<string>
     public long SizeBytes { get; private set; }
 
     public string? StorageInstanceName { get; private set; }
+
+    public string? VodId { get; private set; }
+    public DateTime? VodCheckAttemptedAt { get; private set; }
 
     public DateTime StartedAt { get; init; }
     public DateTime? FinishedAt { get; private set; }
@@ -120,6 +98,9 @@ public sealed class Stream : Entity<string>
     public void SetStorageLocation(StorageLocation storageLocation) => StorageLocation = storageLocation;
     public void SetStorageInstance(string instanceName) => StorageInstanceName = instanceName;
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
+
+    public void SetVodId(string? vodId) => VodId = vodId;
+    public void MarkVodChecked(DateTime checkedAt) => VodCheckAttemptedAt = checkedAt;
 
     public void RequestDeletion() => StorageOperationStatus = StorageOperationStatus.DeleteRequest;
 

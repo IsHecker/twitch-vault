@@ -1,5 +1,12 @@
 namespace TwitchVault.Api.Features.Twitch;
 
+public enum VodAccessibility
+{
+    NotFound,
+    Public,
+    SubscriberOnly
+}
+
 public interface ITwitchGqlClient
 {
     Task<Dictionary<Channel, bool>> IsChannelLiveAsync(List<Channel> channels, CancellationToken cancellationToken);
@@ -9,4 +16,5 @@ public interface ITwitchGqlClient
     Task<ResponseStream> DownloadAsStreamAsync(string url, CancellationToken cancellationToken);
     Task<string?> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken);
     Task<string?> GetChannelIdAsync(string channel, CancellationToken cancellationToken);
+    Task<VodAccessibility> GetVodAccessibilityAsync(string vodId, CancellationToken cancellationToken);
 }

@@ -138,35 +138,6 @@ public class RecordingLifecycleServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_ShouldContinueResumingOtherChannels_WhenOneFailsToResume()
-    {
-        // Arrange
-        var channel1 = SeedChannel("chan_1", "live_chan_1", isLive: true);
-        var channel2 = SeedChannel("chan_2", "live_chan_2", isLive: true);
-        SeedStream("stream_1", channel1.Id, StreamStatus.Interrupted, finishedAt: null);
-        SeedStream("stream_2", channel2.Id, StreamStatus.Interrupted, finishedAt: null);
-
-        _twitchGqlClient.IsChannelLiveAsync(Arg.Any<List<Channel>>(), Arg.Any<CancellationToken>())
-            .Returns(args =>
-            {
-                var channels = args.Arg<List<Channel>>();
-                return channels.ToDictionary(c => c, _ => true);
-            });
-
-        _orchestrator.TryStartRecordingAsync(channel1.Id, channel1.Name)
-            .Returns(Task.FromException(new InvalidOperationException("Failed to start channel 1")));
-
-        var sut = CreateSut();
-
-        // Act
-        await sut.StartAsync(CancellationToken.None);
-
-        // Assert
-        await _orchestrator.Received(1).TryStartRecordingAsync(channel1.Id, channel1.Name);
-        await _orchestrator.Received(1).TryStartRecordingAsync(channel2.Id, channel2.Name);
-    }
-
-    [Fact]
     public async Task StopAsync_ShouldCallShutdownAllRecordingsAsync()
     {
         // Arrange

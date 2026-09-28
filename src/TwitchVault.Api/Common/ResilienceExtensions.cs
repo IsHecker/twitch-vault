@@ -43,32 +43,6 @@ public static class ResilienceExtensions
                 BackoffType = DelayBackoffType.Exponential,
                 UseJitter = true,
                 Delay = options.BaseDelay,
-                DelayGenerator = args =>
-                {
-                    var headers = args.Outcome.Result?.Headers;
-                    if (headers is not null)
-                    {
-                        // 1. Twitch: 'Ratelimit-Reset' (Unix timestamp in seconds)
-                        if (headers.TryGetValues("Ratelimit-Reset", out var resetVals) &&
-                            long.TryParse(resetVals.FirstOrDefault(), out var resetUnix))
-                        {
-                            var delay = DateTimeOffset.FromUnixTimeSeconds(resetUnix) - DateTimeOffset.UtcNow;
-                            if (delay > TimeSpan.Zero)
-                                return ValueTask.FromResult<TimeSpan?>(delay);
-                        }
-
-                        // 2. Discord: 'x-ratelimit-reset-after' (Seconds as float)
-                        if (headers.TryGetValues("x-ratelimit-reset-after", out var afterVals) &&
-                            float.TryParse(afterVals.FirstOrDefault(), out var resetAfterSeconds))
-                        {
-                            var delay = TimeSpan.FromSeconds(resetAfterSeconds + 0.25f);
-                            if (delay > TimeSpan.Zero)
-                                return ValueTask.FromResult<TimeSpan?>(delay);
-                        }
-                    }
-
-                    return ValueTask.FromResult<TimeSpan?>(null);
-                },
                 ShouldHandle = args =>
                 {
                     var isLocalRateLimitReject = args.Outcome.Exception is RateLimiterRejectedException;

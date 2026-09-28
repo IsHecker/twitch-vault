@@ -217,12 +217,6 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
         {
             bytesWritten += written;
         }
-        // else
-        // {
-        //     var fallback = Encoding.UTF8.GetBytes(duration.ToString("F3", CultureInfo.InvariantCulture));
-        //     fallback.CopyTo(buffer.AsSpan(bytesWritten));
-        //     bytesWritten += fallback.Length;
-        // }
 
         buffer[bytesWritten++] = (byte)',';
         buffer[bytesWritten++] = (byte)'\n';

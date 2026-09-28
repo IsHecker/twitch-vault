@@ -117,4 +117,37 @@ internal static class TwitchGqlPayloads
             login = channel
         }
     };
+
+    public static object VodPlaybackToken(string vodId) => new
+    {
+        OperationName = "PlaybackAccessToken_Template",
+        Query = """
+                query PlaybackAccessToken_Template(
+                    $id: ID!,
+                    $isVod: Boolean!,
+                    $playerType: String!,
+                    $platform: String!
+                ) {
+                    videoPlaybackAccessToken(
+                        id: $id,
+                        params: {
+                            platform: $platform,
+                            playerBackend: "mediaplayer",
+                            playerType: $playerType
+                        }
+                    ) @include(if: $isVod) {
+                        value
+                        signature
+                        __typename
+                    }
+                }
+                """,
+        Variables = new
+        {
+            isVod = true,
+            id = vodId,
+            playerType = "site",
+            platform = "web"
+        }
+    };
 }

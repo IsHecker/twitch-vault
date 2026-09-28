@@ -164,7 +164,7 @@ public sealed class TwitchGqlClient(
         try
         {
             using var cdnClient = httpClientFactory.CreateClient(TwitchHttpClients.Cdn);
-            response = await cdnClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response = await cdnClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -173,8 +173,14 @@ public sealed class TwitchGqlClient(
         catch (Exception ex)
         {
             response?.Dispose();
-            if (ex is not OperationCanceledException)
+            if (ex is OperationCanceledException)
+                return ResponseStream.Null;
+
+            if (ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound })
+                logger.LogInformation("Segment unavailable on CDN (404).");
+            else
                 logger.LogWarning(ex, "Transient network error downloading segment.");
+
             return ResponseStream.Null;
         }
     }
@@ -211,6 +217,61 @@ public sealed class TwitchGqlClient(
         return user.ValueKind == JsonValueKind.Null ? null : user.GetProperty("id").GetString();
     }
 
+    public async Task<VodAccessibility> GetVodAccessibilityAsync(string vodId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var payload = TwitchGqlPayloads.VodPlaybackToken(vodId);
+            using var response = await SendGqlRequestAsync(payload, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return VodAccessibility.NotFound;
+
+            using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+            if (document is null)
+                return VodAccessibility.NotFound;
+
+            if (!document.RootElement.TryGetProperty("data", out var data) ||
+                data.ValueKind == JsonValueKind.Null)
+            {
+                return VodAccessibility.NotFound;
+            }
+
+            if (!data.TryGetProperty("videoPlaybackAccessToken", out var tokenElement) ||
+                tokenElement.ValueKind == JsonValueKind.Null)
+            {
+                return VodAccessibility.NotFound;
+            }
+
+            var token = tokenElement.Deserialize<PlaybackToken>();
+            if (string.IsNullOrEmpty(token.Token) || string.IsNullOrEmpty(token.Signature))
+                return VodAccessibility.NotFound;
+
+            var usherUrl = BuildVodPlaylistUrl(vodId, token);
+            using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
+            using var usherResponse = await apiClient.GetAsync(usherUrl, cancellationToken);
+
+            if (usherResponse.IsSuccessStatusCode)
+                return VodAccessibility.Public;
+
+            if (usherResponse.StatusCode == HttpStatusCode.Forbidden)
+            {
+                var content = await usherResponse.Content.ReadAsStringAsync(cancellationToken);
+                if (content.Contains("vod_manifest_restricted", StringComparison.OrdinalIgnoreCase) ||
+                    content.Contains("unauthorized_entitlements", StringComparison.OrdinalIgnoreCase))
+                {
+                    return VodAccessibility.SubscriberOnly;
+                }
+            }
+
+            return VodAccessibility.NotFound;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Error checking accessibility for VOD '{VodId}'.", vodId);
+            return VodAccessibility.NotFound;
+        }
+    }
+
     private async Task<HttpResponseMessage> SendGqlRequestAsync(object payload, CancellationToken cancellationToken)
     {
         using var apiClient = httpClientFactory.CreateClient(TwitchHttpClients.Api);
@@ -242,6 +303,14 @@ public sealed class TwitchGqlClient(
         $"&player_backend=mediaplayer&player_version=1.52.0-rc.3&playlist_include_framerate=true" +
         $"&reassignments_supported=true&sig={token.Signature}&supported_codecs=av1,h265,h264" +
         $"&token={token.Token}&transcode_mode=cbr_v1";
+
+    private static string BuildVodPlaylistUrl(string vodId, PlaybackToken token) =>
+        $"https://usher.ttvnw.net/vod/v2/{vodId}.m3u8" +
+        $"?allow_source=true&browser_family=chrome&browser_version=154.0&cdm=wv&enable_score=true" +
+        $"&include_unavailable=true&lang=en&os_name=Windows&os_version=NT%2010.0&p=3306716&platform=web" +
+        $"&player_backend=mediaplayer&player_version=1.57.0-rc.2&playlist_include_framerate=true" +
+        $"&reassignments_supported=true&sig={token.Signature}&supported_codecs=av1,h264" +
+        $"&token={Uri.EscapeDataString(token.Token)}&transcode_mode=cbr_v1";
 
     private static StreamMetadata? ParseStreamMetadata(JsonElement root)
     {

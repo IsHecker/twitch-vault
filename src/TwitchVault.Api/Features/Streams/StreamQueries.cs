@@ -25,4 +25,12 @@ public static class StreamQueries
         query.Where(s => s.ChannelId == channelId
             && s.FinishedAt == null
             && (currentTwitchStreamId == null || s.Id != currentTwitchStreamId));
+
+    public static IQueryable<Stream> EligibleForVodPrune(this IQueryable<Stream> query, DateTime cutoff) =>
+        query.Where(s =>
+            s.Status == StreamStatus.Finished
+            && s.FinishedAt != null
+            && s.VodId != null
+            && s.VodCheckAttemptedAt == null
+            && s.FinishedAt <= cutoff);
 }

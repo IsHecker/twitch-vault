@@ -44,15 +44,8 @@ public sealed class RecordingLifecycleService(
                     continue;
                 }
 
-                try
-                {
-                    await orchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
-                    resumeCount++;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to resume recording for channel '{Channel}'.", channel.Name);
-                }
+                await orchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
+                resumeCount++;
             }
 
             logger.LogInformation("Resumed {Resumed}/{Total} recording session(s).",

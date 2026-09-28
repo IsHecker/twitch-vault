@@ -28,7 +28,6 @@ public sealed class GlobalExceptionMiddleware(
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
         context.Response.ContentType = "application/problem+json";
 
-        // Never leak internal details (stack trace, file paths, SQL) to clients in production.
         var detail = env.IsDevelopment()
             ? ex.Message
             : "An unexpected error occurred. Please provide the traceId to support.";

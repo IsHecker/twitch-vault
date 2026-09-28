@@ -41,7 +41,7 @@ public sealed class StreamFinalizer(
             switch (reason)
             {
                 case SessionEndReason.StreamStopped:
-                    await MarkStoppedAsync(stream, sizeBytes);
+                    await MarkStoppedAsync(stream, channel.Name, sizeBytes);
                     break;
 
                 case SessionEndReason.StreamError(var ex):
@@ -50,7 +50,7 @@ public sealed class StreamFinalizer(
 
                 case SessionEndReason.StreamEnded:
                 default:
-                    await HandleStreamEndedAsync(stream, sizeBytes);
+                    await HandleStreamEndedAsync(stream, channel.Name, sizeBytes);
                     break;
             }
         }
@@ -64,8 +64,12 @@ public sealed class StreamFinalizer(
         }
     }
 
-    private async Task MarkStoppedAsync(Streams.Stream stream, long sizeBytes)
+    private async Task MarkStoppedAsync(Streams.Stream stream, string channelName, long sizeBytes)
     {
+        var vodId = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
+        if (vodId is not null)
+            stream.SetVodId(vodId);
+
         stream.MarkAsStopped(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
 
@@ -78,7 +82,7 @@ public sealed class StreamFinalizer(
 
         if (!await IsChannelLiveAsync(stream, channelName))
         {
-            await HandleStreamEndedAsync(stream, sizeBytes);
+            await HandleStreamEndedAsync(stream, channelName, sizeBytes);
             return;
         }
 
@@ -86,8 +90,12 @@ public sealed class StreamFinalizer(
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
     }
 
-    private async Task HandleStreamEndedAsync(Streams.Stream stream, long sizeBytes)
+    private async Task HandleStreamEndedAsync(Streams.Stream stream, string channelName, long sizeBytes)
     {
+        var vodId = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
+        if (vodId is not null)
+            stream.SetVodId(vodId);
+
         stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
         stream.SetSize(sizeBytes);
 

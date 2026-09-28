@@ -10,6 +10,7 @@ using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Polly;
+using Polly.Timeout;
 using PolyStore;
 using PolyStore.Catbox;
 using PolyStore.Discord;
@@ -135,6 +136,7 @@ public static class DependencyInjection
     {
         services.ConfigureOptions<StorageCleanupJobConfiguration>();
         services.ConfigureOptions<StorageUploadJobConfiguration>();
+        services.ConfigureOptions<PublicVodCleanupJobConfiguration>();
 
         services.AddPolyStore(configuration)
             .AddDiscord()
@@ -205,6 +207,7 @@ public static class DependencyInjection
                 ShouldHandle = args =>
                 {
                     var isNetworkError = args.Outcome.Exception is HttpRequestException;
+                    var isTimeout = args.Outcome.Exception is TimeoutRejectedException || args.Outcome.Exception is TimeoutException;
                     var isTransientHttpError = (args.Outcome.Result?.StatusCode) switch
                     {
                         HttpStatusCode.TooManyRequests => true,
@@ -215,7 +218,7 @@ public static class DependencyInjection
                         HttpStatusCode.GatewayTimeout => true,
                         _ => false
                     };
-                    return ValueTask.FromResult(isNetworkError || isTransientHttpError);
+                    return ValueTask.FromResult(isNetworkError || isTimeout || isTransientHttpError);
                 }
             });
             pipelineBuilder.AddTimeout(TimeSpan.FromSeconds(20));

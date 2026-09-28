@@ -93,6 +93,31 @@ public class SegmentStoreTests
         _sut.CloseCurrentSegment().Should().BeNull();
     }
 
+    [Fact]
+    public async Task SaveAsync_ShouldRollbackStreamPosition_WhenWriteFails()
+    {
+        // Arrange
+        var expectedPath = Path.Combine(StreamFolderPath, "seg_1.ts");
+        var mockFileStream = SetupWrite(expectedPath, FileMode.Create);
+        var initial = CreateSegment(SegmentUrl, "valid-prefix-", duration: 4f);
+        await _sut.SaveAsync(StreamFolderPath, initial, lastSegmentFileName: null, CancellationToken.None);
+
+        var failingStream = Substitute.For<System.IO.Stream>();
+        failingStream.CopyToAsync(Arg.Any<System.IO.Stream>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new IOException("Simulated network/disk error"));
+        var failingSegment = new SegmentContent(
+            new RemoteSegment(SegmentUrl, 4f, false),
+            new ResponseStream(failingStream, null));
+
+        // Act
+        var act = () => _sut.SaveAsync(StreamFolderPath, failingSegment, lastSegmentFileName: null, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<IOException>();
+        mockFileStream.ToArray().Should().BeEquivalentTo(Encoding.UTF8.GetBytes("valid-prefix-"));
+        mockFileStream.Position.Should().Be(Encoding.UTF8.GetBytes("valid-prefix-").Length);
+    }
+
     private MemoryStream SetupWrite(string expectedPath, FileMode expectedMode)
     {
         var mockFileStream = new MemoryStream();

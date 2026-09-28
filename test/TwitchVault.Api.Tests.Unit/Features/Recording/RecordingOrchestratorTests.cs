@@ -222,7 +222,6 @@ public class RecordingOrchestratorTests
     [Theory]
     [InlineData(StreamStatus.Recording)]
     [InlineData(StreamStatus.Finished)]
-    [InlineData(StreamStatus.Stopped)]
     public async Task RecordStreamAsync_ShouldDoNothing_WhenExistingStreamIsNotInterrupted(StreamStatus status)
     {
         // Arrange

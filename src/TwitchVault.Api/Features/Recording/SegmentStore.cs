@@ -79,7 +79,21 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
     {
         var content = segment.ResponseStream.Content;
         EnsureCurrentFileStream(streamFolderPath, lastFlushedFileName, GetUrlExtension(segment.Source.Url));
-        await content.CopyToAsync(_currentFileStream!, cancellationToken);
+
+        var positionBefore = _currentFileStream!.CanSeek ? _currentFileStream.Position : 0;
+        try
+        {
+            await content.CopyToAsync(_currentFileStream!, cancellationToken);
+        }
+        catch
+        {
+            if (_currentFileStream.CanSeek)
+            {
+                _currentFileStream.SetLength(positionBefore);
+                _currentFileStream.Position = positionBefore;
+            }
+            throw;
+        }
 
         _accumulatedDuration += segment.Source.Duration;
         return !IsFull ? null : CloseCurrentSegment();

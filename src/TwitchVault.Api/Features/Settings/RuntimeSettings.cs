@@ -24,10 +24,15 @@ public sealed class JobOptions
     public const string TwitchWebhookHealthCheck = nameof(TwitchWebhookHealthCheck);
     public const string StorageUpload = nameof(StorageUpload);
     public const string StorageCleanup = nameof(StorageCleanup);
+    public const string PublicVodCleanup = nameof(PublicVodCleanup);
 
     public bool Enabled { get; set; }
     public float RunIntervalInMinutes { get; set; }
+    public string? CronExpression { get; set; }
 
     [JsonIgnore]
     public TimeSpan RunInterval => TimeSpan.FromMinutes(RunIntervalInMinutes);
+
+    [JsonIgnore]
+    public bool IsCron => !string.IsNullOrWhiteSpace(CronExpression);
 }

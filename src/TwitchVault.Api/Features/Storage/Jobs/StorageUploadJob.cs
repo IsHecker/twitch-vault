@@ -45,7 +45,6 @@ public sealed class StorageUploadJob(
             return;
         }
 
-        // Segments still on disk are segments the live uploader failed to upload (or never ran).
         var remainingSegments = new DirectoryInfo(localDirectory)
             .EnumerateFiles()
             .Where(f => HlsSegmentNaming.IsSegmentFile(f.FullName))

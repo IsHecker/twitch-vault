@@ -1,10 +1,7 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using PolyStore;
-using TwitchVault.Api.Features.Recording;
-using TwitchVault.Api.Features.Streams;
 using Stream = TwitchVault.Api.Features.Streams.Stream;
 
 namespace TwitchVault.Api.Tests.Unit.Features.Recording;

@@ -16,22 +16,6 @@ public readonly record struct StreamFolder
     [JsonConstructor]
     public StreamFolder(string relativePath)
     {
-        // if (!string.IsNullOrWhiteSpace(relativePath) && relativePath.TrimStart().StartsWith('{'))
-        // {
-        //     try
-        //     {
-        //         using var doc = JsonDocument.Parse(relativePath);
-        //         if (doc.RootElement.TryGetProperty(nameof(RelativePath), out var prop))
-        //         {
-        //             relativePath = prop.GetString() ?? string.Empty;
-        //         }
-        //     }
-        //     catch
-        //     {
-        //         // Fall back to raw string if JSON parsing fails
-        //     }
-        // }
-
         RelativePath = (relativePath ?? string.Empty).Replace('\\', '/');
     }
 

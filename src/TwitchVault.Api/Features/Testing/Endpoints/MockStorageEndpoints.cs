@@ -10,8 +10,6 @@ public class MockStorageEndpoints : IDevOnlyEndpoint
 
         group.MapPost("/upload-file", () =>
         {
-            // Desktop enumeration was removed for security reasons.
-            // Provide a specific file path via the /delete-file or /rewrite endpoints instead.
             return Results.BadRequest("Direct file upload from a fixed path is not supported.");
         }).DisableAntiforgery();
 
