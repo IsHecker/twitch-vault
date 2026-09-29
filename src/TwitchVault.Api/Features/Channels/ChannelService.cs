@@ -142,7 +142,7 @@ public sealed class ChannelService(
         return Result.Success;
     }
 
-    public async Task<Result<Channel>> UpdateChannelQualityAsync(
+    public async Task<Result> ChangeChannelQualityAsync(
         string channelId,
         int qualityRank,
         CancellationToken cancellationToken = default)
@@ -151,13 +151,21 @@ public sealed class ChannelService(
         if (qualityRankResult.IsFailure)
             return qualityRankResult.Error;
 
+        var isSuccessful = recordingOrchestrator.ChangeQuality(channelId, qualityRank);
+        if (isSuccessful)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return Result.Success;
+        }
+
         var channel = await db.Channels.GetByIdAsync(channelId, cancellationToken);
         if (channel is null)
             return Error.NotFound($"Channel '{channelId}' was not found.");
 
-        channel.UpdateQualityRank(qualityRank);
+        channel.ChangeQualityRank(qualityRank);
         await db.SaveChangesAsync(cancellationToken);
-        return channel;
+
+        return Result.Success;
     }
 
     public async Task<Result<PagedResponse<ChannelResponse>>> GetChannelsForUserAsync(

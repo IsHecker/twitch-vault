@@ -475,11 +475,10 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.UpdateChannelQualityAsync("chan_quality", 0);
+        var result = await sut.ChangeChannelQualityAsync("chan_quality", 0);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.QualityRank.Should().Be(0);
 
         var updated = await Db.Channels.FindAsync("chan_quality");
         updated!.QualityRank.Should().Be(0);
@@ -492,7 +491,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.UpdateChannelQualityAsync("non_existent", 1);
+        var result = await sut.ChangeChannelQualityAsync("non_existent", 1);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -511,7 +510,7 @@ public class ChannelServiceTests : ChannelTestBase
         var sut = CreateSut();
 
         // Act
-        var result = await sut.UpdateChannelQualityAsync("chan_quality_bad", qualityRank);
+        var result = await sut.ChangeChannelQualityAsync("chan_quality_bad", qualityRank);
 
         // Assert
         result.IsFailure.Should().BeTrue();

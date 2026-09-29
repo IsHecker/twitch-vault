@@ -93,6 +93,15 @@ public sealed class RecordingOrchestrator(
         await recorder.StopAsync();
     }
 
+    public bool ChangeQuality(string channelId, int qualityRank)
+    {
+        if (!streamRecorderRegistry.TryGet(channelId, out var recorder))
+            return false;
+
+        recorder.ChangeQuality(qualityRank);
+        return true;
+    }
+
     public async Task<IReadOnlyList<string>> FinishAllRecordingsAsync(IReadOnlyCollection<string>? channelIds = null)
     {
         var targetChannelIds = channelIds ?? streamRecorderRegistry.GetActiveChannelIds();

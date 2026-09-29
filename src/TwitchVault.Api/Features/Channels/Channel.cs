@@ -31,7 +31,7 @@ public class Channel : Entity<string>
 
     public void SetLive(bool isLive) => IsLive = isLive;
 
-    public void UpdateQualityRank(int qualityRank)
+    public void ChangeQualityRank(int qualityRank)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(qualityRank);
         QualityRank = qualityRank;

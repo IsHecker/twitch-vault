@@ -6,4 +6,5 @@ public interface IRecordingOrchestrator
     Task StopRecordingAsync(string channelId);
     Task<IReadOnlyList<string>> FinishAllRecordingsAsync(IReadOnlyCollection<string>? channelIds = null);
     Task StopAllRecordingsAsync();
+    bool ChangeQuality(string channelId, int qualityRank);
 }

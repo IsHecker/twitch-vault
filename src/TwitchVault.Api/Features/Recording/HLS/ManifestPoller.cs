@@ -42,12 +42,15 @@ public sealed class ManifestPoller(
         if (_variants.Length == 0)
             return (ResponseStream.Null, false);
 
-        var (rank, url) = ResolveQuality(channel);
+        var (rank, url) = ResolveQuality(channel.QualityRank);
+
+        var manifestStream = await twitchClient.GetPlaylistContentAsync(url, cancellationToken);
+        if (manifestStream.IsEmpty)
+            return (manifestStream, false);
 
         var hasQualityChanged = rank != _activeQualityRank || url != _activeVariantUrl;
         (_activeQualityRank, _activeVariantUrl) = (rank, url);
 
-        var manifestStream = await twitchClient.GetPlaylistContentAsync(url, cancellationToken);
         return (manifestStream, hasQualityChanged);
     }
 
@@ -73,9 +76,9 @@ public sealed class ManifestPoller(
             _variants.Length, _variants[^1].Bandwidth);
     }
 
-    private (int Rank, string Url) ResolveQuality(Channel channel)
+    private (int Rank, string Url) ResolveQuality(int qualityRank)
     {
-        var requestedRank = channel!.QualityRank - 1;
+        var requestedRank = qualityRank - 1;
         var clampedRank = Math.Clamp(requestedRank, 0, _variants.Length - 1);
 
         return (clampedRank, _variants[clampedRank].Url);

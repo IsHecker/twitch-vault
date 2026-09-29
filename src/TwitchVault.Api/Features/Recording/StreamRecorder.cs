@@ -9,6 +9,7 @@ public interface IStreamRecorder : IAsyncDisposable
     Task StartAsync(Streams.Stream stream, Channel channel);
     Task StopAsync();
     Task FinishAsync();
+    void ChangeQuality(int qualityRank);
 }
 
 public sealed class StreamRecorder(
@@ -78,6 +79,8 @@ public sealed class StreamRecorder(
         SetEndReason(new SessionEndReason.StreamEnded());
         await _cts.CancelAsync();
     }
+
+    public void ChangeQuality(int qualityRank) => _channel.ChangeQualityRank(qualityRank);
 
     private async Task RecordStreamAsync(CancellationToken cancellationToken)
     {
