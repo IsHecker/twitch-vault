@@ -36,7 +36,9 @@ TwitchVault runs entirely in the background. It detects when channels go live th
 
 TwitchVault is a single application structured around vertical feature slices instead of horizontal layers. Most of the system is a set of long-running background pipelines that operate autonomously with a small HTTP API surface.
 
-<img src="docs/diagrams/stream_recorder.png" alt="twitchvault-2025-07-14-0054" style="width:60%;" />
+<p align="center">
+  <img src="docs/diagrams/stream_recorder.png" width="60%">
+</p>
 
 ## Project layout
 
@@ -69,7 +71,9 @@ HLS is Twitch's delivery format. A live stream is broken into short video segmen
 
 ### How the recording loop works
 
-<img src="docs/diagrams/recording-loop.png" alt="twitchvault-2025-07-14-0054 (1)" style="width: 60%;" />
+<p align="center">
+  <img src="docs/diagrams/recording-loop.png" width="60%">
+</p>
 
 ### Playlist parsing
 
@@ -91,7 +95,9 @@ The moment a segment is completed, it goes to the upload pipeline to be uploaded
 
 ### The priority queue
 
-<img src="docs/diagrams/upload-priority-queue.png" alt="upload-priority-queue" style="width:50%;" />
+<p align="center">
+  <img src="docs/diagrams/upload-priority-queue.png" width="50%">
+</p>
 
 The queue has two tiers. Regular segments enter one channel, and the remaining segments at the end of a stream are flushed to an urgent channel that workers drain first. Awaiting both channels at once would leak uncompleted waiter nodes into the channel's internal linked list, so the queue uses a single semaphore as a shared signal instead. See [Priority queue without leaking waiters](#priority-queue-without-leaking-waiters) in Challenges.
 
@@ -113,7 +119,9 @@ PolyStore is an independent storage abstraction library that hides all of this b
 
 ### The abstraction
 
-<img src="docs/diagrams/polystore-abstraction.png" alt="polystore-abstraction" style="width:70%;" />
+<p align="center">
+  <img src="docs/diagrams/polystore-abstraction.png" width="70%">
+</p>
 
 A caller hands `PolyStore` a list of files and gets back a mapping of filename to remote URL along with the provider's name. Which provider handled the upload, how many API calls it took, what the batch size was, and what rate limits applied all stay invisible to the caller.
 
@@ -134,7 +142,9 @@ Discord is the primary cloud storage because it is free and has no storage quota
 - **URL mapping:** Discord attachments don't return a direct CDN URL. The provider builds each URL from the message and attachment IDs in the API response, points it at the Cloudflare Worker so playback goes through the edge cache, and returns it in the filename-to-URL map.
 - **Bulk deletion:** When deleting files by URL, the provider extracts the Discord message IDs from the URLs and issues a bulk delete. A 404 for a message that is already gone is ignored, so deletion is safe to retry.
 
-<img src="docs/diagrams/discord-provider-upload.png" alt="discord-provider-upload" style="width:60%;" />
+<p align="center">
+  <img src="docs/diagrams/discord-provider-upload.png" width="60%">
+</p>
 
 ## Cloudflare Workers
 
@@ -146,7 +156,9 @@ Two Cloudflare Workers sit in front of Discord traffic:
 
 - The upload Worker proxies upload requests to the Discord API. This spreads concurrent bot traffic across a separate outbound path, which in practice reduced upload-side 429 responses when recording many streams simultaneously.
 
-<img src="docs/diagrams/cloudflare-worker-playback.png" alt="cloudflare-worker-playback" style="width:60%;" />
+<p align="center">
+  <img src="docs/diagrams/cloudflare-worker-playback.png" width="60%">
+</p>
 
 ## Crash recovery and graceful shutdown
 
