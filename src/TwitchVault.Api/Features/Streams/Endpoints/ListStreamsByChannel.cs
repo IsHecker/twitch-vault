@@ -48,7 +48,7 @@ public class ListStreamsByChannel : IEndpoint
                     && s.StorageOperationStatus == StorageOperationStatus.Uploaded);
 
             if (subscribedAt.HasValue)
-                query = query.Where(s => s.StartedAt >= subscribedAt.Value);
+                query = query.Where(s => s.FinishedAt == null || s.FinishedAt >= subscribedAt.Value);
 
             var projected = query.OrderByDescending(s => s.StartedAt)
                 .Select(s => StreamResponse.FromDomain(s, options.Value.BaseUrl));

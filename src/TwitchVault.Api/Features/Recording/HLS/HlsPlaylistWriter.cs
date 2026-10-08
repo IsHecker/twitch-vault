@@ -32,7 +32,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     public bool HasInitSegment { get; private set; }
 
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private readonly System.IO.Stream _fileStream;
+    private readonly System.IO.Stream _stream;
     private readonly DateTime _startTime;
     private readonly bool _isFinalized;
     private readonly byte[] _lineBuffer = new byte[LineBufferSize];
@@ -41,9 +41,9 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     private float _totalDuration;
     private bool _lastEntryWasDiscontinuity;
 
-    private HlsPlaylistWriter(System.IO.Stream fileStream, PlaylistState state)
+    private HlsPlaylistWriter(System.IO.Stream stream, PlaylistState state)
     {
-        _fileStream = fileStream;
+        _stream = stream;
         _startTime = state.StartTime;
         _targetDuration = state.TargetDuration;
         _totalDuration = state.TotalDuration;
@@ -69,7 +69,6 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             : PlaylistState.Empty(dateTimeProvider.DateTimeNow);
 
         var fileStream = fileSystem.OpenWrite(path, FileMode.OpenOrCreate);
-
         var playlist = new HlsPlaylistWriter(fileStream, state);
 
         if (!exists)
@@ -90,7 +89,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
 
             await WriteHeaderAsync(cancellationToken);
             await WriteLineAsync(HlsTags.Map(fileName), cancellationToken);
-            await _fileStream.FlushAsync(cancellationToken);
+            await _stream.FlushAsync(cancellationToken);
             HasInitSegment = true;
         }
         finally
@@ -120,7 +119,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             LastSegmentFileName = fileName;
             _lastEntryWasDiscontinuity = false;
 
-            await FlushIfDueAsync(cancellationToken);
+            await FlushAsync(cancellationToken);
         }
         finally
         {
@@ -136,10 +135,10 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             if (string.IsNullOrWhiteSpace(LastSegmentFileName) || _lastEntryWasDiscontinuity)
                 return;
 
-            _fileStream.Position = _fileStream.Length;
+            _stream.Position = _stream.Length;
 
             await WriteLineAsync(HlsTags.Discontinuity, cancellationToken);
-            await _fileStream.FlushAsync(cancellationToken);
+            await _stream.FlushAsync(cancellationToken);
             _lastEntryWasDiscontinuity = true;
         }
         finally
@@ -150,12 +149,12 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
 
     public void UpdateTwitchMediaSequence(long mediaSequence) => LastTwitchMediaSequence = mediaSequence;
 
-    private async Task FlushIfDueAsync(CancellationToken cancellationToken)
+    private async Task FlushAsync(CancellationToken cancellationToken)
     {
         if (_flushStopwatch.Elapsed < MinFlushInterval)
             return;
 
-        await _fileStream.FlushAsync(cancellationToken);
+        await _stream.FlushAsync(cancellationToken);
         _flushStopwatch.Restart();
     }
 
@@ -169,9 +168,17 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
 
     private void RemoveEndListTag()
     {
-        var endListBytes = Encoding.UTF8.GetByteCount($"{HlsTags.EndList}\n");
-        if (_fileStream.Length >= endListBytes)
-            _fileStream.SetLength(_fileStream.Length - endListBytes);
+        var crlfBytes = Encoding.UTF8.GetByteCount($"{HlsTags.EndList}\r\n");
+        var lfBytes = Encoding.UTF8.GetByteCount($"{HlsTags.EndList}\n");
+
+        if (_stream.Length >= crlfBytes)
+        {
+            _stream.SetLength(_stream.Length - crlfBytes);
+            return;
+        }
+
+        if (_stream.Length >= lfBytes)
+            _stream.SetLength(_stream.Length - lfBytes);
     }
 
     private async Task WriteHeaderAsync(CancellationToken cancellationToken)
@@ -197,12 +204,12 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             .Append(HlsTags.TotalSeconds(totalSecondsValue)).AppendLine()
             .ToString();
 
-        _fileStream.Position = 0;
+        _stream.Position = 0;
 
         await WriteAsync(header, cancellationToken);
-        await _fileStream.FlushAsync(cancellationToken);
+        await _stream.FlushAsync(cancellationToken);
 
-        _fileStream.Position = _fileStream.Length;
+        _stream.Position = _stream.Length;
     }
 
     private async ValueTask WriteExtInfAsync(float duration, CancellationToken ct)
@@ -221,7 +228,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
         buffer[bytesWritten++] = (byte)',';
         buffer[bytesWritten++] = (byte)'\n';
 
-        await _fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten), ct);
+        await _stream.WriteAsync(buffer.AsMemory(0, bytesWritten), ct);
     }
 
     private ValueTask WriteAsync(string text, CancellationToken ct)
@@ -244,7 +251,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
             if (appendNewline)
                 buffer[bytesWritten++] = (byte)'\n';
 
-            await _fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten), ct);
+            await _stream.WriteAsync(buffer.AsMemory(0, bytesWritten), ct);
         }
         finally
         {
@@ -257,8 +264,8 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     {
         await WriteHeaderAsync(CancellationToken.None);
         await WriteLineAsync(HlsTags.EndList, CancellationToken.None);
-        await _fileStream.FlushAsync();
-        await _fileStream.DisposeAsync();
+        await _stream.FlushAsync();
+        await _stream.DisposeAsync();
         _lock.Dispose();
     }
 }

@@ -31,7 +31,7 @@ public class GetPlaylist : IEndpoint
                     .AsNoTracking()
                     .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.ChannelId == stream.ChannelId);
 
-                if (subscription is null || stream.StartedAt < subscription.AddedAt)
+                if (subscription is null || (stream.FinishedAt != null && stream.FinishedAt < subscription.AddedAt))
                     return Results.NotFound();
             }
 
