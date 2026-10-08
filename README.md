@@ -127,99 +127,9 @@ A caller hands `PolyStore` a list of files and gets back a mapping of filename t
 
 ### Provider discovery
 
-Providers register themselves with a `[StorageProvider]` attribute. At startup, `PolyStore` scans the assembly, finds every implementation, and builds a registry. Provider instances are created dynamically from configuration: each configured instance becomes a live provider instance with its own credentials, concurrency limits, and behavior options, making instance addition purely a configuration concern and trivial. See the [Configuration](#configuration) section for the full `secrets.json` format.
+Providers register themselves with a `[StorageProvider]` attribute. At startup, `PolyStore` scans the assembly, finds every implementation, and builds a registry. Provider instances are created dynamically from configuration: each configured instance becomes a live provider instance with its own credentials, concurrency limits, and behavior options, making instance addition purely a configuration concern and trivial. 
 
-### The router
-
-Instance selection uses lock-free round-robin. An atomic integer is incremented on every upload request, and the result picks the instance that handles it.
-
-### The Discord provider
-
-Discord is the primary cloud storage because it is free and has no storage quota. It isn't built to be a file store, which made a reliable provider challenging to write:
-
-- **Attachment limits & chunking:** Discord's API allows at most 10 file attachments per message, while a single upload call from a caller can contain any number of files. The provider chunks them into groups of 10, sends one API request per chunk, and accumulates the results, so the caller never sees the limit.
-- **Rate limiting:** Rate limit information comes back in response headers. The provider reads them on every response and waits before the next request when the remaining count reaches zero. Each instance tracks its own limits independently.
-- **URL mapping:** Discord attachments don't return a direct CDN URL. The provider builds each URL from the message and attachment IDs in the API response, points it at the Cloudflare Worker so playback goes through the edge cache, and returns it in the filename-to-URL map.
-- **Bulk deletion:** When deleting files by URL, the provider extracts the Discord message IDs from the URLs and issues a bulk delete. A 404 for a message that is already gone is ignored, so deletion is safe to retry.
-
-<p align="center">
-  <img src="docs/diagrams/discord-provider-upload.png" width="60%">
-</p>
-
-## Cloudflare Workers
-
-Using Discord creates a problem specific to this storage backend: Discord CDN URLs expire. The attachment links in the `playlist.m3u8` file carry tokens that Discord rotates, so segments become unreachable after some time if they are served directly.
-
-Two Cloudflare Workers sit in front of Discord traffic:
-
-- The playback Worker handles all CDN-facing requests. When a segment is requested, it checks the edge cache first. On a miss it fetches the segment from Discord's CDN, refreshing the URL if the token has expired, and then caches the response. The player never sees an expiry failure, and repeated playback requests are served from cache without hitting Discord.
-
-- The upload Worker proxies upload requests to the Discord API. This spreads concurrent bot traffic across a separate outbound path, which in practice reduced upload-side 429 responses when recording many streams simultaneously.
-
-<p align="center">
-  <img src="docs/diagrams/cloudflare-worker-playback.png" width="60%">
-</p>
-
-## Crash recovery and graceful shutdown
-
-### Resuming after a restart
-
-On every startup, TwitchVault queries the database for streams that were in a non-finished state when the server last stopped. For each one, it checks Twitch to see whether the stream is still live. If it is, recording resumes immediately. The playlist writer reopens the existing `.m3u8` file, reads the last known state, appends a discontinuity marker to signal the gap, and keeps appending from where it left off.
-
-### Graceful shutdown
-
-The original implementation stopped sessions sequentially, waiting for each to finalize before starting the next, so shutdown could take several minutes with many active streams.
-
-Separately, the upload queue drains its in-flight workers with a configured timeout before the process exits, so segments that are mid-upload are not silently lost.
-
-## Challenges and solutions
-
-### Segment downloads without LOH pressure
-
-***Problem:*** Every video segment from Twitch is 1.5 to 2.5 MB. The naïve implementation loads the HTTP response into an in-memory buffer before writing to disk. Objects larger than about 85 KB go directly onto the .NET Large Object Heap, which only a full Gen 2 GC can reclaim. At sustained throughput across many concurrent streams, this will result in heavy pauses.
-
-***Fix:*** The HTTP response body stream is piped directly into the file write path. Bytes flow from the network socket to disk without buffering the whole segment in memory, which keeps the LOH out of the hot path.
-
-### Minimal-allocation playlist parsing
-
-***Problem:*** The HLS manifest poller fetches a new playlist every 3 seconds per stream. Decoding the response to a string and splitting on newlines allocates a fresh string and array on every poll, which adds up to a pile of short-lived garbage across many concurrent sessions.
-
-***Fix:*** The playlist is parsed with `System.IO.Pipelines`, operating directly on raw byte buffers from the network. The parser works on byte spans line by line, uses `Utf8Parser` to read numbers straight from UTF-8 bytes, and tracks its state in a stack-allocated struct. The only heap allocations are for the final list of new segment URLs.
-
-### Priority queue without leaking waiters
-
-***Problem:*** The upload queue has two channels, regular and urgent. The natural approach is to await `WaitToReadAsync` on both at once and wake on whichever produces data first. When the regular channel wins, the pending wait on the urgent channel is abandoned mid-call. In .NET's channel implementation, `WaitToReadAsync` registers a waiter node, and abandoning the call without awaiting it means the node is never removed. The result is a memory leak that grows linearly with uptime.
-
-***Fix:*** A single semaphore acts as a shared signal. Any write to either channel releases the semaphore exactly once (an atomic exchange prevents a double release). Workers wait on the semaphore, then try to read the urgent channel first and fall back to the regular channel.
-
-## Configuration
-
-<details>
-<summary>appsettings.json: key settings</summary>
-
-```json
-{
-  "Vault": {
-    "MaxSegmentDurationInSec": 10,
-    "MaxConsecutiveEmptyPolls": 3,
-    "UploadBatchSize": 10,
-    "MaxConcurrentUploadWorkers": 20,
-    "PublicVodRetentionDays": 7
-  },
-  "BackgroundJobs": {
-    "ChannelMonitor":   { "Enabled": true, "RunIntervalInMinutes": 1 },
-    "StorageUpload":    { "Enabled": true, "RunIntervalInMinutes": 2 },
-    "StorageCleanup":   { "Enabled": true, "RunIntervalInMinutes": 5 },
-    "PublicVodCleanup": { "Enabled": true, "CronExpression": "0 0 3 * * ?" }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>secrets.json: PolyStore provider & instance configuration</summary>
-
+### PolyStore Configuration
 ```json
 {
   "PolyStore": {
@@ -269,7 +179,7 @@ Separately, the upload queue drains its in-flight workers with a configured time
             "Name": "discord-node-2",
             "Enabled": true,
             "CDNUrl": "https://your-playback-worker.workers.dev",
-            "Settings": { ... }
+            "Settings": {...}
           }
         ]
       },
@@ -300,4 +210,65 @@ Separately, the upload queue drains its in-flight workers with a configured time
 
 Adding additional Discord channels or other storage providers (Catbox, Telegram) is purely a configuration change. Each provider defines default limits, concurrency, and resilience policies, with one or more active instances configured under `Instances`.
 
-</details>
+### The router
+
+Instance selection uses lock-free round-robin. An atomic integer is incremented on every upload request, and the result picks the instance that handles it.
+
+### The Discord provider
+
+Discord is the primary cloud storage because it is free and has no storage quota. It isn't built to be a file store, which made a reliable provider challenging to write:
+
+- **Attachment limits & chunking:** Discord's API allows at most 10 file attachments per message, while a single upload call from a caller can contain any number of files. The provider chunks them into groups of 10, sends one API request per chunk, and accumulates the results, so the caller never sees the limit.
+- **Rate limiting:** Rate limit information comes back in response headers. The provider reads them on every response and waits before the next request when the remaining count reaches zero. Each instance tracks its own limits independently.
+- **URL mapping:** Discord attachments don't return a direct CDN URL. The provider builds each URL from the message and attachment IDs in the API response, points it at the Cloudflare Worker so playback goes through the edge cache, and returns it in the filename-to-URL map.
+- **Bulk deletion:** When deleting files by URL, the provider extracts the Discord message IDs from the URLs and issues a bulk delete. A 404 for a message that is already gone is ignored, so deletion is safe to retry.
+
+<p align="center">
+  <img src="docs/diagrams/discord-provider-upload.png" width="60%">
+</p>
+
+## Cloudflare Workers
+
+Using Discord creates a problem specific to this storage backend: Discord CDN URLs expire. The attachment links in the `playlist.m3u8` file carry tokens that Discord rotates, so segments become unreachable after some time if they are served directly.
+
+Two Cloudflare Workers sit in front of Discord traffic:
+
+- The playback Worker handles all CDN-facing requests. When a segment is requested, it checks the edge cache first. On a miss, it fetches the segment from Discord's CDN, refreshing the URL if the token has expired, and then caches the response. The player never sees an expiry failure, and repeated playback requests are served from cache without hitting Discord.
+
+- The upload Worker proxies upload requests to the Discord API. This spreads concurrent bot traffic across a separate outbound path, which in practice reduces upload-side 429 responses when recording many streams simultaneously.
+
+<p align="center">
+  <img src="docs/diagrams/cloudflare-worker-playback.png" width="60%">
+</p>
+
+## Crash recovery and graceful shutdown
+
+### Resuming after a restart
+
+On every startup, TwitchVault queries the database for streams that were in a non-finished state when the server last stopped. For each one, it checks Twitch to see whether the stream is still live. If it is, recording resumes immediately. The playlist writer reopens the existing `.m3u8` file, reads the last known state, appends a discontinuity marker to signal the gap, and keeps appending from where it left off.
+
+### Graceful shutdown
+
+The original implementation stopped sessions sequentially, waiting for each to finalize before starting the next, so shutdown could take several minutes with many active streams.
+
+Separately, the upload queue drains its in-flight workers with a configured timeout before the process exits, so segments that are mid-upload are not silently lost.
+
+## Challenges and solutions
+
+### Segment downloads without LOH pressure
+
+***Problem:*** Every video segment from Twitch is 1.5 to 2.5 MB. The naïve implementation loads the HTTP response into an in-memory buffer before writing to disk. Objects larger than about 85 KB go directly onto the .NET Large Object Heap, which only a full Gen 2 GC can reclaim. At sustained throughput across many concurrent streams, this will result in heavy pauses.
+
+***Fix:*** The HTTP response body stream is piped directly into the file write path. Bytes flow from the network socket to disk without buffering the whole segment in memory, which keeps the LOH out of the hot path.
+
+### Minimal-allocation playlist parsing
+
+***Problem:*** The HLS manifest poller fetches a new playlist every 3 seconds per stream. Decoding the response to a string and splitting on newlines allocates a fresh string and array on every poll, which adds up to a pile of short-lived garbage across many concurrent sessions.
+
+***Fix:*** The playlist is parsed with `System.IO.Pipelines`, operating directly on raw byte buffers from the network. The parser works on byte spans line by line, uses `Utf8Parser` to read numbers straight from UTF-8 bytes, and tracks its state in a stack-allocated struct. The only heap allocations are for the final list of new segment URLs.
+
+### Priority queue without leaking waiters
+
+***Problem:*** The upload queue has two channels, regular and urgent. The natural approach is to await `WaitToReadAsync` on both at once and wake on whichever produces data first. When the regular channel wins, the pending wait on the urgent channel is abandoned mid-call. In .NET's channel implementation, `WaitToReadAsync` registers a waiter node, and abandoning the call without awaiting it means the node is never removed. The result is a memory leak that grows linearly with uptime.
+
+***Fix:*** A single semaphore acts as a shared signal. Any write to either channel releases the semaphore exactly once (an atomic exchange prevents a double release). Workers wait on the semaphore, then try to read the urgent channel first and fall back to the regular channel.
