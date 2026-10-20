@@ -19,7 +19,9 @@ public static class StreamQueries
 
     public static IQueryable<Stream> PendingDeletion(this IQueryable<Stream> query) =>
         query.Where(s => s.Status != StreamStatus.Recording
-            && (s.StorageOperationStatus == StorageOperationStatus.DeleteRequest || s.StorageOperationStatus == StorageOperationStatus.Deleting));
+            && (s.StorageOperationStatus == StorageOperationStatus.DeleteRequest
+                || s.StorageOperationStatus == StorageOperationStatus.Deleting
+                || s.StorageOperationStatus == StorageOperationStatus.DeleteFailed));
 
     public static IQueryable<Stream> StaleActive(this IQueryable<Stream> query, string channelId, string? currentTwitchStreamId = null) =>
         query.Where(s => s.ChannelId == channelId

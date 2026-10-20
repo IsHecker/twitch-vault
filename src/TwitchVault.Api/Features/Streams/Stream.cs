@@ -15,7 +15,7 @@ public sealed class Stream : Entity<string>
     public string? VodId { get; private set; }
     public DateTime? VodCheckAttemptedAt { get; private set; }
 
-    public DateTime StartedAt { get; init; }
+    public DateTime StartedAt { get; private set; }
     public DateTime? FinishedAt { get; private set; }
 
     public List<Chapter> Chapters { get; init; } = [];
@@ -99,6 +99,7 @@ public sealed class Stream : Entity<string>
     public void SetStorageInstance(string instanceName) => StorageInstanceName = instanceName;
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
 
+    public void UpdateStartedAt(DateTime startedAt) => StartedAt = startedAt;
     public void SetVodId(string? vodId) => VodId = vodId;
     public void MarkVodChecked(DateTime checkedAt) => VodCheckAttemptedAt = checkedAt;
 

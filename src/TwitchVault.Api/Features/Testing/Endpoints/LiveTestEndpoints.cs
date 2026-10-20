@@ -17,7 +17,7 @@ public class LiveTestEndpoints : IDevOnlyEndpoint
         group.MapPost("/start", async (
             StartRequest request,
             ClaimsPrincipal principal,
-            TwitchHelixClient twitchHelixClient,
+            ITwitchHelixClient twitchHelixClient,
             IDataStore dataStore,
             IRecordingOrchestrator recordingOrchestrator,
             LiveTestSession session) =>

@@ -81,27 +81,6 @@ internal static class TwitchGqlPayloads
         }
     };
 
-    public static object GetStreamVOD(string channel) => new
-    {
-        OperationName = "GetStreamVOD",
-        Query = """
-                query GetStreamVOD($login: String) {
-                  user(login: $login) {
-                    stream {
-                      id
-                      archiveVideo {
-                        id
-                      }
-                    }
-                  }
-                }
-                """,
-        Variables = new
-        {
-            login = channel
-        }
-    };
-
     public static object GetChannelId(string channel) => new
     {
         OperationName = "GetUserId",

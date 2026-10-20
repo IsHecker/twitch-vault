@@ -22,23 +22,72 @@ public class StreamStorageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStreamAsync_ShouldDeleteParentChannelDirectory_WhenNoOtherStreamsRemain()
+    public async Task DeleteStreamAsync_ShouldReturnFalseAndSetDeleteFailed_WhenRemoteDeleteFails()
     {
         // Arrange
-        var channelName = "testchannel";
+        var channelName = "testchannel_failure";
         var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
         var streamLocalDir = streamFolder.AbsolutePath;
         Directory.CreateDirectory(streamLocalDir);
 
-        var parentChannelDir = Path.GetDirectoryName(streamLocalDir)!;
+        await File.WriteAllTextAsync(streamFolder.RemoteUrlsPath, "seg_0.ts\thttps://cdn.discordapp.com/attachments/123/456/seg_0.ts\n");
 
         var stream = Stream.Create(
-            "stream_clean_parent",
+            "stream_failed_delete",
             "chan_id",
             streamFolder,
             DateTime.UtcNow,
             "Title",
             "Category");
+        stream.SetStorageLocation(StorageLocation.Remote);
+        stream.SetStorageInstance("discord-node-2");
+
+        _polyStore.DeleteAsync(
+            Arg.Any<string>(),
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<CancellationToken>())
+            .Returns(PolyStore.Common.Results.Error.Failure("DeleteFailed", "Delete failed"));
+
+        var sut = new StreamStorageService(_polyStore, _dataStore, NullLogger<StreamStorageService>.Instance);
+
+        // Act
+        var result = await sut.DeleteStreamAsync(stream);
+
+        // Assert
+        result.Should().BeFalse();
+        stream.StorageOperationStatus.Should().Be(StorageOperationStatus.DeleteFailed);
+        Directory.Exists(streamLocalDir).Should().BeTrue();
+        File.Exists(streamFolder.RemoteUrlsPath).Should().BeTrue();
+        _dataStore.Received(1).Save(stream);
+        await _dataStore.DidNotReceive().DeleteAsync<Stream, string>(stream.Id);
+    }
+
+    [Fact]
+    public async Task DeleteStreamAsync_ShouldReturnTrueAndDeleteRecord_WhenRemoteDeleteSucceeds()
+    {
+        // Arrange
+        var channelName = "testchannel_success";
+        var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
+        var streamLocalDir = streamFolder.AbsolutePath;
+        Directory.CreateDirectory(streamLocalDir);
+
+        await File.WriteAllTextAsync(streamFolder.RemoteUrlsPath, "seg_0.ts\thttps://cdn.discordapp.com/attachments/123/456/seg_0.ts\n");
+
+        var stream = Stream.Create(
+            "stream_success_delete",
+            "chan_id",
+            streamFolder,
+            DateTime.UtcNow,
+            "Title",
+            "Category");
+        stream.SetStorageLocation(StorageLocation.Remote);
+        stream.SetStorageInstance("discord-node-2");
+
+        _polyStore.DeleteAsync(
+            Arg.Any<string>(),
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<CancellationToken>())
+            .Returns(PolyStore.Common.Results.Result.Success);
 
         var sut = new StreamStorageService(_polyStore, _dataStore, NullLogger<StreamStorageService>.Instance);
 
@@ -48,40 +97,7 @@ public class StreamStorageServiceTests : IDisposable
         // Assert
         result.Should().BeTrue();
         Directory.Exists(streamLocalDir).Should().BeFalse();
-        Directory.Exists(parentChannelDir).Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task DeleteStreamAsync_ShouldKeepParentChannelDirectory_WhenOtherStreamsRemain()
-    {
-        // Arrange
-        var channelName = "testchannel_multiple";
-        var streamFolder1 = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
-        var streamLocalDir1 = streamFolder1.AbsolutePath;
-        Directory.CreateDirectory(streamLocalDir1);
-
-        var parentChannelDir = Path.GetDirectoryName(streamLocalDir1)!;
-        var otherStreamDir = Path.Combine(parentChannelDir, "other_stream_folder");
-        Directory.CreateDirectory(otherStreamDir);
-
-        var stream = Stream.Create(
-            "stream_keep_parent",
-            "chan_id",
-            streamFolder1,
-            DateTime.UtcNow,
-            "Title",
-            "Category");
-
-        var sut = new StreamStorageService(_polyStore, _dataStore, NullLogger<StreamStorageService>.Instance);
-
-        // Act
-        var result = await sut.DeleteStreamAsync(stream);
-
-        // Assert
-        result.Should().BeTrue();
-        Directory.Exists(streamLocalDir1).Should().BeFalse();
-        Directory.Exists(parentChannelDir).Should().BeTrue();
-        Directory.Exists(otherStreamDir).Should().BeTrue();
+        await _dataStore.Received(1).DeleteAsync<Stream, string>(stream.Id);
     }
 
     public void Dispose()

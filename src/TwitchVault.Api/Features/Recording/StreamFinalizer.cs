@@ -20,7 +20,7 @@ public sealed class StreamFinalizer(
     IDataStore dataStore,
     IStreamStorageService storageService,
     ITwitchGqlClient twitchClient,
-    IDateTimeProvider dateTimeProvider,
+    ITwitchHelixClient helixClient,
     ILogger<StreamFinalizer> logger) : IStreamFinalizer
 {
     public async Task FinalizeAsync(
@@ -41,7 +41,7 @@ public sealed class StreamFinalizer(
             switch (reason)
             {
                 case SessionEndReason.StreamStopped:
-                    await MarkStoppedAsync(stream, channel.Name, sizeBytes);
+                    await MarkStoppedAsync(stream, sizeBytes);
                     break;
 
                 case SessionEndReason.StreamError(var ex):
@@ -50,7 +50,7 @@ public sealed class StreamFinalizer(
 
                 case SessionEndReason.StreamEnded:
                 default:
-                    await HandleStreamEndedAsync(stream, channel.Name, sizeBytes);
+                    await HandleStreamEndedAsync(stream, sizeBytes);
                     break;
             }
         }
@@ -64,13 +64,14 @@ public sealed class StreamFinalizer(
         }
     }
 
-    private async Task MarkStoppedAsync(Streams.Stream stream, string channelName, long sizeBytes)
+    private async Task MarkStoppedAsync(Streams.Stream stream, long sizeBytes)
     {
-        var vodId = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
-        if (vodId is not null)
-            stream.SetVodId(vodId);
+        await TryResolveVodAsync(stream);
 
-        stream.MarkAsStopped(dateTimeProvider.DateTimeNow);
+        var totalDurationSec = ReadPlaylistTotalDuration(stream.Folder.PlaylistPath);
+        var finishedAt = stream.StartedAt.AddSeconds(totalDurationSec);
+
+        stream.MarkAsStopped(finishedAt);
         stream.SetSize(sizeBytes);
 
         await storageService.FinalizeStorageAsync(stream);
@@ -82,7 +83,7 @@ public sealed class StreamFinalizer(
 
         if (!await IsChannelLiveAsync(stream, channelName))
         {
-            await HandleStreamEndedAsync(stream, channelName, sizeBytes);
+            await HandleStreamEndedAsync(stream, sizeBytes);
             return;
         }
 
@@ -90,18 +91,57 @@ public sealed class StreamFinalizer(
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
     }
 
-    private async Task HandleStreamEndedAsync(Streams.Stream stream, string channelName, long sizeBytes)
+    private async Task HandleStreamEndedAsync(Streams.Stream stream, long sizeBytes)
     {
-        var vodId = await twitchClient.GetStreamVODIdAsync(channelName, CancellationToken.None);
-        if (vodId is not null)
-            stream.SetVodId(vodId);
+        await TryResolveVodAsync(stream);
 
-        stream.MarkAsFinished(dateTimeProvider.DateTimeNow);
+        var totalDurationSec = ReadPlaylistTotalDuration(stream.Folder.PlaylistPath);
+        var finishedAt = stream.StartedAt.AddSeconds(totalDurationSec);
+
+        stream.MarkAsFinished(finishedAt);
         stream.SetSize(sizeBytes);
 
         await storageService.FinalizeStorageAsync(stream);
-        var duration = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
-        logger.LogInformation("Stream finished. Total duration: {Duration} ({Instance}).", duration, stream.StorageInstanceName);
+        var durationStr = (stream.FinishedAt - stream.StartedAt)?.ToString(@"hh\:mm\:ss") ?? "unknown";
+        logger.LogInformation("Stream finished. Total duration: {Duration} ({Instance}).", durationStr, stream.StorageInstanceName);
+    }
+
+    private async Task TryResolveVodAsync(Streams.Stream stream)
+    {
+        if (stream.VodId is not null)
+            return;
+
+        var vod = await helixClient.GetRecentStreamVodAsync(stream.ChannelId!, stream.Id, CancellationToken.None);
+        if (vod is null)
+            return;
+
+        stream.SetVodId(vod.Value.Id);
+        stream.UpdateStartedAt(vod.Value.CreatedAt);
+    }
+
+    private static float ReadPlaylistTotalDuration(string playlistPath)
+    {
+        if (!File.Exists(playlistPath))
+            return 0f;
+
+        using var stream = new FileStream(playlistPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(stream);
+
+        string? line;
+        while ((line = reader.ReadLine()) is not null)
+        {
+            if (line.StartsWith(HlsTags.TotalSecondsPrefix, StringComparison.Ordinal))
+            {
+                var value = HlsTagReader.ReadTagValue(line, HlsTags.TotalSecondsPrefix);
+                if (float.TryParse(value, out var duration))
+                    return duration;
+            }
+
+            if (line.StartsWith(HlsTags.ExtInfPrefix, StringComparison.Ordinal))
+                break;
+        }
+
+        return 0f;
     }
 
     private async Task<bool> IsChannelLiveAsync(Streams.Stream stream, string channelName)

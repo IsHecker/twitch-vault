@@ -16,6 +16,7 @@ public sealed class StreamRecorder(
     IThumbnailManager thumbnailManager,
     IManifestPoller manifestPoller,
     ITwitchGqlClient twitchGqlClient,
+    ITwitchHelixClient helixClient,
     IHlsPlaylistWriter playlistWriter,
     ISegmentStore segmentStore,
     IChapterTracker chapterTracker,
@@ -29,6 +30,8 @@ public sealed class StreamRecorder(
     private static readonly TimeSpan EmptyPollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan StreamEndWaitInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan VodFetchInitialDelay = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan VodFetchRetryInterval = TimeSpan.FromMinutes(2);
 
     private Streams.Stream _stream = null!;
     private Channel _channel = null!;
@@ -52,6 +55,7 @@ public sealed class StreamRecorder(
             chapterTracker.Attach(_stream, _channel);
             segmentUploader.Attach(_stream);
 
+            _ = FetchVodIdAsync(_cts.Token);
             await RecordStreamAsync(_cts.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -82,6 +86,26 @@ public sealed class StreamRecorder(
 
     public void ChangeQuality(int qualityRank) => _channel.ChangeQualityRank(qualityRank);
 
+    private async Task FetchVodIdAsync(CancellationToken cancellationToken)
+    {
+        await Task.Delay(VodFetchInitialDelay, timeProvider, cancellationToken);
+
+        while (!cancellationToken.IsCancellationRequested && _stream.VodId is null)
+        {
+            var vod = await helixClient.GetRecentStreamVodAsync(
+                _stream.ChannelId!, _stream.Id, cancellationToken);
+
+            if (vod is null)
+            {
+                await Task.Delay(VodFetchRetryInterval, timeProvider, cancellationToken);
+                continue;
+            }
+
+            _stream.SetVodId(vod.Value.Id);
+            _stream.UpdateStartedAt(vod.Value.CreatedAt);
+        }
+    }
+
     private async Task RecordStreamAsync(CancellationToken cancellationToken)
     {
         var emptyPollsRemaining = VaultOptions.MaxConsecutiveEmptyPolls;
@@ -95,7 +119,9 @@ public sealed class StreamRecorder(
             if (manifestStream.IsEmpty)
             {
                 await manifestStream.DisposeAsync();
-                logger.LogWarning("No manifest available. {Remaining} attempts left.", emptyPollsRemaining--);
+                if (--emptyPollsRemaining == 0)
+                    logger.LogWarning("No manifest available after all retries. Ending session for '{Channel}'.", _channel.Name);
+
                 await Task.Delay(EmptyPollInterval, timeProvider, cancellationToken);
                 continue;
             }
@@ -155,10 +181,6 @@ public sealed class StreamRecorder(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                if (ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound })
-                    logger.LogInformation("Segment unavailable on CDN (404) for channel '{Channel}'. Skipping segment.", _channel.Name);
-                else
-                    logger.LogWarning(ex, "Failed to download a segment for channel '{Channel}'. Skipping segment.", _channel.Name);
                 continue;
             }
 

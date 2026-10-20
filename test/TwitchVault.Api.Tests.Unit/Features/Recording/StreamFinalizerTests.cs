@@ -7,8 +7,8 @@ namespace TwitchVault.Api.Tests.Unit.Features.Recording;
 public class StreamFinalizerTests
 {
     private readonly ITwitchGqlClient _twitchClient = Substitute.For<ITwitchGqlClient>();
+    private readonly ITwitchHelixClient _helixClient = Substitute.For<ITwitchHelixClient>();
     private readonly IStreamStorageService _storageService = Substitute.For<IStreamStorageService>();
-    private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<StreamFinalizer> _logger = Substitute.For<ILogger<StreamFinalizer>>();
     private readonly TestDbContextFactory _factory = new();
     private readonly IDataStore _dataStore;
@@ -41,15 +41,12 @@ public class StreamFinalizerTests
         // Arrange
         var sut = CreateSut();
         var stream = SeedStream(CreateStream());
-        var stoppedAt = new DateTime(2026, 1, 1, 12, 0, 0);
-        _dateTimeProvider.DateTimeNow.Returns(stoppedAt);
 
         // Act
         await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamStopped());
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Stopped);
-        stream.FinishedAt.Should().Be(stoppedAt);
         await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
@@ -79,15 +76,12 @@ public class StreamFinalizerTests
 
         var sut = CreateSut();
         var stream = SeedStream(CreateStream("ts_old"));
-        var finishedAt = new DateTime(2026, 1, 1, 11, 0, 0);
-        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
 
         // Act
         await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Finished);
-        stream.FinishedAt.Should().Be(finishedAt);
         await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
@@ -97,15 +91,12 @@ public class StreamFinalizerTests
         // Arrange
         var sut = CreateSut();
         var stream = SeedStream(CreateStream(startedAt: new DateTime(2026, 1, 1, 10, 0, 0)));
-        var finishedAt = new DateTime(2026, 1, 1, 11, 30, 0);
-        _dateTimeProvider.DateTimeNow.Returns(finishedAt);
 
         // Act
         await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Finished);
-        stream.FinishedAt.Should().Be(finishedAt);
         await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
@@ -152,7 +143,7 @@ public class StreamFinalizerTests
             db.Channels.Add(_channel);
             db.SaveChanges();
         }
-        return new(_dataStore, _storageService, _twitchClient, _dateTimeProvider, _logger);
+        return new(_dataStore, _storageService, _twitchClient, _helixClient, _logger);
     }
 
     private static Api.Features.Streams.Stream CreateStream(string twitchStreamId = "ts_1", string channelId = "chan_1", DateTime? startedAt = null) =>

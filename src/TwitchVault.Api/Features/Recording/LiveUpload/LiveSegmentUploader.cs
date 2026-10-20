@@ -34,7 +34,6 @@ public sealed class LiveSegmentUploader(
         _stream = stream;
         _buffer = new string[vaultOptions.CurrentValue.UploadBatchSize + BufferRoom];
         _onBatchCompleted = HandleBatchCompleted;
-        // ResetIdleTimer();
     }
 
     public async Task AddAsync(LocalSegment segment)
@@ -51,14 +50,12 @@ public sealed class LiveSegmentUploader(
                 batchToQueue = ConsumeBuffer();
         }
 
-        // ResetIdleTimer();
         if (batchToQueue is not null)
             await EnqueueBatchAsync(batchToQueue, isUrgent: false);
     }
 
     public async Task FlushRemainingAsync()
     {
-        // CancelIdleTimer();
         string[] remaining;
         lock (_lock)
         {
@@ -129,50 +126,4 @@ public sealed class LiveSegmentUploader(
             _uploadsCompletedSignal.Dispose();
         }
     }
-
-    // private void ResetIdleTimer()
-    // {
-    //     CancelIdleTimer();
-
-    //     var timeoutSec = vaultOptions.CurrentValue.IdleFlushTimeoutSeconds;
-
-    //     var cts = new CancellationTokenSource();
-    //     _idleCts = cts;
-
-    //     _ = Task.Run(async () =>
-    //     {
-    //         try
-    //         {
-    //             await Task.Delay(TimeSpan.FromSeconds(timeoutSec), cts.Token);
-    //             await FlushIdleBufferAsync();
-    //         }
-    //         catch { }
-    //     });
-    // }
-
-    // private async Task FlushIdleBufferAsync()
-    // {
-    //     List<string>? batchToQueue = null;
-    //     lock (_lock)
-    //     {
-    //         if (_buffer.Count <= 0)
-    //             return;
-
-    //         batchToQueue = ConsumeBuffer();
-    //     }
-
-    //     if (batchToQueue is not null)
-    //         await uploadQueue.QueueBatchAsync(new UploadBatch(_stream, batchToQueue));
-    // }
-
-    // private void CancelIdleTimer()
-    // {
-    //     try
-    //     {
-    //         _idleCts?.Cancel();
-    //         _idleCts?.Dispose();
-    //         _idleCts = null;
-    //     }
-    //     catch { }
-    // }
 }

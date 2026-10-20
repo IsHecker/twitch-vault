@@ -128,7 +128,6 @@ public sealed class TwitchGqlClient(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Error fetching master playlist for channel '{Channel}'.", channel);
             return string.Empty;
         }
     }
@@ -153,7 +152,6 @@ public sealed class TwitchGqlClient(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             response?.Dispose();
-            logger.LogWarning(ex, "Error fetching playlist content");
             return ResponseStream.Null;
         }
     }
@@ -170,37 +168,11 @@ public sealed class TwitchGqlClient(
             var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             return new(stream, response);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             response?.Dispose();
-            if (ex is OperationCanceledException)
-                return ResponseStream.Null;
-
-            if (ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound })
-                logger.LogInformation("Segment unavailable on CDN (404).");
-            else
-                logger.LogWarning(ex, "Transient network error downloading segment.");
-
             return ResponseStream.Null;
         }
-    }
-
-    public async Task<string?> GetStreamVODIdAsync(string channel, CancellationToken cancellationToken)
-    {
-        var payload = TwitchGqlPayloads.GetStreamVOD(channel);
-        using var response = await SendGqlRequestAsync(payload, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
-        var stream = document!.RootElement.GetProperty("data").GetProperty("user").GetProperty("stream");
-        if (stream.ValueKind == JsonValueKind.Null)
-            return null;
-
-        var archiveVideo = stream.GetProperty("archiveVideo");
-        var vodId = archiveVideo.ValueKind != JsonValueKind.Null ? archiveVideo.GetProperty("id").GetString() : null;
-        return vodId;
     }
 
     public async Task<string?> GetChannelIdAsync(string channel, CancellationToken cancellationToken)
@@ -285,10 +257,7 @@ public sealed class TwitchGqlClient(
 
         if (!response.IsSuccessStatusCode)
         {
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                logger.LogWarning("Twitch GQL rate limit (429) hit during API request.");
-            else
-                logger.LogWarning("Twitch GQL request failed with status code {StatusCode}.", response.StatusCode);
+            logger.LogWarning("Twitch GQL request failed with status code {StatusCode}.", response.StatusCode);
         }
 
         return response;

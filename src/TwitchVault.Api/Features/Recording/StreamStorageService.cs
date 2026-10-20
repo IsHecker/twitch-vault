@@ -43,11 +43,7 @@ public sealed class StreamStorageService(
         var (storageFiles, localPaths) = OpenSourceFiles(localFilePaths);
         var uploadResult = await polyStore.UploadAsync(storageFiles, stream.StorageInstanceName, cancellationToken);
         if (uploadResult.IsFailure)
-        {
-            logger.LogError("Batch upload failed for stream '{StreamId}': {Error}",
-                stream.Id, uploadResult.Error);
             return false;
-        }
 
         var response = uploadResult.Value;
         if (string.IsNullOrWhiteSpace(stream.StorageInstanceName))
@@ -153,8 +149,7 @@ public sealed class StreamStorageService(
             return Task.CompletedTask;
         });
 
-        if (_streamLocks.TryRemove(stream.Id, out var sem))
-            sem.Dispose();
+        RemoveStreamLock(stream.Id);
 
         return true;
     }
@@ -163,6 +158,7 @@ public sealed class StreamStorageService(
         Streams.Stream stream,
         CancellationToken cancellationToken = default)
     {
+        var isDeleteSuccessful = false;
         var urlFilePath = stream.Folder.RemoteUrlsPath;
         if (stream.StorageLocation == StorageLocation.Remote && File.Exists(urlFilePath))
         {
@@ -178,31 +174,35 @@ public sealed class StreamStorageService(
                         continue;
 
                     batch.Add(url);
+                    if (batch.Count < 200)
+                        continue;
 
-                    if (batch.Count >= 200)
-                    {
-                        var deleteResult = await polyStore.DeleteAsync(
-                            stream.StorageInstanceName!, batch, cancellationToken);
-                        if (deleteResult.IsFailure)
-                        {
-                            logger.LogError("Batch delete failed for stream '{StreamId}': {Error}",
-                                stream.Id, deleteResult.Error);
-                        }
-                        batch.Clear();
-                    }
+                    isDeleteSuccessful = await DeleteBatchAsync(stream, batch, cancellationToken);
+                    batch.Clear();
                 }
             }
 
             if (batch.Count > 0)
+                isDeleteSuccessful = await DeleteBatchAsync(stream, batch, cancellationToken);
+        }
+        else if (!File.Exists(urlFilePath))
+        {
+            logger.LogWarning("Remote URLs file not found for remote stream '{StreamId}' at '{Path}'.",
+                stream.Id, urlFilePath);
+            return false;
+        }
+
+        if (!isDeleteSuccessful)
+        {
+            await dataStore.ExecuteAsync(() =>
             {
-                var deleteResult = await polyStore.DeleteAsync(
-                    stream.StorageInstanceName!, batch, cancellationToken);
-                if (deleteResult.IsFailure)
-                {
-                    logger.LogError("Batch delete failed for stream '{StreamId}': {Error}",
-                        stream.Id, deleteResult.Error);
-                }
-            }
+                stream.SetStorageOperationStatus(StorageOperationStatus.DeleteFailed);
+                dataStore.Save(stream);
+                return Task.CompletedTask;
+            });
+
+            RemoveStreamLock(stream.Id);
+            return false;
         }
 
         await dataStore.ExecuteAsync(async () => await dataStore.DeleteAsync<Streams.Stream, string>(stream.Id));
@@ -214,8 +214,19 @@ public sealed class StreamStorageService(
         if (!Directory.EnumerateFileSystemEntries(channelDirectory).Any())
             await IOUtils.DeleteDirectoryAsync(channelDirectory);
 
-        if (_streamLocks.TryRemove(stream.Id, out var sem))
-            sem.Dispose();
+        RemoveStreamLock(stream.Id);
+        return true;
+    }
+
+    private async Task<bool> DeleteBatchAsync(Streams.Stream stream, List<string> batch, CancellationToken cancellationToken)
+    {
+        var deleteResult = await polyStore.DeleteAsync(stream.StorageInstanceName!, batch, cancellationToken);
+        if (deleteResult.IsFailure)
+        {
+            logger.LogError("Batch delete failed for stream '{StreamId}': {Error}",
+                stream.Id, deleteResult.Error);
+            return false;
+        }
 
         return true;
     }
@@ -260,6 +271,12 @@ public sealed class StreamStorageService(
             return existing;
 
         return _streamLocks.GetOrAdd(streamId, new SemaphoreSlim(1, 1));
+    }
+
+    private void RemoveStreamLock(string streamId)
+    {
+        if (_streamLocks.TryRemove(streamId, out var sem))
+            sem.Dispose();
     }
 
     private static string ResolveContentType(string filePath)

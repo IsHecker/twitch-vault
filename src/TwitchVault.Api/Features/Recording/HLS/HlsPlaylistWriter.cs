@@ -10,6 +10,7 @@ public interface IHlsPlaylistWriter : IAsyncDisposable
     long LastTwitchMediaSequence { get; }
     string? LastSegmentFileName { get; }
     bool HasInitSegment { get; }
+    float TotalDuration { get; }
 
     Task SetInitSegmentAsync(string fileName, CancellationToken cancellationToken);
     Task AddSegmentAsync(string fileName, float duration, CancellationToken cancellationToken);
@@ -30,6 +31,7 @@ public sealed class HlsPlaylistWriter : IHlsPlaylistWriter
     public long LastTwitchMediaSequence { get; private set; }
     public string? LastSegmentFileName { get; private set; }
     public bool HasInitSegment { get; private set; }
+    public float TotalDuration => _totalDuration;
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly System.IO.Stream _stream;

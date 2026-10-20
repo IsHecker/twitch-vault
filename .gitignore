@@ -15,6 +15,7 @@ out/
 *.userosscache
 *.sln.docstates
 docs/commands.txt
+*.excalidraw
 
 ## OS-specific
 .DS_Store

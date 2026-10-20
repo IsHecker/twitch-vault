@@ -6,6 +6,7 @@ public sealed class RecordingLifecycleService(
     IRecordingOrchestrator orchestrator,
     IDataStore dataStore,
     ITwitchGqlClient twitchGqlClient,
+    IStreamFinalizer streamFinalizer,
     ILogger<RecordingLifecycleService> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -39,8 +40,13 @@ public sealed class RecordingLifecycleService(
             {
                 if (!isLive)
                 {
-                    await ResetStaleChannelAsync(channel);
                     var stream = interruptedStreams.First(s => s.ChannelId == channel.Id);
+                    await streamFinalizer.FinalizeAsync(
+                        channel,
+                        stream,
+                        stream.SizeBytes,
+                        new SessionEndReason.StreamEnded());
+
                     continue;
                 }
 
@@ -54,23 +60,6 @@ public sealed class RecordingLifecycleService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Error during recording resume on startup.");
-        }
-    }
-
-    private async Task ResetStaleChannelAsync(Channel channel)
-    {
-        try
-        {
-            await dataStore.ExecuteAsync(() =>
-            {
-                channel.SetLive(false);
-                dataStore.Save(channel);
-                return Task.CompletedTask;
-            });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to reset stale state for channel '{Channel}'.", channel.Name);
         }
     }
 }

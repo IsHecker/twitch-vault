@@ -19,6 +19,7 @@ public class StreamRecorderTests : IDisposable
     private readonly IThumbnailManager _thumbnailManager = Substitute.For<IThumbnailManager>();
     private readonly IManifestPoller _manifestPoller = Substitute.For<IManifestPoller>();
     private readonly ITwitchGqlClient _twitchGqlClient = Substitute.For<ITwitchGqlClient>();
+    private readonly ITwitchHelixClient _helixClient = Substitute.For<ITwitchHelixClient>();
     private readonly ISegmentStore _segmentStore = Substitute.For<ISegmentStore>();
     private readonly IHlsPlaylistWriter _hlsPlaylist = Substitute.For<IHlsPlaylistWriter>();
     private readonly ISegmentUploader _uploader = Substitute.For<ISegmentUploader>();
@@ -517,6 +518,7 @@ public class StreamRecorderTests : IDisposable
         new(_thumbnailManager,
             _manifestPoller,
             _twitchGqlClient,
+            _helixClient,
             _hlsPlaylist,
             _segmentStore,
             _chapterTracker,

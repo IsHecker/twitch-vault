@@ -1,6 +1,5 @@
 namespace TwitchVault.Api.Common;
 
-
 public static class HlsTagReader
 {
     private const char NewLine = '\n';

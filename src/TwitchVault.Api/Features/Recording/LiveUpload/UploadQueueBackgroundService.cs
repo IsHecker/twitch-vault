@@ -117,10 +117,6 @@ public sealed class UploadQueueBackgroundService(
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    logger.LogWarning(
-                        ex,
-                        "Worker #{WorkerId}: Exception uploading batch for stream '{StreamId}' (attempt {Attempt}/{MaxAttempts}).",
-                        workerId, batch.Stream.Id, attempt, MaxUploadAttempts);
                 }
 
                 var isLastAttempt = attempt == MaxUploadAttempts;

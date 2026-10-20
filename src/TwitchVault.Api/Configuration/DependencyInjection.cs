@@ -226,7 +226,7 @@ public static class DependencyInjection
 
         services.AddSingleton<ITwitchGqlClient, TwitchGqlClient>();
 
-        services.AddSingleton<TwitchHelixClient>();
+        services.AddSingleton<ITwitchHelixClient, TwitchHelixClient>();
         services.AddHttpClient(nameof(TwitchHelixClient)).AddThrottle(
             opts =>
             {

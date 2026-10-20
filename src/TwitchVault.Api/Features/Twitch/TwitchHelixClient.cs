@@ -10,10 +10,11 @@ public sealed class TwitchHelixClient(
     IHttpClientFactory httpClientFactory,
     IOptionsMonitor<TwitchOptions> twitchOptions,
     IOptions<PathsOptions> pathsOptions,
-    ILogger<TwitchHelixClient> logger)
+    ILogger<TwitchHelixClient> logger) : ITwitchHelixClient
 {
     private const string HelixSubscriptionUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
     private const string HelixStreamsUrl = "https://api.twitch.tv/helix/streams";
+    private const string HelixVideosUrl = "https://api.twitch.tv/helix/videos";
     private const string TokenUrl = "https://id.twitch.tv/oauth2/token";
 
     private TwitchOptions Options => twitchOptions.CurrentValue;
@@ -140,6 +141,59 @@ public sealed class TwitchHelixClient(
             results.Count, page + 1, minViewers, maxViewers == int.MaxValue ? "∞" : maxViewers.ToString());
 
         return results;
+    }
+
+    public async Task<TwitchVodInfo?> GetRecentStreamVodAsync(
+        string userId,
+        string streamId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        try
+        {
+            var url = $"{HelixVideosUrl}?user_id={Uri.EscapeDataString(userId)}&type=archive&first=1";
+
+            using var response = await SendRequestAsync(HttpMethod.Get, url, null, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Failed to fetch recent VOD from Helix for user '{UserId}'. Status: {Status}.", userId, response.StatusCode);
+                return null;
+            }
+
+            using var document = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken);
+            if (document is null)
+                return null;
+
+            if (!document.RootElement.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
+                return null;
+
+            var video = data[0];
+            var vodId = video.GetProperty("id").GetString()!;
+            var createdAtOffset = video.GetProperty("created_at").GetDateTimeOffset();
+            var createdAt = EgyptTimeProvider.ToEgyptDateTime(createdAtOffset);
+
+            var vodStreamId = video.TryGetProperty("stream_id", out var sIdProp) && sIdProp.ValueKind != JsonValueKind.Null
+                ? sIdProp.GetString()
+                : null;
+
+            if (!string.IsNullOrEmpty(vodStreamId)
+                && !string.Equals(vodStreamId, streamId, StringComparison.Ordinal))
+            {
+                logger.LogInformation(
+                    "Latest archive VOD '{VodId}' on Twitch belongs to stream '{VodStreamId}', not current stream '{StreamId}'.",
+                    vodId, vodStreamId, streamId);
+                return null;
+            }
+
+            return new TwitchVodInfo(vodId, createdAt);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error fetching recent stream VOD from Helix for user '{UserId}'.", userId);
+            return null;
+        }
     }
 
     private sealed record HelixStreamsResponse(

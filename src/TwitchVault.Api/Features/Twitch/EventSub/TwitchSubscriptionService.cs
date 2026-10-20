@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 public sealed class TwitchSubscriptionService(
-    TwitchHelixClient twitchHelixClient,
+    ITwitchHelixClient twitchHelixClient,
     IDataStore dataStore,
     ILogger<TwitchSubscriptionService> logger) : ITwitchSubscriptionService
 {

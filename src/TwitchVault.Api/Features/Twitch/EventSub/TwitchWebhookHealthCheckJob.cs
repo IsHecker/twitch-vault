@@ -5,7 +5,7 @@ namespace TwitchVault.Api.Features.Twitch.EventSub;
 
 [DisallowConcurrentExecution]
 public sealed class TwitchWebhookHealthCheckJob(
-    TwitchHelixClient twitchHelixClient,
+    ITwitchHelixClient twitchHelixClient,
     ITwitchSubscriptionService twitchSubscription,
     IOptionsMonitor<BackgroundJobsOptions> jobsOptions,
     ILogger<TwitchWebhookHealthCheckJob> logger) : IJob

@@ -23,8 +23,6 @@ public sealed class RecordingOrchestrator(
 
         try
         {
-            logger.LogInformation("{Channel} went live.", channelName);
-
             var channel = await dataStore.QueryAsync(context => context.Channels.GetByIdAsync(channelId));
 
             if (channel is null)
@@ -37,7 +35,6 @@ public sealed class RecordingOrchestrator(
             var metadata = await twitchGqlClient.GetStreamMetadataAsync(channelName, default);
             if (!metadata.HasValue)
             {
-                logger.LogWarning("Failed to fetch stream metadata for {Channel}.", channelName);
                 streamRecorderRegistry.Remove(channelId);
                 return;
             }
@@ -66,14 +63,18 @@ public sealed class RecordingOrchestrator(
                 return existing switch
                 {
                     null => await CreateStreamAsync(channel, metadata),
-                    { Status: StreamStatus.Interrupted or StreamStatus.Stopped } => MarkAsResuming(existing),
+                    { Status: not StreamStatus.Finished } => MarkAsResuming(existing),
                     _ => null
                 };
             });
 
             if (stream is null)
+            {
+                streamRecorderRegistry.Remove(channel.Id);
                 return;
+            }
 
+            logger.LogInformation("{Channel} went live.", channel.Name);
             await LaunchRecordingSessionAsync(stream, channel);
         }
         finally

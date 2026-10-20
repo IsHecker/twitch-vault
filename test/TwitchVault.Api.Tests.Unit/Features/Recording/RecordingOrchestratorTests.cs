@@ -185,7 +185,7 @@ public class RecordingOrchestratorTests
     }
 
     [Fact]
-    public async Task RecordStreamAsync_ShouldResumeStreamAndPersist_WhenExistingStreamIsInterrupted()
+    public async Task RecordStreamAsync_ShouldResumeStreamAndPersist_WhenExistingStreamCanBeResumed()
     {
         // Arrange
         using var db = _factory.CreateDbContext();
@@ -195,7 +195,17 @@ public class RecordingOrchestratorTests
 
         var metadata = CreateMetadata("ts_existing");
         var existingStream = CreateStream("ts_existing", channel.Id);
-        existingStream.MarkAsInterrupted();
+        switch (existingStream.Status)
+        {
+            case StreamStatus.Interrupted:
+                existingStream.MarkAsInterrupted();
+                break;
+            case StreamStatus.Stopped:
+                existingStream.MarkAsStopped(DateTime.UtcNow);
+                break;
+            case StreamStatus.Recording:
+                break;
+        }
         db.Streams.Add(existingStream);
         await db.SaveChangesAsync();
 
@@ -219,10 +229,8 @@ public class RecordingOrchestratorTests
         persisted!.Status.Should().Be(StreamStatus.Recording);
     }
 
-    [Theory]
-    [InlineData(StreamStatus.Recording)]
-    [InlineData(StreamStatus.Finished)]
-    public async Task RecordStreamAsync_ShouldDoNothing_WhenExistingStreamIsNotInterrupted(StreamStatus status)
+    [Fact]
+    public async Task RecordStreamAsync_ShouldDoNothingAndUnregister_WhenExistingStreamIsFinished()
     {
         // Arrange
         using var db = _factory.CreateDbContext();
@@ -232,16 +240,7 @@ public class RecordingOrchestratorTests
 
         var metadata = CreateMetadata("ts_existing");
         var existingStream = CreateStream("ts_existing", channel.Id);
-
-        switch (status)
-        {
-            case StreamStatus.Finished:
-                existingStream.MarkAsFinished(DateTime.UtcNow);
-                break;
-            case StreamStatus.Stopped:
-                existingStream.MarkAsStopped(DateTime.UtcNow);
-                break;
-        }
+        existingStream.MarkAsFinished(DateTime.UtcNow);
 
         db.Streams.Add(existingStream);
         await db.SaveChangesAsync();
@@ -257,6 +256,7 @@ public class RecordingOrchestratorTests
         // Assert
         _streamService.DidNotReceive().CreateStream(Arg.Any<Channel>(), Arg.Any<StreamMetadata>());
         await _streamRecorderFactory.DidNotReceive().CreateAsync(Arg.Any<Api.Features.Streams.Stream>(), Arg.Any<Channel>(), Arg.Any<CancellationToken>());
+        _streamRecorderRegistry.Received(1).Remove(ChannelId);
     }
 
     [Fact]

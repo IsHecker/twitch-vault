@@ -54,7 +54,7 @@ public class Program
 
         app.UseSerilogUi(options =>
         {
-            options.WithRoutePrefix("logs");
+            options.WithRoutePrefix("serilog-api");
         });
 
         app.UseTwitchLibEventSubWebhooks();
@@ -71,6 +71,10 @@ public class Program
         app.UseRateLimiter();
         app.UseStreamThumbnails();
         app.MapEndpoints(isDevelopment: app.Environment.IsDevelopment());
+        app.MapGet("/logs", (IWebHostEnvironment env) =>
+            Results.File(Path.Combine(env.ContentRootPath, "Pages", "logs.html"), "text/html; charset=utf-8"))
+            .ExcludeFromDescription();
+
         app.Run();
     }
 }

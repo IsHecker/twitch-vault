@@ -6,8 +6,6 @@ using Quartz;
 using TwitchVault.Api.Configuration;
 using TwitchVault.Api.Features.Settings;
 using TwitchVault.Api.Features.Storage.Jobs;
-using TwitchVault.Api.Features.Streams;
-using TwitchVault.Api.Features.Twitch;
 using DomainStream = TwitchVault.Api.Features.Streams.Stream;
 
 namespace TwitchVault.Api.Tests.Unit.Features.Storage;
