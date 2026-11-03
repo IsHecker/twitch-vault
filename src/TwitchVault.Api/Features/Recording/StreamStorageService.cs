@@ -144,7 +144,6 @@ public sealed class StreamStorageService(
         await dataStore.ExecuteAsync(() =>
         {
             stream.SetStorageOperationStatus(StorageOperationStatus.Uploaded);
-            stream.SetStorageLocation(StorageLocation.Remote);
             dataStore.Save(stream);
             return Task.CompletedTask;
         });
@@ -160,7 +159,7 @@ public sealed class StreamStorageService(
     {
         var isDeleteSuccessful = false;
         var urlFilePath = stream.Folder.RemoteUrlsPath;
-        if (stream.StorageLocation == StorageLocation.Remote && File.Exists(urlFilePath))
+        if (File.Exists(urlFilePath))
         {
             var batch = new List<string>(200);
 

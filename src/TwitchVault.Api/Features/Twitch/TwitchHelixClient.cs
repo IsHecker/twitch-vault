@@ -148,8 +148,6 @@ public sealed class TwitchHelixClient(
         string streamId,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-
         try
         {
             var url = $"{HelixVideosUrl}?user_id={Uri.EscapeDataString(userId)}&type=archive&first=1";

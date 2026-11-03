@@ -8,8 +8,6 @@ public class Channel : Entity<string>
     public bool IsArchived { get; private set; }
     public DateTime? LastStreamedAt { get; private set; }
 
-    public ICollection<User> Users { get; private set; } = [];
-
     private Channel() { }
 
     public static Channel Create(string id, string name, int qualityRank, bool isArchived)

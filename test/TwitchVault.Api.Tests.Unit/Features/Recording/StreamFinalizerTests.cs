@@ -60,10 +60,11 @@ public class StreamFinalizerTests
             .Returns(new StreamMetadata("ts_current", "title", "cat", DateTime.Now));
 
         // Act
-        await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("network blip")));
+        await sut.FinalizeAsync(_channel, stream, sizeBytes: 500, new SessionEndReason.StreamError(new Exception("network blip")));
 
         // Assert
         stream.Status.Should().Be(StreamStatus.Interrupted);
+        stream.SizeBytes.Should().Be(500);
         await _storageService.DidNotReceive().FinalizeStorageAsync(Arg.Any<Api.Features.Streams.Stream>());
     }
 

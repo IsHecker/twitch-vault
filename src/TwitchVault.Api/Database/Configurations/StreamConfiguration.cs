@@ -18,7 +18,7 @@ public class StreamConfiguration : IEntityTypeConfiguration<Features.Streams.Str
         builder.Property(s => s.Folder)
             .HasConversion(
                 folder => folder.RelativePath,
-                path => new Features.Streams.StreamFolder(path))
+                path => new StreamFolder(path))
             .IsRequired();
 
         builder.OwnsMany(s => s.Chapters, chapters =>

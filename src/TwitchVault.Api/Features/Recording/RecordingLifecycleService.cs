@@ -38,9 +38,10 @@ public sealed class RecordingLifecycleService(
             var resumeCount = 0;
             foreach (var (channel, isLive) in liveResults)
             {
+                var stream = interruptedStreams.First(s => s.ChannelId == channel.Id);
+
                 if (!isLive)
                 {
-                    var stream = interruptedStreams.First(s => s.ChannelId == channel.Id);
                     await streamFinalizer.FinalizeAsync(
                         channel,
                         stream,
@@ -49,6 +50,9 @@ public sealed class RecordingLifecycleService(
 
                     continue;
                 }
+
+                var diskSize = ComputeFolderSizeBytes(stream.Folder.AbsolutePath);
+                stream.SetSize(diskSize);
 
                 await orchestrator.TryStartRecordingAsync(channel.Id, channel.Name);
                 resumeCount++;
@@ -61,5 +65,15 @@ public sealed class RecordingLifecycleService(
         {
             logger.LogError(ex, "Error during recording resume on startup.");
         }
+    }
+
+    private static long ComputeFolderSizeBytes(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+            return 0;
+
+        return new DirectoryInfo(folderPath)
+            .EnumerateFiles("*", SearchOption.AllDirectories)
+            .Sum(f => f.Length);
     }
 }

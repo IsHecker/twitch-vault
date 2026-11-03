@@ -39,7 +39,7 @@ public class PublicVodCleanupJobTests : IDisposable
     private PublicVodCleanupJob CreateSut() =>
         new(_dataStore, _gqlClient, _dateTimeProvider, _jobsOptions, _vaultOptions, _logger);
 
-    private DomainStream SeedStream(string id, string? vodId, DateTime finishedAt, DateTime? vodCheckedAt = null, StorageOperationStatus opStatus = StorageOperationStatus.None)
+    private DomainStream SeedStream(string id, string? vodId, DateTime finishedAt, bool isVodChecked = false, StorageOperationStatus opStatus = StorageOperationStatus.None)
     {
         using var db = _factory.CreateDbContext();
         var channel = db.Channels.Find("ch-1");
@@ -53,9 +53,9 @@ public class PublicVodCleanupJobTests : IDisposable
         stream.MarkAsFinished(finishedAt);
         stream.SetVodId(vodId);
         stream.SetStorageOperationStatus(opStatus);
-        if (vodCheckedAt.HasValue)
+        if (isVodChecked)
         {
-            stream.MarkVodChecked(vodCheckedAt.Value);
+            stream.MarkVodChecked();
         }
 
         db.Streams.Add(stream);
@@ -102,7 +102,7 @@ public class PublicVodCleanupJobTests : IDisposable
         using var db = _factory.CreateDbContext();
         var stream = db.Streams.Find("s1")!;
         stream.StorageOperationStatus.Should().Be(StorageOperationStatus.DeleteRequest);
-        stream.VodCheckAttemptedAt.Should().Be(_now);
+        stream.IsVodChecked.Should().BeTrue();
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class PublicVodCleanupJobTests : IDisposable
         using var db = _factory.CreateDbContext();
         var stream = db.Streams.Find("s2")!;
         stream.StorageOperationStatus.Should().Be(StorageOperationStatus.None);
-        stream.VodCheckAttemptedAt.Should().Be(_now);
+        stream.IsVodChecked.Should().BeTrue();
     }
 
     [Fact]
@@ -142,14 +142,14 @@ public class PublicVodCleanupJobTests : IDisposable
         using var db = _factory.CreateDbContext();
         var stream = db.Streams.Find("s3")!;
         stream.StorageOperationStatus.Should().Be(StorageOperationStatus.None);
-        stream.VodCheckAttemptedAt.Should().Be(_now);
+        stream.IsVodChecked.Should().BeTrue();
     }
 
     [Fact]
     public async Task Execute_ShouldSkipStream_WhenAlreadyCheckedBefore()
     {
         // Arrange
-        SeedStream("s4", "vod-4", _now.AddDays(-8), vodCheckedAt: _now.AddDays(-1));
+        SeedStream("s4", "vod-4", _now.AddDays(-8), isVodChecked: true);
 
         var sut = CreateSut();
         var context = Substitute.For<IJobExecutionContext>();

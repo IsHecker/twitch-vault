@@ -39,7 +39,6 @@ public class StreamStorageServiceTests : IDisposable
             DateTime.UtcNow,
             "Title",
             "Category");
-        stream.SetStorageLocation(StorageLocation.Remote);
         stream.SetStorageInstance("discord-node-2");
 
         _polyStore.DeleteAsync(
@@ -80,7 +79,6 @@ public class StreamStorageServiceTests : IDisposable
             DateTime.UtcNow,
             "Title",
             "Category");
-        stream.SetStorageLocation(StorageLocation.Remote);
         stream.SetStorageInstance("discord-node-2");
 
         _polyStore.DeleteAsync(

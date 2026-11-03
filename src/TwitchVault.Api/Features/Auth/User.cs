@@ -7,8 +7,6 @@ public class User : Entity<Guid>
     public string GoogleId { get; private set; } = string.Empty;
     public bool IsAdmin { get; private set; }
 
-    public ICollection<Channel> Channels { get; private set; } = [];
-
     private User() { }
 
     public static User Create(Guid id, string username, string email, string googleId, DateTime createdAt, bool isAdmin = false)

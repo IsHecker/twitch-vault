@@ -51,6 +51,7 @@ public sealed class StreamRecorder(
         {
             _channel = channel;
             _stream = stream;
+            _streamSizeBytes = stream.SizeBytes;
             _streamDirectory = _stream.Folder.AbsolutePath;
             chapterTracker.Attach(_stream, _channel);
             segmentUploader.Attach(_stream);

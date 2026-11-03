@@ -6,14 +6,13 @@ public sealed class Stream : Entity<string>
 
     public StreamFolder Folder { get; init; } = null!;
     public StreamStatus Status { get; private set; }
-    public StorageLocation StorageLocation { get; private set; }
     public StorageOperationStatus StorageOperationStatus { get; private set; }
     public long SizeBytes { get; private set; }
 
     public string? StorageInstanceName { get; private set; }
 
     public string? VodId { get; private set; }
-    public DateTime? VodCheckAttemptedAt { get; private set; }
+    public bool IsVodChecked { get; private set; }
 
     public DateTime StartedAt { get; private set; }
     public DateTime? FinishedAt { get; private set; }
@@ -44,7 +43,6 @@ public sealed class Stream : Entity<string>
             ChannelId = channelId.Trim(),
             Folder = folder,
             Status = StreamStatus.Recording,
-            StorageLocation = StorageLocation.Local,
             StorageOperationStatus = StorageOperationStatus.None,
             SizeBytes = 0,
             StartedAt = startedAt,
@@ -95,13 +93,12 @@ public sealed class Stream : Entity<string>
         SizeBytes = sizeBytes;
     }
 
-    public void SetStorageLocation(StorageLocation storageLocation) => StorageLocation = storageLocation;
     public void SetStorageInstance(string instanceName) => StorageInstanceName = instanceName;
     public void SetStorageOperationStatus(StorageOperationStatus status) => StorageOperationStatus = status;
 
     public void UpdateStartedAt(DateTime startedAt) => StartedAt = startedAt;
     public void SetVodId(string? vodId) => VodId = vodId;
-    public void MarkVodChecked(DateTime checkedAt) => VodCheckAttemptedAt = checkedAt;
+    public void MarkVodChecked() => IsVodChecked = true;
 
     public void RequestDeletion() => StorageOperationStatus = StorageOperationStatus.DeleteRequest;
 

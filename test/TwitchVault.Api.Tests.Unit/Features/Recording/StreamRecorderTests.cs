@@ -311,6 +311,26 @@ public class StreamRecorderTests : IDisposable
     }
 
     [Fact]
+    public async Task StartAsync_ShouldPreserveAndAccumulateStreamSizeBytes_WhenResumingStream()
+    {
+        // Arrange
+        _stream.SetSize(1000);
+        StubManifestOnce(BuildManifest(segments: [("seg_1.ts", 6f)]));
+        StubDownloadSegments(Segment("seg_1.ts", 6f, sizeBytes: 500));
+        _segmentStore.CloseCurrentSegment().Returns(new LocalSegment("seg_2.ts", 2f, 250));
+
+        await using var sut = CreateSut();
+
+        // Act
+        await StartAndRunToCompletionAsync(sut);
+
+        // Assert
+        await AssertFinalizedAsync(new SessionEndReason.StreamEnded(), expectedSizeBytes: 1750);
+        await _uploader.Received(1).AddAsync(Arg.Is<LocalSegment>(s => s.FilePath == "seg_1.ts" && s.SizeBytes == 500));
+        await _uploader.Received(1).AddAsync(Arg.Is<LocalSegment>(s => s.FilePath == "seg_2.ts" && s.SizeBytes == 250));
+    }
+
+    [Fact]
     public async Task StartAsync_ShouldProduceStreamError_WhenManifestPollerThrows()
     {
         // Arrange

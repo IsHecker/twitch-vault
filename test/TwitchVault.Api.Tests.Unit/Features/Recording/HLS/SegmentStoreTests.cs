@@ -104,7 +104,7 @@ public class SegmentStoreTests
 
         var failingStream = Substitute.For<System.IO.Stream>();
         failingStream.CopyToAsync(Arg.Any<System.IO.Stream>(), Arg.Any<CancellationToken>())
-            .Returns<Task>(_ => throw new IOException("Simulated network/disk error"));
+            .Returns(_ => throw new IOException("Simulated network/disk error"));
         var failingSegment = new SegmentContent(
             new RemoteSegment(SegmentUrl, 4f, false),
             new ResponseStream(failingStream, null));

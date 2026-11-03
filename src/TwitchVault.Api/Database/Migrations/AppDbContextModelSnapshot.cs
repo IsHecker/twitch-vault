@@ -151,6 +151,9 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsVodChecked")
+                        .HasColumnType("bit");
+
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
 
@@ -164,16 +167,9 @@ namespace TwitchVault.Api.Persistence.Database.Migrations
                     b.Property<string>("StorageInstanceName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("StorageLocation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("StorageOperationStatus")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("VodCheckAttemptedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("VodId")
                         .HasColumnType("nvarchar(max)");

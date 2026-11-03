@@ -88,6 +88,7 @@ public sealed class StreamFinalizer(
         }
 
         stream.MarkAsInterrupted();
+        stream.SetSize(sizeBytes);
         logger.LogWarning("Stream disconnected but still live on Twitch. Marked as interrupted.");
     }
 

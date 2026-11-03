@@ -52,7 +52,7 @@ public sealed class PublicVodCleanupJob(
 
         await dataStore.ExecuteAsync(() =>
         {
-            stream.MarkVodChecked(dateTimeProvider.DateTimeNow);
+            stream.MarkVodChecked();
 
             if (accessibility == VodAccessibility.Public)
             {

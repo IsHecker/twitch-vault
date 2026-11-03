@@ -15,7 +15,7 @@ public static class StreamQueries
 
     public static IQueryable<Stream> PendingUpload(this IQueryable<Stream> query) =>
         query.Where(s => s.Status == StreamStatus.Finished
-            && (s.StorageLocation == StorageLocation.Local || s.StorageOperationStatus == StorageOperationStatus.UploadFailed));
+            && s.StorageOperationStatus == StorageOperationStatus.UploadFailed);
 
     public static IQueryable<Stream> PendingDeletion(this IQueryable<Stream> query) =>
         query.Where(s => s.Status != StreamStatus.Recording
@@ -33,6 +33,6 @@ public static class StreamQueries
             s.Status == StreamStatus.Finished
             && s.FinishedAt != null
             && s.VodId != null
-            && s.VodCheckAttemptedAt == null
+            && !s.IsVodChecked
             && s.FinishedAt <= cutoff);
 }
