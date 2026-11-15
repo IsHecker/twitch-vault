@@ -1,4 +1,3 @@
-
 namespace TwitchVault.Api.Features.Streams;
 
 public record ChapterResponse(
@@ -20,6 +19,8 @@ public record StreamResponse(
     string TwitchStreamId,
     string? ChannelId,
     string ThumbnailUrl,
+    string? StripUrl,
+    string? StoryboardUrl,
     long SizeBytes,
     StreamStatus Status,
     DateTime StartedAt,
@@ -31,6 +32,8 @@ public record StreamResponse(
             stream.Id,
             stream.ChannelId,
             stream.Folder.GetThumbnailUrl(baseUrl),
+            stream.Folder.GetStripUrl(baseUrl),
+            stream.Folder.GetStoryboardManifestUrl(baseUrl),
             stream.SizeBytes,
             stream.Status,
             stream.StartedAt,

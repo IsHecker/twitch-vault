@@ -1,6 +1,7 @@
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using TwitchVault.Api.Configuration;
 
@@ -178,12 +179,7 @@ public sealed class TwitchHelixClient(
 
             if (!string.IsNullOrEmpty(vodStreamId)
                 && !string.Equals(vodStreamId, streamId, StringComparison.Ordinal))
-            {
-                logger.LogInformation(
-                    "Latest archive VOD '{VodId}' on Twitch belongs to stream '{VodStreamId}', not current stream '{StreamId}'.",
-                    vodId, vodStreamId, streamId);
                 return null;
-            }
 
             return new TwitchVodInfo(vodId, createdAt);
         }
@@ -199,12 +195,12 @@ public sealed class TwitchHelixClient(
         HelixPagination? Pagination);
 
     private sealed record HelixStreamEntry(
-        [property: System.Text.Json.Serialization.JsonPropertyName("user_id")] string UserId,
-        [property: System.Text.Json.Serialization.JsonPropertyName("user_login")] string UserLogin,
-        [property: System.Text.Json.Serialization.JsonPropertyName("viewer_count")] int ViewerCount);
+        [property: JsonPropertyName("user_id")] string UserId,
+        [property: JsonPropertyName("user_login")] string UserLogin,
+        [property: JsonPropertyName("viewer_count")] int ViewerCount);
 
     private sealed record HelixPagination(
-        [property: System.Text.Json.Serialization.JsonPropertyName("cursor")] string? Cursor);
+        [property: JsonPropertyName("cursor")] string? Cursor);
 
     private async Task<string> GetAppAccessTokenAsync(CancellationToken cancellationToken)
     {

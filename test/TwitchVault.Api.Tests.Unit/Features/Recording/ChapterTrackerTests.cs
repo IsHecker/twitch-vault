@@ -22,7 +22,7 @@ public class ChapterTrackerTests
         _dataStore = new EfDataStore(_factory);
 
         _stream = Api.Features.Streams.Stream.Create(
-            "ts_1", ChannelId, StreamFolder.Create("streams_root", ChannelName),
+            "ts_1", ChannelId, StreamFolder.Create("streams_root", ChannelName, "ts_1"),
             new DateTime(2026, 1, 1), "Some Title", "Some Category");
 
         _dateTimeProvider.DateTimeNow.Returns(new DateTime(2026, 1, 1, 1, 0, 0));

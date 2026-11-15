@@ -111,4 +111,23 @@ public class PlaylistStateRestorerTests
         // Assert
         result.LastSegmentFileName.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData("000000000-10", -10)]
+    [InlineData("000000000100", 100)]
+    public void Restore_ShouldHandleMalformedOrPaddedNegativeTwitchMediaSequence_WithoutThrowing(string sequenceTag, long expectedCount)
+    {
+        // Arrange
+        var lines = new List<string>
+        {
+            "#EXTM3U",
+            $"#TWITCH-MEDIA-SEQUENCE:{sequenceTag}"
+        };
+
+        // Act
+        var result = PlaylistStateRestorer.Restore(lines);
+
+        // Assert
+        result.SegmentCount.Should().Be(expectedCount);
+    }
 }

@@ -18,7 +18,8 @@ public static class PlaylistStateRestorer
 
             if (line.StartsWith(HlsTags.TwitchMediaSequencePrefix))
             {
-                twitchSegmentCount = long.Parse(HlsTagReader.ReadTagValue(line, HlsTags.TwitchMediaSequencePrefix));
+                var value = HlsTagReader.ReadTagValueSpan(line, HlsTags.TwitchMediaSequencePrefix);
+                twitchSegmentCount = long.Parse(value.TrimStart('0'));
                 continue;
             }
             else if (line.StartsWith(HlsTags.TargetDurationPrefix))

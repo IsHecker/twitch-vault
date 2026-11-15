@@ -16,6 +16,8 @@ out/
 *.sln.docstates
 docs/commands.txt
 *.excalidraw
+sixlabors.lic
+benchmarks
 
 ## OS-specific
 .DS_Store

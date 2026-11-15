@@ -20,7 +20,7 @@ public class StreamService(
 {
     public Stream CreateStream(Channel channel, StreamMetadata metadata)
     {
-        var folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name);
+        var folder = StreamFolder.Create(pathsOptions.Value.Streams, channel.Name, metadata.Id);
         return Stream.Create(
             metadata.Id,
             channel.Id,
@@ -45,7 +45,7 @@ public class StreamService(
             if (stream == null || stream.IsDeleted)
                 return Task.FromResult((Result)Error.NotFound());
 
-            if (stream.Status == StreamStatus.Recording)
+            if (stream.Status is StreamStatus.Recording or StreamStatus.Finalizing)
                 return Task.FromResult((Result)Error.Validation("Cannot delete a stream that is still recording or finishing. Stop it first."));
 
             stream.RequestDeletion();

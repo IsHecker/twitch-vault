@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -37,7 +36,7 @@ public class RecordingLifecycleServiceTests
         var stream = Api.Features.Streams.Stream.Create(
             id,
             channelId,
-            StreamFolder.Create("streams_root", "testchannel"),
+            StreamFolder.Create("streams_root", "testchannel", id),
             DateTime.UtcNow,
             "Title",
             "Category");
@@ -46,10 +45,35 @@ public class RecordingLifecycleServiceTests
             stream.MarkAsInterrupted();
         else if (status == StreamStatus.Finished && finishedAt.HasValue)
             stream.MarkAsFinished(finishedAt.Value);
+        else if (status == StreamStatus.Finalizing)
+            stream.MarkAsFinalizing(finishedAt ?? DateTime.UtcNow);
+        else if (status == StreamStatus.Stopped)
+            stream.MarkAsStopped(finishedAt ?? DateTime.UtcNow);
 
         db.Streams.Add(stream);
         db.SaveChanges();
         return stream;
+    }
+
+    [Fact]
+    public async Task StartAsync_ShouldIgnoreStreams_WhenStatusIsNotRecordingAndStopped()
+    {
+        // Arrange
+        var channel = SeedChannel("chan_1", "offline_channel", isLive: false);
+        SeedStream("stream_finalizing", channel.Id, StreamStatus.Finalizing);
+        SeedStream("stream_finished", channel.Id, StreamStatus.Finished, DateTime.Today);
+        var sut = CreateSut();
+
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+
+        // Assert
+        await _twitchGqlClient.DidNotReceive().IsChannelLiveAsync(Arg.Any<List<Channel>>(), Arg.Any<CancellationToken>());
+        await _streamFinalizer.DidNotReceive().FinalizeAsync(
+            Arg.Any<Channel>(),
+            Arg.Any<Api.Features.Streams.Stream>(),
+            Arg.Any<long>(),
+            Arg.Any<SessionEndReason>());
     }
 
     [Fact]

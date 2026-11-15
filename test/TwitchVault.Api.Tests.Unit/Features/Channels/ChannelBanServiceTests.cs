@@ -272,7 +272,7 @@ public class ChannelBanServiceTests : ChannelTestBase
         Db.Channels.Add(channel);
         Db.Subscriptions.Add(Subscription.Create(user.Id, channelId, DateTime.UtcNow));
 
-        var streamFolder = StreamFolder.Create(PathsOptions.Value.Streams, channel.Name);
+        var streamFolder = StreamFolder.Create(PathsOptions.Value.Streams, channel.Name, "stream_ban_1");
         var stream = Api.Features.Streams.Stream.Create(
             "stream_ban_1",
             channelId,

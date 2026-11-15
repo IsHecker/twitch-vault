@@ -40,7 +40,7 @@ public class StreamRecorderTests : IDisposable
         _stream = Api.Features.Streams.Stream.Create(
             "ts_1",
             ChannelId,
-            StreamFolder.Create("streams_root", ChannelName),
+            StreamFolder.Create("streams_root", ChannelName, "ts_1"),
             new DateTime(2026, 1, 1),
             "Some Title",
             "Some Category");
@@ -65,6 +65,7 @@ public class StreamRecorderTests : IDisposable
             Arg.Any<Api.Features.Streams.Stream>(),
             Arg.Any<long>(),
             Arg.Any<SessionEndReason>()).Returns(Task.CompletedTask);
+
     }
 
     [Fact]

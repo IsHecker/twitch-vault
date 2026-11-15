@@ -19,6 +19,7 @@ public static class StreamQueries
 
     public static IQueryable<Stream> PendingDeletion(this IQueryable<Stream> query) =>
         query.Where(s => s.Status != StreamStatus.Recording
+            && s.Status != StreamStatus.Finalizing
             && (s.StorageOperationStatus == StorageOperationStatus.DeleteRequest
                 || s.StorageOperationStatus == StorageOperationStatus.Deleting
                 || s.StorageOperationStatus == StorageOperationStatus.DeleteFailed));

@@ -256,6 +256,7 @@ public sealed class StreamRecorder(
         await playlistWriter.DisposeAsync();
         segmentUploader.Dispose();
         chapterTracker.Dispose();
+        await segmentStore.DisposeAsync();
         _cts.Dispose();
     }
 }

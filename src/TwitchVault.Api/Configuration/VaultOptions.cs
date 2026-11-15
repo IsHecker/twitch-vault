@@ -13,4 +13,5 @@ public sealed class VaultOptions
     public int MaxQualityRank { get; set; }
     public int DefaultQualityRank { get; set; }
     public int PublicVodRetentionDays { get; set; } = 7;
+    public int StoryboardDownloadIntervalMs { get; set; } = 150;
 }

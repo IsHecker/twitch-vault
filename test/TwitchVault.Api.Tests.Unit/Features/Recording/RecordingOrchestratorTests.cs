@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -17,13 +16,10 @@ public class RecordingOrchestratorTests
     private readonly ILogger<RecordingOrchestrator> _logger = Substitute.For<ILogger<RecordingOrchestrator>>();
     private readonly TestDbContextFactory _factory = new();
     private readonly IDataStore _dataStore;
-    private readonly CancellationTokenSource _appStoppingCts = new();
-    private readonly IHostApplicationLifetime _appLifetime = Substitute.For<IHostApplicationLifetime>();
 
     public RecordingOrchestratorTests()
     {
         _dataStore = new EfDataStore(_factory);
-        _appLifetime.ApplicationStopping.Returns(_appStoppingCts.Token);
     }
 
     private RecordingOrchestrator CreateSut() =>
@@ -32,8 +28,7 @@ public class RecordingOrchestratorTests
             _dataStore,
             _streamService,
             _twitchGqlClient,
-            _logger,
-            _appLifetime);
+            _logger);
 
     private static Channel CreateChannel(string id = ChannelId, string name = ChannelName) =>
         Channel.Create(id, name, 1, isArchived: false);
@@ -42,7 +37,13 @@ public class RecordingOrchestratorTests
         new(twitchStreamId, "Some Title", "Some Game", DateTime.Now);
 
     private static Api.Features.Streams.Stream CreateStream(string twitchStreamId, string channelId) =>
-        Api.Features.Streams.Stream.Create(twitchStreamId, channelId, StreamFolder.Create("streams_root", ChannelName), DateTime.Now, "Test", "Test");
+        Api.Features.Streams.Stream.Create(
+            twitchStreamId,
+            channelId,
+            StreamFolder.Create("streams_root", ChannelName, twitchStreamId),
+            DateTime.Now,
+            "Test",
+            "Test");
 
     private IStreamRecorder StubFactoryReturnsRecorder()
     {

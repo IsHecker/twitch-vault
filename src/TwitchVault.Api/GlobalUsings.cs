@@ -19,3 +19,5 @@ global using TwitchVault.Api.Features.Testing.Endpoints;
 global using TwitchVault.Api.Features.Twitch;
 global using TwitchVault.Api.Features.Twitch.EventSub;
 global using TwitchVault.Api.Infrastructure.Events;
+global using TwitchVault.Api.Features.Recording.Storyboard;
+global using TwitchVault.Api.Features.Recording.Storyboard.Jobs;

@@ -49,7 +49,7 @@ public class PublicVodCleanupJobTests : IDisposable
             db.Channels.Add(channel);
         }
 
-        var stream = DomainStream.Create(id, "ch-1", StreamFolder.Create("Streams", "testchannel"), finishedAt.AddHours(-2), "Title", "Cat");
+        var stream = DomainStream.Create(id, "ch-1", StreamFolder.Create("Streams", "testchannel", id), finishedAt.AddHours(-2), "Title", "Cat");
         stream.MarkAsFinished(finishedAt);
         stream.SetVodId(vodId);
         stream.SetStorageOperationStatus(opStatus);

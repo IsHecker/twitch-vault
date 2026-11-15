@@ -5,7 +5,7 @@ using TwitchVault.Api.Configuration;
 
 namespace TwitchVault.Api.Infrastructure.Middleware;
 
-public static class StreamThumbnailsMiddlewareExtensions
+public static class StreamFilesMiddlewareExtensions
 {
     public static IApplicationBuilder UseStreamThumbnails(this WebApplication app)
     {
@@ -17,6 +17,7 @@ public static class StreamThumbnailsMiddlewareExtensions
         contentTypeProvider.Mappings[".jpg"] = "image/jpeg";
         contentTypeProvider.Mappings[".jpeg"] = "image/jpeg";
         contentTypeProvider.Mappings[".png"] = "image/png";
+        contentTypeProvider.Mappings[".json"] = "application/json";
 
         return app.UseStaticFiles(new StaticFileOptions
         {

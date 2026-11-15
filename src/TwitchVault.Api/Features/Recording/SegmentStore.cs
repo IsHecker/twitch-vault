@@ -5,7 +5,7 @@ namespace TwitchVault.Api.Features.Recording;
 
 public readonly record struct LocalSegment(string FilePath, float Duration, long SizeBytes);
 
-public interface ISegmentStore
+public interface ISegmentStore : IAsyncDisposable
 {
     Task<LocalSegment?> SaveAsync(
         string streamFolderRelativePath,
@@ -16,7 +16,9 @@ public interface ISegmentStore
     LocalSegment? CloseCurrentSegment();
 }
 
-public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOptions> vaultOptions) : ISegmentStore
+public sealed class SegmentStore(
+    IFileSystem fileSystem,
+    IOptionsMonitor<VaultOptions> vaultOptions) : ISegmentStore
 {
     // TODO: no need for sequential segment name, i can just use guid.
     private float _accumulatedDuration;
@@ -77,7 +79,7 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
         string? lastFlushedFileName,
         CancellationToken cancellationToken)
     {
-        var content = segment.ResponseStream.Content;
+        using var content = segment.ResponseStream.Content;
         EnsureCurrentFileStream(streamFolderPath, lastFlushedFileName, GetUrlExtension(segment.Source.Url));
 
         var positionBefore = _currentFileStream!.CanSeek ? _currentFileStream.Position : 0;
@@ -97,6 +99,15 @@ public sealed class SegmentStore(IFileSystem fileSystem, IOptionsMonitor<VaultOp
 
         _accumulatedDuration += segment.Source.Duration;
         return !IsFull ? null : CloseCurrentSegment();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_currentFileStream is not null)
+        {
+            await _currentFileStream.DisposeAsync();
+            _currentFileStream = null;
+        }
     }
 
     private void EnsureCurrentFileStream(string streamFolderPath, string? lastFlushedFileName, string urlExtension)

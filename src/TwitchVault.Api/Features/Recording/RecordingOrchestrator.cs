@@ -8,8 +8,7 @@ public sealed class RecordingOrchestrator(
     IDataStore dataStore,
     IStreamService streamService,
     ITwitchGqlClient twitchGqlClient,
-    ILogger<RecordingOrchestrator> logger,
-    IHostApplicationLifetime appLifetime) : IRecordingOrchestrator
+    ILogger<RecordingOrchestrator> logger) : IRecordingOrchestrator
 {
     private static readonly SemaphoreSlim _sessionsLock = new(1, 1);
 
@@ -63,7 +62,7 @@ public sealed class RecordingOrchestrator(
                 return existing switch
                 {
                     null => await CreateStreamAsync(channel, metadata),
-                    { Status: not StreamStatus.Finished } => MarkAsResuming(existing),
+                    { Status: not StreamStatus.Finished and not StreamStatus.Finalizing } => MarkAsResuming(existing),
                     _ => null
                 };
             });
@@ -197,7 +196,7 @@ public sealed class RecordingOrchestrator(
 
     private async Task LaunchRecordingSessionAsync(Streams.Stream stream, Channel channel)
     {
-        var session = await streamRecorderFactory.CreateAsync(stream, channel, appLifetime.ApplicationStopping);
+        var session = await streamRecorderFactory.CreateAsync(stream, channel, CancellationToken.None);
 
         var backgroundTask = Task.Run(async () =>
         {

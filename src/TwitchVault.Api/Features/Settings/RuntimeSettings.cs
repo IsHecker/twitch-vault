@@ -25,6 +25,7 @@ public sealed class JobOptions
     public const string StorageUpload = nameof(StorageUpload);
     public const string StorageCleanup = nameof(StorageCleanup);
     public const string PublicVodCleanup = nameof(PublicVodCleanup);
+    public const string StoryboardCompilation = nameof(StoryboardCompilation);
 
     public bool Enabled { get; set; }
     public float RunIntervalInMinutes { get; set; }

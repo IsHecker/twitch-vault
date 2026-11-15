@@ -45,7 +45,7 @@ public class StreamServiceTests
         var channelId = "channel-1";
         var streamId = "stream-123";
         var channel = Channel.Create(channelId, "testchannel", 1, isArchived: false);
-        var stream = DomainStream.Create(streamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
+        var stream = DomainStream.Create(streamId, channelId, StreamFolder.Create("Streams", "testchannel", streamId), DateTime.UtcNow, "Title", "Cat");
         stream.SetStorageOperationStatus(status);
 
         using (var dbInit = _factory.CreateDbContext())
@@ -71,7 +71,7 @@ public class StreamServiceTests
         var channelId = "channel-1";
         var streamId = "stream-123";
         var channel = Channel.Create(channelId, "testchannel", 1, isArchived: false);
-        var stream = DomainStream.Create(streamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
+        var stream = DomainStream.Create(streamId, channelId, StreamFolder.Create("Streams", "testchannel", streamId), DateTime.UtcNow, "Title", "Cat");
         stream.MarkAsFinished(DateTime.UtcNow);
 
         using (var dbInit = _factory.CreateDbContext())
@@ -100,9 +100,9 @@ public class StreamServiceTests
         // Arrange
         var channelId = "channel-1";
         var channel = Channel.Create(channelId, "testchannel", 1, isArchived: false);
-        var staleStream = DomainStream.Create("stale-1", channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
+        var staleStream = DomainStream.Create("stale-1", channelId, StreamFolder.Create("Streams", "testchannel", "stale-1"), DateTime.UtcNow, "Title", "Cat");
         var activeStreamId = "active-1";
-        var activeStream = DomainStream.Create(activeStreamId, channelId, StreamFolder.Create("Streams", "testchannel"), DateTime.UtcNow, "Title", "Cat");
+        var activeStream = DomainStream.Create(activeStreamId, channelId, StreamFolder.Create("Streams", "testchannel", activeStreamId), DateTime.UtcNow, "Title", "Cat");
 
         using (var dbInit = _factory.CreateDbContext())
         {

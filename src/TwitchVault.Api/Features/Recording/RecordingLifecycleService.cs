@@ -25,15 +25,20 @@ public sealed class RecordingLifecycleService(
         {
             var interruptedStreams = await dataStore.QueryAsync(
                 ctx => ctx.Streams
-                    .Where(s => s.Status != StreamStatus.Finished && s.ChannelId != null)
+                    .Where(s => s.Status != StreamStatus.Finished && s.Status != StreamStatus.Finalizing && s.ChannelId != null)
                     .Include(s => s.Channel)
                     .ToListAsync(cancellationToken));
 
             if (interruptedStreams.Count == 0)
                 return;
 
-            var channels = interruptedStreams.Select(s => s.Channel).ToList();
-            var liveResults = await twitchGqlClient.IsChannelLiveAsync(channels, cancellationToken);
+            var distinctChannels = interruptedStreams
+                .Select(s => s.Channel)
+                .Where(c => c is not null)
+                .DistinctBy(c => c.Id)
+                .ToList();
+
+            var liveResults = await twitchGqlClient.IsChannelLiveAsync(distinctChannels, cancellationToken);
 
             var resumeCount = 0;
             foreach (var (channel, isLive) in liveResults)

@@ -89,7 +89,7 @@ public class StreamFolderTests
     [Fact]
     public void Create_ShouldSanitizeChannelName()
     {
-        var folder = StreamFolder.Create("Streams", "test:chan/nel?*");
+        var folder = StreamFolder.Create("Streams", "test:chan/nel?*", "ts_1");
 
         folder.RelativePath.Should().NotContain(":");
         folder.RelativePath.Should().NotContain("?");

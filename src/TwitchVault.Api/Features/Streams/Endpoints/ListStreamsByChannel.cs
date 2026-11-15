@@ -44,7 +44,7 @@ public class ListStreamsByChannel : IEndpoint
                 .AsNoTracking()
                 .ForChannel(channelId)
                 .Where(s => s.Status == StreamStatus.Recording
-                    || s.StorageOperationStatus == StorageOperationStatus.Uploaded);
+                    || (s.Status == StreamStatus.Finished && s.StorageOperationStatus == StorageOperationStatus.Uploaded));
 
             if (subscribedAt.HasValue)
                 query = query.Where(s => s.FinishedAt == null || s.FinishedAt >= subscribedAt.Value);

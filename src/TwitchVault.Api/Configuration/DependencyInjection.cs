@@ -16,8 +16,10 @@ using PolyStore.Catbox;
 using PolyStore.Discord;
 using PolyStore.Telegram;
 using Quartz;
+using SixLabors.ImageSharp.Memory;
 using TwitchLib.EventSub.Webhooks.Core.Models;
 using TwitchLib.EventSub.Webhooks.Extensions;
+using Vortice.MediaFoundation;
 
 namespace TwitchVault.Api.Configuration;
 
@@ -27,6 +29,10 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        MediaFactory.MFStartup();
+        SixLabors.ImageSharp.Configuration.Default.MemoryAllocator = MemoryAllocator.Create(
+            new MemoryAllocatorOptions { MaximumPoolSizeMegabytes = 8 });
+
         services
             .AddConfigurationOptions(configuration)
             .AddCommonInfrastructure()
@@ -115,6 +121,11 @@ public static class DependencyInjection
         services.AddTransient<IManifestPoller, ManifestPoller>();
         services.AddTransient<IThumbnailManager, ThumbnailManager>();
         services.AddTransient<ISegmentUploader, LiveSegmentUploader>();
+
+        services.AddTransient<IFrameExtractor, FrameExtractor>();
+        services.AddTransient<StoryboardCompiler>();
+        // services.AddTransient<IStoryboardManager, StoryboardManager>();
+        services.ConfigureOptions<StoryboardCompilationJobConfiguration>();
 
         services.AddSingleton<IUploadQueue, UploadQueue>();
         services.AddHostedService<UploadQueueBackgroundService>();

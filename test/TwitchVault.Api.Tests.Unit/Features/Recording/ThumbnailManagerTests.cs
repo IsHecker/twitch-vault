@@ -17,7 +17,7 @@ public class ThumbnailManagerTests
         _stream = Api.Features.Streams.Stream.Create(
             "test-stream",
             "channel-1",
-            StreamFolder.Create("streams_root", "Test Channel"),
+            StreamFolder.Create("streams_root", "Test Channel", "test-stream"),
             DateTime.Now,
             "initialTitle",
             "initialCategoryId");

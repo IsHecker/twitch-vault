@@ -1,7 +1,7 @@
 
 namespace TwitchVault.Api.Features.Testing.Endpoints;
 
-public class MockTwitchEvents : IDevOnlyEndpoint
+public class MockTwitchEvents : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
@@ -24,6 +24,27 @@ public class MockTwitchEvents : IDevOnlyEndpoint
         group.MapPost("/clear-events", async (TwitchSubscriptionService service) =>
         {
             await service.ClearAllSubscriptionsAsync(default);
+            return Results.Ok();
+        });
+
+        group.MapPost("/storyboard", async (string path, int duration, string dest, IStoryboardManager storyboard) =>
+        {
+            // var segs = new DirectoryInfo(path)
+            //     .EnumerateFiles()
+            //     .Where(f => !f.Name.Equals("init.mp4", StringComparison.OrdinalIgnoreCase)
+            //             && Path.GetExtension(f.Name) is ".ts" or ".mp4")
+            //     .ToList();
+
+            // storyboard.Attach(dest);
+            // foreach (var seg in segs)
+            // {
+            //     var stream = File.OpenRead(seg.FullName);
+            //     await storyboard.ProcessKeyframeAsync(stream, Path.GetExtension(stream.Name));
+            // }
+            storyboard.Attach(Path.GetDirectoryName(path)!);
+            var stream = File.OpenRead(path);
+            await storyboard.ProcessKeyframeAsync(stream, Path.GetExtension(stream.Name));
+            await storyboard.FinalizeAsync(duration);
             return Results.Ok();
         });
     }

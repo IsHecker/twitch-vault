@@ -9,7 +9,8 @@ public readonly record struct StreamFolder
     public const string PlaylistFile = "playlist.m3u8";
     public const string RemoteUrlsFile = "remoteUrls.txt";
     public const string ThumbnailFile = "thumbnail.jpg";
-    private const string TimestampFormat = "yyyy-MM-dd HH-mm-ss";
+    public const string StoryboardManifestFile = StoryboardConstants.ManifestFileName;
+    public const string StripFile = StoryboardConstants.StripFileName;
 
     public string RelativePath { get; }
 
@@ -19,11 +20,10 @@ public readonly record struct StreamFolder
         RelativePath = (relativePath ?? string.Empty).Replace('\\', '/');
     }
 
-    public static StreamFolder Create(string streamsRoot, string channelName)
+    public static StreamFolder Create(string streamsRoot, string channelName, string streamId)
     {
         var sanitizedChannel = SanitizeForFileSystem(channelName);
-        var timestamp = DateTime.Now.ToString(TimestampFormat);
-        var relative = Path.Combine(streamsRoot, sanitizedChannel, timestamp);
+        var relative = Path.Combine(streamsRoot, sanitizedChannel, streamId);
         return new StreamFolder(relative);
     }
 
@@ -42,6 +42,16 @@ public readonly record struct StreamFolder
 
     public string GetThumbnailUrl(string baseUrl) =>
         new Uri($"{baseUrl.TrimEnd('/')}/{ThumbnailPath}").AbsoluteUri;
+
+    public string StripPath => Path.Combine(AbsolutePath, StripFile);
+
+    public string GetStripUrl(string baseUrl) =>
+        new Uri($"{baseUrl.TrimEnd('/')}/{Path.Combine(RelativePath, StripFile).Replace('\\', '/')}").AbsoluteUri;
+
+    public string StoryboardManifestPath => Path.Combine(AbsolutePath, StoryboardManifestFile);
+
+    public string GetStoryboardManifestUrl(string baseUrl) =>
+        new Uri($"{baseUrl.TrimEnd('/')}/{Path.Combine(RelativePath, StoryboardManifestFile).Replace('\\', '/')}").AbsoluteUri;
 
     public string GetAbsolutePlaylistPath(string? rootPath = null) =>
         Path.Combine(GetAbsolutePath(rootPath), PlaylistFile);

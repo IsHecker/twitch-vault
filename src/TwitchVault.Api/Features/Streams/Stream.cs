@@ -4,7 +4,7 @@ public sealed class Stream : Entity<string>
 {
     public string? ChannelId { get; init; }
 
-    public StreamFolder Folder { get; init; } = null!;
+    public StreamFolder Folder { get; private set; } = null!;
     public StreamStatus Status { get; private set; }
     public StorageOperationStatus StorageOperationStatus { get; private set; }
     public long SizeBytes { get; private set; }
@@ -52,6 +52,25 @@ public sealed class Stream : Entity<string>
 
         stream.AddChapter(initialTitle, initialCategoryId, startedAt);
         return stream;
+    }
+
+    public void MarkAsFinalizing(DateTime finishedAt)
+    {
+        Status = StreamStatus.Finalizing;
+        FinishedAt = finishedAt;
+
+        CurrentChapter?.Complete(finishedAt);
+    }
+
+    public void UpdateFolder(StreamFolder folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        Folder = folder;
+    }
+
+    public void MarkAsFinished()
+    {
+        Status = StreamStatus.Finished;
     }
 
     public void MarkAsFinished(DateTime finishedAt)

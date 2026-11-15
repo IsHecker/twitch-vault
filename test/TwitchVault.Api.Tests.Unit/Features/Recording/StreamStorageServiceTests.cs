@@ -26,7 +26,7 @@ public class StreamStorageServiceTests : IDisposable
     {
         // Arrange
         var channelName = "testchannel_failure";
-        var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
+        var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName, "stream_failed_delete");
         var streamLocalDir = streamFolder.AbsolutePath;
         Directory.CreateDirectory(streamLocalDir);
 
@@ -66,7 +66,7 @@ public class StreamStorageServiceTests : IDisposable
     {
         // Arrange
         var channelName = "testchannel_success";
-        var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName);
+        var streamFolder = StreamFolder.Create(Path.Combine(_tempRoot, "Streams"), channelName, "stream_success_delete");
         var streamLocalDir = streamFolder.AbsolutePath;
         Directory.CreateDirectory(streamLocalDir);
 

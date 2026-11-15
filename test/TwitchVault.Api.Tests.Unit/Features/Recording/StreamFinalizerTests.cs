@@ -70,7 +70,7 @@ public class StreamFinalizerTests
 
     [Theory]
     [MemberData(nameof(NotCurrentlyLiveMetadata))]
-    public async Task FinalizeAsync_ShouldMarkFinished_WhenChannelIsNotLiveWithSameStreamAfterError(StreamMetadata? metadata)
+    public async Task FinalizeAsync_ShouldMarkFinalizing_WhenChannelIsNotLiveWithSameStreamAfterError(StreamMetadata? metadata)
     {
         // Arrange
         _twitchClient.GetStreamMetadataAsync(_channel.Name, Arg.Any<CancellationToken>()).Returns(metadata);
@@ -82,12 +82,12 @@ public class StreamFinalizerTests
         await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamError(new Exception("fatal")));
 
         // Assert
-        stream.Status.Should().Be(StreamStatus.Finished);
+        stream.Status.Should().Be(StreamStatus.Finalizing);
         await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
     [Fact]
-    public async Task FinalizeAsync_ShouldMarkFinished_WhenReasonIsStreamEnded()
+    public async Task FinalizeAsync_ShouldMarkFinalizing_WhenReasonIsStreamEnded()
     {
         // Arrange
         var sut = CreateSut();
@@ -97,7 +97,7 @@ public class StreamFinalizerTests
         await sut.FinalizeAsync(_channel, stream, sizeBytes: 0, new SessionEndReason.StreamEnded());
 
         // Assert
-        stream.Status.Should().Be(StreamStatus.Finished);
+        stream.Status.Should().Be(StreamStatus.Finalizing);
         await _storageService.Received(1).FinalizeStorageAsync(stream);
     }
 
@@ -151,7 +151,7 @@ public class StreamFinalizerTests
         Api.Features.Streams.Stream.Create(
             twitchStreamId,
             channelId,
-            StreamFolder.Create("streams_root", "testchannel"),
+            StreamFolder.Create("streams_root", "testchannel", twitchStreamId),
             startedAt ?? new DateTime(2026, 1, 1, 10, 0, 0),
             "Test Title",
             "Test Category");

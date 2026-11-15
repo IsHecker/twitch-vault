@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TwitchVault.Api.Features.Auth;
 
 namespace TwitchVault.Api.Database.Configurations;
 

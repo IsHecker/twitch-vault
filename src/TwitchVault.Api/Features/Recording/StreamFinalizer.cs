@@ -99,7 +99,7 @@ public sealed class StreamFinalizer(
         var totalDurationSec = ReadPlaylistTotalDuration(stream.Folder.PlaylistPath);
         var finishedAt = stream.StartedAt.AddSeconds(totalDurationSec);
 
-        stream.MarkAsFinished(finishedAt);
+        stream.MarkAsFinalizing(finishedAt);
         stream.SetSize(sizeBytes);
 
         await storageService.FinalizeStorageAsync(stream);
