@@ -31,27 +31,7 @@ public static class StoryboardCalculator
         var interval = (int)Math.Round(Math.Max(MinIntervalSeconds, rawInterval));
         return interval % 2 == 0 ? interval : interval + 1;
     }
-    // public static double CalculateStoryboardInterval(
-    //     double durationSeconds,
-    //     double densityModifier = DefaultDensityModifier,
-    //     double growthStrength = DefaultGrowthStrength)
-    // {
-    //     if (durationSeconds <= 0)
-    //         return 0;
 
-    //     var durationHours = durationSeconds / 3600.0;
-    //     var denominator = 200.0 * densityModifier * (1.0 + (growthStrength * Math.Log(1.0 + durationHours)));
-    //     if (denominator <= 0)
-    //         return MinIntervalSeconds;
-
-    //     var rawInterval = durationSeconds / denominator;
-    //     return Math.Max(MinIntervalSeconds, rawInterval);
-    // }
-
-    /// <summary>
-    /// Computes evenly spaced target timestamps in whole seconds across the stream duration for strip frame extraction.
-    /// Centered at slice midpoints: Round((i + 0.5) * (totalDurationSeconds / count)).
-    /// </summary>
     public static List<int> CalculateStripTimestamps(
         double totalDurationSeconds,
         int targetFrameCount = StoryboardConstants.StripFrameCount)
@@ -65,7 +45,8 @@ public static class StoryboardCalculator
         var timestamps = new List<int>(count);
         for (var i = 0; i < count; i++)
         {
-            timestamps.Add((int)Math.Round((i + 0.5) * interval));
+            var raw = (i + 0.5) * interval;
+            timestamps.Add((int)Math.Floor(raw / 2.0) * 2);
         }
 
         return timestamps;

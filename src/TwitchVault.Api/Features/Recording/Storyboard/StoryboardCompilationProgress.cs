@@ -17,7 +17,7 @@ public sealed class StoryboardCompilationProgress
     {
         LastProcessedSegmentIndex = -1,
         AccumulatedSeconds = 0,
-        NextCaptureSeconds = 0, // capture at start
+        NextCaptureSeconds = 0,
         TotalFrames = 0,
         CurrentSheetIndex = 0,
         TilesOnCurrentSheet = 0,

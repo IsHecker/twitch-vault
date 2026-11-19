@@ -208,9 +208,9 @@ public sealed class StoryboardCompiler(
     {
         var progress = session.Progress;
 
-        while (progress.NextCaptureSeconds <= progress.AccumulatedSeconds + segmentDuration)
+        while (progress.NextCaptureSeconds < progress.AccumulatedSeconds + segmentDuration)
         {
-            var target = (progress.NextCaptureSeconds - progress.AccumulatedSeconds) % segmentDuration;
+            var target = progress.NextCaptureSeconds - progress.AccumulatedSeconds;
             var origin = GetTileOrigin(progress.TilesOnCurrentSheet);
 
             var captured = frameExtractor.ExtractFrameInto(
